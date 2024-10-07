@@ -28,6 +28,7 @@ pub struct ClaimTopicsUpdated {
     claim_topics: Array<felt252>,
 }
 
+#[starknet::interface]
 pub trait ITrustedIssuersRegistry<TContractState> {
     fn add_trusted_issuer(
         ref self: TContractState, trusted_issuer: ContractAddress, claim_topics: Array<u256>

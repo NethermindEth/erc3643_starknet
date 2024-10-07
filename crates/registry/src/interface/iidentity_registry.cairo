@@ -1,4 +1,9 @@
 use starknet::ContractAddress;
+use registry::interface::{
+    itrusted_issuers_registry::{ITrustedIssuersRegistryDispatcher, ITrustedIssuersRegistryDispatcherTrait},
+    iidentity_registry_storage::{IIdentityRegistryStorageDispatcher, IIdentityRegistryStorageDispatcherTrait},
+    iclaim_topics_registry::{IClaimTopicsRegistryDispatcher, IClaimTopicsRegistryDispatcherTrait},
+};
 
 #[starknet::interface]
 pub trait IIdentityRegistry<TContractState> {
@@ -30,9 +35,9 @@ pub trait IIdentityRegistry<TContractState> {
     fn is_verified(self: @TContractState, user_address: ContractAddress) -> bool;
     fn identity(self: @TContractState, user_address: ContractAddress); //-> IIdentity;
     fn investor_country(self: @TContractState, user_address: ContractAddress) -> u16;
-    fn identity_storage(self: @TContractState); // -> IIdentityRegistryStorage;
-    fn issuers_registry(self: @TContractState); // -> ITrustedIssuersRegistry;
-    fn topics_registry(self: @TContractState); // -> IClaimTopicsRegistry 
+    fn identity_storage(self: @TContractState) -> IIdentityRegistryStorageDispatcher;
+    fn issuers_registry(self: @TContractState) -> ITrustedIssuersRegistryDispatcher; // -> ITrustedIssuersRegistry;
+    fn topics_registry(self: @TContractState) -> IClaimTopicsRegistryDispatcher;
 }
 
 #[event]

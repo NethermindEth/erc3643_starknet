@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait IIdentityRegistryStorage<TContractState> {
+pub trait IIdentityRegistryStorage<TContractState> {
     fn add_identity_to_storage(ref self: TContractState, //identity: IIdentity,
      country: u16);
 
