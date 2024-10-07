@@ -1,0 +1,26 @@
+#[starknet::contract]
+mod TREXFactory {
+    use factory::itrex_factory::{ITREXFactory, TokenDetails, ClaimDetails, TREXFactoryEvent};
+    use starknet::storage::{
+        Map, StoragePathEntry, StorageMapReadAccess,
+        StorageMapWriteAccess
+    };
+    use starknet::ContractAddress;
+
+    #[storage]
+    struct Storage {
+        implementation_authority: ContractAddress,
+        id_factory: ContractAddress,
+        token_deployed: Map<ByteArray, ContractAddress>,
+    }
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState) {
+        
+    }
+}

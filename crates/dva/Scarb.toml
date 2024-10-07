@@ -1,0 +1,17 @@
+[package]
+name = "dva"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+starknet.workspace = true
+roles = {path="../roles"}
+
+[[target.starknet-contract]]
+sierra = true
+
+[tool]
+fmt.workspace = true
+
+[lib]
+name= "dva"
