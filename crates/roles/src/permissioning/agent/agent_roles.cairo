@@ -1,5 +1,6 @@
 // Can we use RoleBased auth instead?
-// like this https://github.com/OpenZeppelin/cairo-contracts/blob/main/packages/access/src/accesscontrol/accesscontrol.cairo
+// like this
+// https://github.com/OpenZeppelin/cairo-contracts/blob/main/packages/access/src/accesscontrol/accesscontrol.cairo
 use starknet::ContractAddress;
 
 pub trait IAgentRoles<TContractState> {
@@ -31,11 +32,8 @@ mod AgentRoles {
     use openzeppelin_access::ownable::ownable::{OwnableComponent};
     use roles::roles::RolesComponent;
     use starknet::ContractAddress;
-    use starknet::storage::{
-        Map, StoragePathEntry, StorageMapReadAccess,
-        StorageMapWriteAccess
-    };
-    
+    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
+
     #[storage]
     struct Storage {
         supply_modifiers: Map<ContractAddress, bool>,
@@ -46,7 +44,7 @@ mod AgentRoles {
         white_list_managers: Map<ContractAddress, bool>,
         agent_admin: Map<ContractAddress, bool>,
     }
-    
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {

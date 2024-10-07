@@ -7,16 +7,15 @@ trait ICountryRestriction<TContractState> {
     fn add_country_restriction(ref self: TContractState, countries: u16);
     fn remove_country_restriction(ref self: TContractState, country: u16);
     fn is_country_restricted(self: @TContractState, country: u16) -> bool;
-    fn compliance_check_on_country_restrictions(self: @TContractState, from: ContractAddress, to: ContractAddress, value: u256) -> bool;
+    fn compliance_check_on_country_restrictions(
+        self: @TContractState, from: ContractAddress, to: ContractAddress, value: u256
+    ) -> bool;
 }
 
 #[starknet::component]
 mod CountryRestrictionComponent {
-    // use path::to::BasicCompliance; 
-    use starknet::storage::{
-        Map, StoragePathEntry, StorageMapReadAccess,
-        StorageMapWriteAccess
-    };
+    // use path::to::BasicCompliance;
+    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
 
     #[storage]
     struct Storage {
@@ -25,7 +24,5 @@ mod CountryRestrictionComponent {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
-    }
-
+    enum Event {}
 }

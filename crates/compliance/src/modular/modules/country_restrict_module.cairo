@@ -12,10 +12,7 @@ trait ICountryRestrictModule<TContractState> {
 #[starknet::contract]
 mod CountryRestrictModule {
     use starknet::ContractAddress;
-    use starknet::storage::{
-        Map, StoragePathEntry, StorageMapReadAccess,
-        StorageMapWriteAccess
-    };
+    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
 
     #[storage]
     struct Storage {
@@ -24,7 +21,5 @@ mod CountryRestrictModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
-    }
-
+    enum Event {}
 }

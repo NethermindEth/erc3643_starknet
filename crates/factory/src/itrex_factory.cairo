@@ -63,8 +63,15 @@ pub struct TREXSuiteDeployed {
 pub trait ITREXFactory<TContractState> {
     fn set_implementation_authority(ref self: TContractState, implementation: ContractAddress);
     fn set_id_factory(ref self: TContractState, id_factory: ContractAddress);
-    fn deploy_TREX_suite(ref self: TContractState, salt: ByteArray, token_details: TokenDetails, claim_details: ClaimDetails);
-    fn recover_contract_ownership(ref self: TContractState, contract: ContractAddress, new_owner: ContractAddress);
+    fn deploy_TREX_suite(
+        ref self: TContractState,
+        salt: ByteArray,
+        token_details: TokenDetails,
+        claim_details: ClaimDetails
+    );
+    fn recover_contract_ownership(
+        ref self: TContractState, contract: ContractAddress, new_owner: ContractAddress
+    );
     fn get_implementation_authority(self: @TContractState) -> ContractAddress;
     fn get_id_factory(self: @TContractState) -> ContractAddress;
     fn get_token(self: @TContractState, salt: ByteArray) -> ContractAddress;

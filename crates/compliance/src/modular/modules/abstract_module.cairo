@@ -1,11 +1,9 @@
 #[starknet::component]
 mod AbstractModule {
     use compliance::modular::modules::imodule::{IModule, ModuleEvents};
-
-    use starknet::storage::{
-        Map, StorageMapReadAccess, StorageMapWriteAccess,
-    };
     use starknet::ContractAddress;
+
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess,};
 
     #[storage]
     struct Storage {
@@ -15,9 +13,8 @@ mod AbstractModule {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {}
-
     //#[embedable_as(ModuleImpl)]
-    //impl ModuleImpl of IModule<ContractState>{
-    //    
-    //}
+//impl ModuleImpl of IModule<ContractState>{
+//
+//}
 }

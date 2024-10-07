@@ -80,6 +80,8 @@ dependencies = [
 name = "token"
 version = "0.1.0"
 dependencies = [
+ "compliance",
  "openzeppelin_access",
+ "registry",
  "snforge_std",
 ]

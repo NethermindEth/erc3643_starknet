@@ -1,11 +1,8 @@
 #[starknet::contract]
 mod TREXGateway {
     use factory::itrex_gateway::{ITREXGateway, Fee};
-    use starknet::storage::{
-        Map, StoragePathEntry, StorageMapReadAccess,
-        StorageMapWriteAccess
-    };
     use starknet::ContractAddress;
+    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
 
     #[storage]
     struct Storage {
@@ -19,12 +16,8 @@ mod TREXGateway {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
-    }
+    enum Event {}
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
-        
-    }
-
+    fn constructor(ref self: ContractState) {}
 }

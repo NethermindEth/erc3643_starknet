@@ -9,11 +9,8 @@ pub trait IAgentRole<TContractState> {
 
 #[starknet::component]
 pub mod AgentRoleComponent {
-    use starknet::storage::{
-        Map, StoragePathEntry, StorageMapReadAccess,
-        StorageMapWriteAccess
-    };
     use starknet::ContractAddress;
+    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
 
     #[storage]
     struct Storage {

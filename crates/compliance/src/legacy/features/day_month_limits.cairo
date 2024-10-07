@@ -4,17 +4,16 @@ use starknet::ContractAddress;
 trait IDayMonthLimits<TContractState> {
     fn set_daily_limit(ref self: TContractState, new_daily_limit: u256);
     fn set_monthly_limit(ref self: TContractState, new_monthly_limit: u256);
-    fn compliance_check_on_day_month_limits(self: @TContractState, from: ContractAddress, to: ContractAddress, amount: u256) -> bool;
+    fn compliance_check_on_day_month_limits(
+        self: @TContractState, from: ContractAddress, to: ContractAddress, amount: u256
+    ) -> bool;
 }
 
 #[starknet::component]
 mod DayMonthLimitsComponent {
-    // use path::to::BasicCompliance; 
-    use starknet::storage::{
-        Map, StoragePathEntry, StorageMapReadAccess,
-        StorageMapWriteAccess
-    };
+    // use path::to::BasicCompliance;
     use starknet::ContractAddress;
+    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
 
     #[starknet::storage_node]
     struct TransferCounter {
@@ -22,7 +21,7 @@ mod DayMonthLimitsComponent {
         monthly_count: u256,
         daily_timer: u256,
         monthly_timer: u256
-    }   
+    }
 
     #[storage]
     struct Storage {
@@ -33,7 +32,5 @@ mod DayMonthLimitsComponent {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
-    }
-
+    enum Event {}
 }

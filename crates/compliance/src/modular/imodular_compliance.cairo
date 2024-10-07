@@ -3,42 +3,41 @@ use starknet::ContractAddress;
 #[event]
 #[derive(Drop, starknet::Event)]
 pub enum ModularComplianceEvent {
-  ModuleInteraction: ModuleInteraction,
-  TokenBound: TokenBound,
-  TokenUnbound: TokenUnbound,
-  ModuleAdded: ModuleAdded,
-  ModuleRemoved: ModuleRemoved,
+    ModuleInteraction: ModuleInteraction,
+    TokenBound: TokenBound,
+    TokenUnbound: TokenUnbound,
+    ModuleAdded: ModuleAdded,
+    ModuleRemoved: ModuleRemoved,
 }
 
 #[derive(Drop, starknet::Event)]
-struct ModuleInteraction {
-  #[key]
-  target: ContractAddress,
-  selector: u32
+pub struct ModuleInteraction {
+    #[key]
+    target: ContractAddress,
+    selector: u32
 }
 
 #[derive(Drop, starknet::Event)]
-struct TokenBound {
-  token: ContractAddress,
+pub struct TokenBound {
+    token: ContractAddress,
 }
 
 #[derive(Drop, starknet::Event)]
-struct TokenUnbound {
-  token: ContractAddress,
+pub struct TokenUnbound {
+    token: ContractAddress,
 }
 
 #[derive(Drop, starknet::Event)]
-struct ModuleAdded {
-  #[key]
-  module: ContractAddress,
+pub struct ModuleAdded {
+    #[key]
+    module: ContractAddress,
 }
 
 #[derive(Drop, starknet::Event)]
-struct ModuleRemoved {
-  #[key]
-  module: ContractAddress,
+pub struct ModuleRemoved {
+    #[key]
+    module: ContractAddress,
 }
-
 
 #[starknet::interface]
 pub trait IModularCompliance<TContractState> {

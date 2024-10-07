@@ -6,6 +6,8 @@ edition = "2024_07"
 [dependencies]
 starknet.workspace = true
 openzeppelin_access.workspace = true
+registry = {path = "../registry"}
+compliance = {path ="../compliance" }
 
 [dev-dependencies]
 snforge_std.workspace = true
