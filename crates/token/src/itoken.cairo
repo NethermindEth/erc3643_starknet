@@ -1,5 +1,5 @@
-use registry::interface::iidentity_registry::IIdentityRegistryDispatcher;
 use compliance::modular::imodular_compliance::IModularComplianceDispatcher;
+use registry::interface::iidentity_registry::IIdentityRegistryDispatcher;
 use starknet::ContractAddress;
 
 #[event]
@@ -134,12 +134,8 @@ pub trait IToken<TContractState> {
     fn symbol(self: @TContractState) -> ByteArray;
     fn onchain_id(self: @TContractState) -> ContractAddress;
     fn version(self: @TContractState) -> ByteArray;
-    fn identity_registry(
-        self: @TContractState
-    ) -> IIdentityRegistryDispatcher;
-    fn compliance(
-        self: @TContractState
-    ) -> IModularComplianceDispatcher;
+    fn identity_registry(self: @TContractState) -> IIdentityRegistryDispatcher;
+    fn compliance(self: @TContractState) -> IModularComplianceDispatcher;
     fn paused(self: @TContractState) -> bool;
     fn is_frozen(self: @TContractState, user_address: ContractAddress) -> bool;
     fn get_frozen_tokens(self: @TContractState, user_address: ContractAddress) -> u256;

@@ -1,10 +1,15 @@
-use starknet::ContractAddress;
 use registry::interface::{
-    itrusted_issuers_registry::{ITrustedIssuersRegistryDispatcher, ITrustedIssuersRegistryDispatcherTrait},
-    iidentity_registry_storage::{IIdentityRegistryStorageDispatcher, IIdentityRegistryStorageDispatcherTrait},
+    itrusted_issuers_registry::{
+        ITrustedIssuersRegistryDispatcher, ITrustedIssuersRegistryDispatcherTrait
+    },
+    iidentity_registry_storage::{
+        IIdentityRegistryStorageDispatcher, IIdentityRegistryStorageDispatcherTrait
+    },
     iclaim_topics_registry::{IClaimTopicsRegistryDispatcher, IClaimTopicsRegistryDispatcherTrait},
 };
+use starknet::ContractAddress;
 
+// TODO: might convert ContractAddress to IIdentity in required places
 #[starknet::interface]
 pub trait IIdentityRegistry<TContractState> {
     fn register_identity(
@@ -36,7 +41,7 @@ pub trait IIdentityRegistry<TContractState> {
     fn identity(self: @TContractState, user_address: ContractAddress); //-> IIdentity;
     fn investor_country(self: @TContractState, user_address: ContractAddress) -> u16;
     fn identity_storage(self: @TContractState) -> IIdentityRegistryStorageDispatcher;
-    fn issuers_registry(self: @TContractState) -> ITrustedIssuersRegistryDispatcher; // -> ITrustedIssuersRegistry;
+    fn issuers_registry(self: @TContractState) -> ITrustedIssuersRegistryDispatcher;
     fn topics_registry(self: @TContractState) -> IClaimTopicsRegistryDispatcher;
 }
 
