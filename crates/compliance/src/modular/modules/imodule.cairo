@@ -1,23 +1,5 @@
 use starknet::ContractAddress;
 
-#[event]
-#[derive(Drop, starknet::Event)]
-pub enum ModuleEvents {
-    ComplianceBound: ComplianceBound,
-    ComplianceUnbound: ComplianceUnbound
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct ComplianceBound {
-    #[key]
-    compliance: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct ComplianceUnbound {
-    compliance: ContractAddress,
-}
-
 #[starknet::interface]
 pub trait IModule<TContractState> {
     fn bind_compliance(ref self: TContractState, compliance: ContractAddress);

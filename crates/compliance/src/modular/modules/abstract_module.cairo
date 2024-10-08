@@ -1,9 +1,8 @@
 #[starknet::component]
 mod AbstractModule {
-    use compliance::modular::modules::imodule::{IModule, ModuleEvents};
+    use core::num::traits::Zero;
     use starknet::ContractAddress;
-
-    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess,};
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
 
     #[storage]
     struct Storage {
@@ -12,9 +11,100 @@ mod AbstractModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {}
-    //#[embedable_as(ModuleImpl)]
-//impl ModuleImpl of IModule<ContractState>{
-//
-//}
+    pub enum Event {
+        ComplianceBound: ComplianceBound,
+        ComplianceUnbound: ComplianceUnbound
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ComplianceBound {
+        #[key]
+        compliance: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ComplianceUnbound {
+        #[key]
+        compliance: ContractAddress,
+    }
+
+    pub trait IAbstractModule<
+        TContractState, +HasComponent<TContractState>, +Drop<TContractState>
+    > {
+        fn bind_compliance(
+            ref self: ComponentState<TContractState>, compliance: ContractAddress
+        ) {
+            assert!(compliance.is_non_zero(), "compliance address zero");
+            assert!(!self.compliance_bound.read(compliance), "compliance already bound");
+            assert!(
+                starknet::get_caller_address() == compliance, "only compliance contract can call"
+            );
+            self.compliance_bound.write(compliance, true);
+            self.emit(ComplianceBound { compliance });
+        }
+        fn unbind_compliance(
+            ref self: ComponentState<TContractState>, compliance: ContractAddress
+        ) {
+            self.only_compliance_call();
+            assert!(compliance.is_non_zero(), "compliance address zero");
+            assert!(
+                starknet::get_caller_address() == compliance, "only compliance contract can call"
+            );
+            self.compliance_bound.write(compliance, false);
+            self.emit(ComplianceUnbound { compliance });
+        }
+
+        fn is_compliance_bound(
+            self: @ComponentState<TContractState>, compliance: ContractAddress
+        ) -> bool {
+            self.compliance_bound.read(compliance)
+        }
+
+        fn module_transfer_action(
+            ref self: ComponentState<TContractState>,
+            form: ContractAddress,
+            to: ContractAddress,
+            value: u256
+        );
+
+        fn module_mint_action(
+            ref self: ComponentState<TContractState>, to: ContractAddress, value: u256
+        );
+
+        fn module_burn_action(
+            ref self: ComponentState<TContractState>, from: ContractAddress, value: u256
+        );
+
+        fn module_check(
+            self: @ComponentState<TContractState>,
+            from: ContractAddress,
+            to: ContractAddress,
+            value: u256
+        ) -> bool;
+        fn can_compliance_bind(
+            self: @ComponentState<TContractState>, compliance: ContractAddress
+        ) -> bool; // pure function in solidity
+        fn is_plug_and_play(self: @ComponentState<TContractState>) -> bool;
+        fn name(self: @ComponentState<TContractState>) -> ByteArray;
+    }
+
+    #[generate_trait]
+    impl InternalImpl<
+        TContractState, +Drop<TContractState>, +HasComponent<TContractState>
+    > of InternalTrait<TContractState> {
+        #[inline]
+        fn only_bound_compliance(
+            self: @ComponentState<TContractState>, compliance: ContractAddress
+        ) {
+            assert!(self.compliance_bound.read(compliance), "compliance not bound");
+        }
+
+        #[inline]
+        fn only_compliance_call(self: @ComponentState<TContractState>) {
+            assert!(
+                self.compliance_bound.read(starknet::get_caller_address()),
+                "only bound compliance can call"
+            );
+        }
+    }
 }
