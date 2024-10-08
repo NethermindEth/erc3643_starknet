@@ -71,7 +71,7 @@ mod ModularCompliance {
         module: ContractAddress,
     }
     //#[abi(embed_v0)]
-//impl ModulatComplianceImpl of IModularCompliance<ContractState>{
+//impl ModularComplianceImpl of IModularCompliance<ContractState>{
 //
 //}
 }
