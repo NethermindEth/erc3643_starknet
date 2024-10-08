@@ -15,7 +15,7 @@ pub mod modular {
         pub mod time_exchange_limits_module;
         pub mod time_transfer_limits_module;
         pub mod transfer_fees_module;
-        pub mod transfer_restricted_module;
+        pub mod transfer_restrict_module;
     }
 }
 

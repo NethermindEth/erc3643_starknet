@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait ITransferRestrictedModule<TContractState> {
+trait ITransferRestrictModule<TContractState> {
     fn allow_user(ref self: TContractState, user_address: ContractAddress);
     fn batch_allow_users(ref self: TContractState, user_addresses: Array<ContractAddress>);
     fn disallow_user(ref self: TContractState, user_address: ContractAddress);
