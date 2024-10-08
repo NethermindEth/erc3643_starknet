@@ -8,7 +8,7 @@ trait IRoles<TContractState> {
     fn remove(ref self: TContractState, account: ContractAddress);
     fn has(self: @TContractState, account: ContractAddress) -> bool;
 }
-// is it possible to turn this to a reciving storage pointer, more like lib in solidity
+// might turn this to a reciving storage pointer, more like lib in solidity
 #[starknet::component]
 pub mod RolesComponent {
     use starknet::ContractAddress;
