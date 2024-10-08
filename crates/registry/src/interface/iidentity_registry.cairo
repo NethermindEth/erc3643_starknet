@@ -1,11 +1,7 @@
 use registry::interface::{
-    itrusted_issuers_registry::{
-        ITrustedIssuersRegistryDispatcher, ITrustedIssuersRegistryDispatcherTrait
-    },
-    iidentity_registry_storage::{
-        IIdentityRegistryStorageDispatcher, IIdentityRegistryStorageDispatcherTrait
-    },
-    iclaim_topics_registry::{IClaimTopicsRegistryDispatcher, IClaimTopicsRegistryDispatcherTrait},
+    itrusted_issuers_registry::ITrustedIssuersRegistryDispatcher,
+    iidentity_registry_storage::IIdentityRegistryStorageDispatcher,
+    iclaim_topics_registry::IClaimTopicsRegistryDispatcher,
 };
 use starknet::ContractAddress;
 

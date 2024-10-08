@@ -1,6 +1,6 @@
 #[starknet::contract]
 mod ClaimTopicsRegistry {
-    use registry::interface::iclaim_topics_registry::IClaimTopicsRegistry;
+    //use registry::interface::iclaim_topics_registry::IClaimTopicsRegistry;
 
     #[storage]
     struct Storage {}

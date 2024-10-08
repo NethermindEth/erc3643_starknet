@@ -15,7 +15,8 @@ struct Fee {
 #[starknet::contract]
 mod TransferFeesModule {
     use starknet::ContractAddress;
-    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    };
     use super::{Fee};
 
     #[storage]

@@ -37,10 +37,10 @@ pub trait IConditionalTransferModule<TContractState> {
 
 #[starknet::contract]
 pub mod ConditionalTransferModule {
-    use compliance::modular::imodular_compliance::{
-        IModularComplianceDispatcher, IModularComplianceDispatcherTrait
-    };
-    use starknet::ContractAddress;
+    //use compliance::modular::imodular_compliance::{
+    //    IModularComplianceDispatcher, IModularComplianceDispatcherTrait
+    //};
+    //use starknet::ContractAddress;
 
     #[storage]
     struct Storage {}

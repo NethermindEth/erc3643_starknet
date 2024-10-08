@@ -1,9 +1,10 @@
 #[starknet::component]
 mod BasicComplianceComponent {
-    use compliance::legacy::icompliance::ICompliance;
+    //use compliance::legacy::icompliance::ICompliance;
     // use token::itoken::ITokenDipatcher;
     use starknet::ContractAddress;
-    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    };
 
     #[storage]
     struct Storage {

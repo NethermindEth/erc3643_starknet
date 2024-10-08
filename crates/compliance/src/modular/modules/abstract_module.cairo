@@ -35,7 +35,9 @@ mod AbstractModuleComponent {
             ref self: ComponentState<TContractState>, compliance: ContractAddress
         ) {
             assert!(compliance.is_non_zero(), "compliance address zero");
-            assert!(!self.AbstractModule_compliance_bound.read(compliance), "compliance already bound");
+            assert!(
+                !self.AbstractModule_compliance_bound.read(compliance), "compliance already bound"
+            );
             assert!(
                 starknet::get_caller_address() == compliance, "only compliance contract can call"
             );

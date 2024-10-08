@@ -1,7 +1,7 @@
 #[starknet::contract]
 mod TrustedIssuersRegistry {
-    use registry::interface::itrusted_issuers_registry::{ITrustedIssuersRegistry};
-    use starknet::ContractAddress;
+    //use registry::interface::itrusted_issuers_registry::{ITrustedIssuersRegistry};
+    //use starknet::ContractAddress;
     #[storage]
     struct Storage {}
     #[event]

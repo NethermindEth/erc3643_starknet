@@ -1,8 +1,10 @@
 #[starknet::contract]
 mod TREXGateway {
-    use factory::itrex_gateway::{ITREXGateway, Fee};
+    use factory::itrex_gateway::{ //ITREXGateway,
+    Fee};
     use starknet::ContractAddress;
-    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    };
 
     #[storage]
     struct Storage {

@@ -1,10 +1,11 @@
 #[starknet::contract]
 mod ModularCompliance {
-    use compliance::modular::imodular_compliance::IModularCompliance;
+    //use compliance::modular::imodular_compliance::IModularCompliance;
     use starknet::ContractAddress;
     use starknet::storage::{
-        Vec, VecTrait, MutableVecTrait, Map, StoragePathEntry, StorageMapReadAccess,
-        StorageMapWriteAccess
+        Vec, //VecTrait, MutableVecTrait, 
+         Map, //StoragePathEntry, StorageMapReadAccess,
+        //StorageMapWriteAccess
     };
 
     #[storage]

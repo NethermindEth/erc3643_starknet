@@ -1,6 +1,6 @@
 #[starknet::contract]
 mod IdentityRegistry {
-    use registry::interface::iidentity_registry::IIdentityRegistry;
+    //use registry::interface::iidentity_registry::IIdentityRegistry;
 
     #[storage]
     struct Storage {}

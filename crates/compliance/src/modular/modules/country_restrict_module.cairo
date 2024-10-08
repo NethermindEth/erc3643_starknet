@@ -1,5 +1,3 @@
-use starknet::ContractAddress;
-
 #[starknet::interface]
 trait ICountryRestrictModule<TContractState> {
     fn add_country_restriction(ref self: TContractState, country: u16);
@@ -12,7 +10,8 @@ trait ICountryRestrictModule<TContractState> {
 #[starknet::contract]
 mod CountryRestrictModule {
     use starknet::ContractAddress;
-    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    };
 
     #[storage]
     struct Storage {

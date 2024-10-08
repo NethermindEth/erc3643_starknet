@@ -13,9 +13,9 @@ trait ITransferRestrictModule<TContractState> {
 
 #[starknet::contract]
 mod TransferRestrictModule {
-    use compliance::modular::modules::abstract_module_upgradeable;
     use starknet::ContractAddress;
-    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    };
 
     #[storage]
     struct Storage {

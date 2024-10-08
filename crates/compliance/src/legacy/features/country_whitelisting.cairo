@@ -15,7 +15,8 @@ trait ICountryWhitelisting<TContractState> {
 #[starknet::component]
 mod CountryWhitelistingComponent {
     // use path::to::BasicCompliance;
-    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    };
     #[storage]
     struct Storage {
         CountryWhitelisting_whitelisted_countries: Map<u16, bool>

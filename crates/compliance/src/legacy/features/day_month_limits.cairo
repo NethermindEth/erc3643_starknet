@@ -13,7 +13,8 @@ trait IDayMonthLimits<TContractState> {
 mod DayMonthLimitsComponent {
     // use path::to::BasicCompliance;
     use starknet::ContractAddress;
-    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    };
 
     #[starknet::storage_node]
     struct TransferCounter {

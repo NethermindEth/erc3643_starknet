@@ -15,7 +15,8 @@ trait ICountryRestriction<TContractState> {
 #[starknet::component]
 mod CountryRestrictionComponent {
     // use path::to::BasicCompliance;
-    use starknet::storage::{Map, StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess};
+    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    };
 
     #[storage]
     struct Storage {
