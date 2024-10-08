@@ -1,12 +1,12 @@
 #[starknet::component]
-mod AbstractModule {
+mod AbstractModuleComponent {
     use core::num::traits::Zero;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
 
     #[storage]
     struct Storage {
-        compliance_bound: Map<ContractAddress, bool>
+        AbstractModule_compliance_bound: Map<ContractAddress, bool>
     }
 
     #[event]
@@ -35,13 +35,14 @@ mod AbstractModule {
             ref self: ComponentState<TContractState>, compliance: ContractAddress
         ) {
             assert!(compliance.is_non_zero(), "compliance address zero");
-            assert!(!self.compliance_bound.read(compliance), "compliance already bound");
+            assert!(!self.AbstractModule_compliance_bound.read(compliance), "compliance already bound");
             assert!(
                 starknet::get_caller_address() == compliance, "only compliance contract can call"
             );
-            self.compliance_bound.write(compliance, true);
+            self.AbstractModule_compliance_bound.write(compliance, true);
             self.emit(ComplianceBound { compliance });
         }
+
         fn unbind_compliance(
             ref self: ComponentState<TContractState>, compliance: ContractAddress
         ) {
@@ -50,14 +51,14 @@ mod AbstractModule {
             assert!(
                 starknet::get_caller_address() == compliance, "only compliance contract can call"
             );
-            self.compliance_bound.write(compliance, false);
+            self.AbstractModule_compliance_bound.write(compliance, false);
             self.emit(ComplianceUnbound { compliance });
         }
 
         fn is_compliance_bound(
             self: @ComponentState<TContractState>, compliance: ContractAddress
         ) -> bool {
-            self.compliance_bound.read(compliance)
+            self.AbstractModule_compliance_bound.read(compliance)
         }
 
         fn module_transfer_action(
@@ -96,13 +97,13 @@ mod AbstractModule {
         fn only_bound_compliance(
             self: @ComponentState<TContractState>, compliance: ContractAddress
         ) {
-            assert!(self.compliance_bound.read(compliance), "compliance not bound");
+            assert!(self.AbstractModule_compliance_bound.read(compliance), "compliance not bound");
         }
 
         #[inline]
         fn only_compliance_call(self: @ComponentState<TContractState>) {
             assert!(
-                self.compliance_bound.read(starknet::get_caller_address()),
+                self.AbstractModule_compliance_bound.read(starknet::get_caller_address()),
                 "only bound compliance can call"
             );
         }
