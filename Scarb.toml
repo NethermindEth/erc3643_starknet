@@ -14,14 +14,14 @@ name = "erc3643_starknet"
 version = "0.1.0"
 edition = "2024_07"
 description = "Implementation of the ERC-3643 T-REX protocol on Starknet."
-cairo-version = "2.8.2"
-scarb-version = "2.8.2"
+cairo-version = "2.8.4"
+scarb-version = "2.8.4"
 readme = "README.md"
 
 [workspace.dependencies]
-assert_macros = "2.8.2"
-starknet = "2.8.2"
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.30.0" }
+assert_macros = "2.8.4"
+starknet = "2.8.4"
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.31.0" }
 openzeppelin_token = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.17.0" }
 openzeppelin_access = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.17.0" }
 

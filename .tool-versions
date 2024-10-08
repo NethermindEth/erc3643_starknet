@@ -1,2 +1,3 @@
-scarb 2.8.2
-starknet 2.8.2
+scarb 2.8.4
+starknet 2.8.4
+starknet-foundry 0.31.0
