@@ -84,10 +84,13 @@ mod AbstractModuleComponent {
             to: ContractAddress,
             value: u256
         ) -> bool;
+
         fn can_compliance_bind(
             self: @ComponentState<TContractState>, compliance: ContractAddress
-        ) -> bool; // pure function in solidity
+        ) -> bool;
+
         fn is_plug_and_play(self: @ComponentState<TContractState>) -> bool;
+
         fn name(self: @ComponentState<TContractState>) -> ByteArray;
     }
 
