@@ -30,8 +30,8 @@ dependencies = [
 
 [[package]]
 name = "openzeppelin_access"
-version = "0.17.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.17.0#bf5d02c25c989ccc24f3ab42ec649617d3f21289"
+version = "0.19.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.19.0#8d49e8c445efd9bdc99b050c8b7d11ae5ad19628"
 dependencies = [
  "openzeppelin_introspection",
  "openzeppelin_utils",
@@ -39,13 +39,13 @@ dependencies = [
 
 [[package]]
 name = "openzeppelin_introspection"
-version = "0.17.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.17.0#bf5d02c25c989ccc24f3ab42ec649617d3f21289"
+version = "0.19.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.19.0#8d49e8c445efd9bdc99b050c8b7d11ae5ad19628"
 
 [[package]]
 name = "openzeppelin_utils"
-version = "0.17.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.17.0#bf5d02c25c989ccc24f3ab42ec649617d3f21289"
+version = "0.19.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.19.0#8d49e8c445efd9bdc99b050c8b7d11ae5ad19628"
 
 [[package]]
 name = "registry"
@@ -65,13 +65,13 @@ dependencies = [
 
 [[package]]
 name = "snforge_scarb_plugin"
-version = "0.31.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.31.0#72ea785ca354e9e506de3e5d687da9fb2c1b3c67"
+version = "0.33.0"
+source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.33.0#221b1dbff42d650e9855afd4283508da8f8cacba"
 
 [[package]]
 name = "snforge_std"
-version = "0.31.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.31.0#72ea785ca354e9e506de3e5d687da9fb2c1b3c67"
+version = "0.33.0"
+source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.33.0#221b1dbff42d650e9855afd4283508da8f8cacba"
 dependencies = [
  "snforge_scarb_plugin",
 ]
