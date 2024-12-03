@@ -1,7 +1,6 @@
 # ERC-3643 Starknet
 
-### Starknet Implementation of ERC3643
-
+### Starknet Implementation of ERC3643
 
 ### Solidity References
 - ERC-3643 TREX [github](https://github.com/ERC-3643), [docs](https://www.erc3643.org/)
@@ -10,3 +9,4 @@
     - [ERC725](https://eips.ethereum.org/EIPS/eip-725)
     - [ERC734](https://github.com/ethereum/EIPs/issues/734)
     - [ERC735](https://github.com/ethereum/EIPs/issues/735)
+    - [ONCHAIN_ID_STARKNET](https://github.com/NethermindEth/onchain_id_starknet)
