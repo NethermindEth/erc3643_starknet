@@ -1,4 +1,4 @@
-use compliance::modular::imodular_compliance::IModularComplianceDispatcher;
+use compliance::imodular_compliance::IModularComplianceDispatcher;
 use registry::interface::iidentity_registry::IIdentityRegistryDispatcher;
 use starknet::ContractAddress;
 
@@ -92,7 +92,7 @@ pub trait IToken<TContractState> {
     fn set_onchain_id(ref self: TContractState, onchain_id: ContractAddress);
     fn pause(ref self: TContractState);
     fn unpause(ref self: TContractState);
-    fn set_addreess_frozen(ref self: TContractState, user_address: ContractAddress, freeze: bool);
+    fn set_address_frozen(ref self: TContractState, user_address: ContractAddress, freeze: bool);
     fn freeze_partial_tokens(ref self: TContractState, user_address: ContractAddress, amount: u256);
     fn unfreeze_partial_tokens(
         ref self: TContractState, user_address: ContractAddress, amount: u256
@@ -112,22 +112,28 @@ pub trait IToken<TContractState> {
     ) -> bool;
     fn batch_transfer(
         ref self: TContractState,
-        from_list: Array<ContractAddress>,
-        to_list: Array<ContractAddress>,
-        amounts: Array<u256>
+        from_list: Span<ContractAddress>,
+        to_list: Span<ContractAddress>,
+        amounts: Span<u256>
     );
-    fn batch_mint(ref self: TContractState, to_list: Array<ContractAddress>, amounts: Array<u256>);
+    fn batch_forced_transfer(
+        ref self: TContractState,
+        from_list: Span<ContractAddress>,
+        to_list: Span<ContractAddress>,
+        amounts: Span<u256>
+    );
+    fn batch_mint(ref self: TContractState, to_list: Span<ContractAddress>, amounts: Span<u256>);
     fn batch_burn(
-        ref self: TContractState, user_addresses: Array<ContractAddress>, amounts: Array<u256>
+        ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>
     );
     fn batch_set_address_frozen(
-        ref self: TContractState, user_addresses: Array<ContractAddress>, freeze: Array<bool>
+        ref self: TContractState, user_addresses: Span<ContractAddress>, freeze: Span<bool>
     );
     fn batch_freeze_partial_tokens(
-        ref self: TContractState, user_addresses: Array<ContractAddress>, amounts: Array<u256>
+        ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>
     );
     fn batch_unfreeze_partial_tokens(
-        ref self: TContractState, user_addresses: Array<ContractAddress>, amounts: Array<u256>
+        ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>
     );
     fn decimals(self: @TContractState) -> u8;
     fn name(self: @TContractState) -> ByteArray;

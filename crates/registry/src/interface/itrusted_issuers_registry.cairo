@@ -31,11 +31,11 @@ pub struct ClaimTopicsUpdated {
 #[starknet::interface]
 pub trait ITrustedIssuersRegistry<TContractState> {
     fn add_trusted_issuer(
-        ref self: TContractState, trusted_issuer: ContractAddress, claim_topics: Array<u256>
+        ref self: TContractState, trusted_issuer: ContractAddress, claim_topics: Span<felt252>
     );
     fn remove_trusted_issuer(ref self: TContractState, trusted_issuer: ContractAddress);
     fn update_issuer_claim_topics(
-        ref self: TContractState, trusted_issuer: ContractAddress, claim_topics: Array<felt252>
+        ref self: TContractState, trusted_issuer: ContractAddress, claim_topics: Span<felt252>
     );
     fn get_trusted_issuers(self: @TContractState) -> Array<ContractAddress>;
     fn get_trusted_issuers_for_claim_topic(
