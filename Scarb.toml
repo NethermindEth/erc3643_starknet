@@ -6,7 +6,8 @@ members = [
     "crates/roles",
     "crates/factory",
     "crates/registry",
-    "crates/token"
+    "crates/token",
+    "crates/onchain_id"
 ]
 
 [workspace.package]
