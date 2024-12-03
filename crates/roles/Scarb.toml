@@ -6,6 +6,10 @@ edition = "2024_07"
 [dependencies]
 starknet.workspace = true
 openzeppelin_access.workspace = true
+openzeppelin_introspection.workspace = true
+token =  { path = "../token"}
+registry = { path = "../registry"}
+onchain_id = {path = "../onchain_id"}
 
 [dev-dependencies]
 snforge_std.workspace = true
