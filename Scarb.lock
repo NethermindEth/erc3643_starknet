@@ -4,6 +4,10 @@ version = 1
 [[package]]
 name = "compliance"
 version = "0.1.0"
+dependencies = [
+ "roles",
+ "token",
+]
 
 [[package]]
 name = "dva"

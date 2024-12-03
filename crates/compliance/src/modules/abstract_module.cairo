@@ -1,13 +1,13 @@
 #[starknet::component]
-mod AbstractModuleComponent {
+pub mod AbstractModuleComponent {
     use core::num::traits::Zero;
     use crate::modules::imodule::IModule;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
 
     #[storage]
-    struct Storage {
-        AbstractModule_compliance_bound: Map<ContractAddress, bool>
+    pub struct Storage {
+        pub AbstractModule_compliance_bound: Map<ContractAddress, bool>
     }
 
     #[event]
@@ -32,7 +32,7 @@ mod AbstractModuleComponent {
     pub trait AbstractFunctionsTrait<TContractState> {
         fn module_transfer_action(
             ref self: ComponentState<TContractState>,
-            form: ContractAddress,
+            from: ContractAddress,
             to: ContractAddress,
             value: u256
         );
@@ -46,7 +46,8 @@ mod AbstractModuleComponent {
             self: @ComponentState<TContractState>,
             from: ContractAddress,
             to: ContractAddress,
-            value: u256
+            value: u256,
+            compliance: ContractAddress
         ) -> bool;
         fn can_compliance_bind(
             self: @ComponentState<TContractState>, compliance: ContractAddress
@@ -55,8 +56,8 @@ mod AbstractModuleComponent {
         fn name(self: @ComponentState<TContractState>) -> ByteArray;
     }
 
-    #[abi(AbstractModule)]
-    impl AbstractModuleImpl<
+    #[embeddable_as(AbstractModule)]
+    pub impl AbstractModuleImpl<
         TContractState,
         +HasComponent<TContractState>,
         +Drop<TContractState>,
@@ -96,7 +97,7 @@ mod AbstractModuleComponent {
             ref self: ComponentState<TContractState>,
             from: ContractAddress,
             to: ContractAddress,
-            value: u256
+            value: u256,
         ) {
             AbstractFunctionsTrait::module_transfer_action(ref self, from, to, value);
         }
@@ -117,9 +118,10 @@ mod AbstractModuleComponent {
             self: @ComponentState<TContractState>,
             from: ContractAddress,
             to: ContractAddress,
-            value: u256
+            value: u256,
+            compliance: ContractAddress
         ) -> bool {
-            AbstractFunctionsTrait::module_check(self, from, to, value)
+            AbstractFunctionsTrait::module_check(self, from, to, value, compliance)
         }
 
         fn can_compliance_bind(
@@ -138,7 +140,7 @@ mod AbstractModuleComponent {
     }
 
     #[generate_trait]
-    impl InternalImpl<
+    pub impl InternalImpl<
         TContractState, +Drop<TContractState>, +HasComponent<TContractState>
     > of InternalTrait<TContractState> {
         #[inline]

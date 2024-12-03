@@ -5,6 +5,8 @@ edition = "2024_07"
 
 [dependencies]
 starknet.workspace = true
+token =  { path = "../token"}
+roles = { path = "../roles"}
 
 [[target.starknet-contract]]
 sierra = true
