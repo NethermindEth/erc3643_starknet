@@ -1,6 +1,7 @@
 #[starknet::component]
 mod AbstractModuleComponent {
     use core::num::traits::Zero;
+    use crate::modules::imodule::IModule;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
 
@@ -28,12 +29,40 @@ mod AbstractModuleComponent {
         compliance: ContractAddress,
     }
 
-    pub trait IAbstractModule<
-        TContractState, +HasComponent<TContractState>, +Drop<TContractState>
-    > {
-        fn bind_compliance(
-            ref self: ComponentState<TContractState>, compliance: ContractAddress
-        ) {
+    pub trait AbstractFunctionsTrait<TContractState> {
+        fn module_transfer_action(
+            ref self: ComponentState<TContractState>,
+            form: ContractAddress,
+            to: ContractAddress,
+            value: u256
+        );
+        fn module_mint_action(
+            ref self: ComponentState<TContractState>, to: ContractAddress, value: u256
+        );
+        fn module_burn_action(
+            ref self: ComponentState<TContractState>, from: ContractAddress, value: u256
+        );
+        fn module_check(
+            self: @ComponentState<TContractState>,
+            from: ContractAddress,
+            to: ContractAddress,
+            value: u256
+        ) -> bool;
+        fn can_compliance_bind(
+            self: @ComponentState<TContractState>, compliance: ContractAddress
+        ) -> bool;
+        fn is_plug_and_play(self: @ComponentState<TContractState>) -> bool;
+        fn name(self: @ComponentState<TContractState>) -> ByteArray;
+    }
+
+    #[abi(AbstractModule)]
+    impl AbstractModuleImpl<
+        TContractState,
+        +HasComponent<TContractState>,
+        +Drop<TContractState>,
+        +AbstractFunctionsTrait<TContractState>
+    > of IModule<ComponentState<TContractState>> {
+        fn bind_compliance(ref self: ComponentState<TContractState>, compliance: ContractAddress) {
             assert!(compliance.is_non_zero(), "compliance address zero");
             assert!(
                 !self.AbstractModule_compliance_bound.read(compliance), "compliance already bound"
@@ -65,33 +94,47 @@ mod AbstractModuleComponent {
 
         fn module_transfer_action(
             ref self: ComponentState<TContractState>,
-            form: ContractAddress,
+            from: ContractAddress,
             to: ContractAddress,
             value: u256
-        );
+        ) {
+            AbstractFunctionsTrait::module_transfer_action(ref self, from, to, value);
+        }
 
         fn module_mint_action(
             ref self: ComponentState<TContractState>, to: ContractAddress, value: u256
-        );
+        ) {
+            AbstractFunctionsTrait::module_mint_action(ref self, to, value);
+        }
 
         fn module_burn_action(
             ref self: ComponentState<TContractState>, from: ContractAddress, value: u256
-        );
+        ) {
+            AbstractFunctionsTrait::module_burn_action(ref self, from, value);
+        }
 
         fn module_check(
             self: @ComponentState<TContractState>,
             from: ContractAddress,
             to: ContractAddress,
             value: u256
-        ) -> bool;
+        ) -> bool {
+            AbstractFunctionsTrait::module_check(self, from, to, value)
+        }
 
         fn can_compliance_bind(
             self: @ComponentState<TContractState>, compliance: ContractAddress
-        ) -> bool;
+        ) -> bool {
+            AbstractFunctionsTrait::can_compliance_bind(self, compliance)
+        }
 
-        fn is_plug_and_play(self: @ComponentState<TContractState>) -> bool;
+        fn is_plug_and_play(self: @ComponentState<TContractState>) -> bool {
+            AbstractFunctionsTrait::is_plug_and_play(self)
+        }
 
-        fn name(self: @ComponentState<TContractState>) -> ByteArray;
+        fn name(self: @ComponentState<TContractState>) -> ByteArray {
+            AbstractFunctionsTrait::name(self)
+        }
     }
 
     #[generate_trait]

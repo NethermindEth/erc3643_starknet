@@ -20,7 +20,7 @@ pub mod AgentRoleComponent {
 
     #[storage]
     pub struct Storage {
-        agents: Map<ContractAddress, bool>
+        AgentRole_agents: Map<ContractAddress, bool>
     }
 
     #[event]
@@ -51,18 +51,18 @@ pub mod AgentRoleComponent {
             let ownable_comp = get_dep_component!(@self, Ownable);
             ownable_comp.assert_only_owner();
             assert(agent.is_non_zero(), 'Agent address zero!');
-            self.agents.entry(agent).write(true);
+            self.AgentRole_agents.entry(agent).write(true);
         }
 
         fn remove_agent(ref self: ComponentState<TContractState>, agent: ContractAddress) {
             let ownable_comp = get_dep_component!(@self, Ownable);
             ownable_comp.assert_only_owner();
             assert(agent.is_non_zero(), 'Agent address zero!');
-            self.agents.entry(agent).write(false);
+            self.AgentRole_agents.entry(agent).write(false);
         }
 
         fn is_agent(self: @ComponentState<TContractState>, agent: ContractAddress) -> bool {
-            self.agents.entry(agent).read()
+            self.AgentRole_agents.entry(agent).read()
         }
     }
 
@@ -72,7 +72,7 @@ pub mod AgentRoleComponent {
     > of InternalTrait<TContractState> {
         fn assert_only_agent(self: @ComponentState<TContractState>) {
             assert(
-                self.agents.entry(starknet::get_caller_address()).read(),
+                self.AgentRole_agents.entry(starknet::get_caller_address()).read(),
                 'Caller does not have agent role'
             );
         }

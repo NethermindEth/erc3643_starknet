@@ -5,7 +5,7 @@ pub trait IModule<TContractState> {
     fn bind_compliance(ref self: TContractState, compliance: ContractAddress);
     fn unbind_compliance(ref self: TContractState, compliance: ContractAddress);
     fn module_transfer_action(
-        ref self: TContractState, form: ContractAddress, to: ContractAddress, value: u256
+        ref self: TContractState, from: ContractAddress, to: ContractAddress, value: u256
     );
     fn module_mint_action(ref self: TContractState, to: ContractAddress, value: u256);
     fn module_burn_action(ref self: TContractState, from: ContractAddress, value: u256);
