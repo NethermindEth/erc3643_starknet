@@ -43,6 +43,7 @@ mod CountryRestrictModule {
     #[abi(embed_v0)]
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
+
     #[storage]
     struct Storage {
         restricted_countries: Map<ContractAddress, Map<u16, bool>>,
@@ -81,6 +82,11 @@ mod CountryRestrictModule {
         country: u16
     }
 
+    pub mod Errors {
+        pub const COUNTRY_ALREADY_RESTRICTED: felt252 = 'Country already restricted';
+        pub const COUNTRY_NOT_RESTRICTED: felt252 = 'Country is not restricted';
+        pub const MAX_COUNTRIES_EXCEEDED: felt252 = 'Max 195 country in one batch';
+    }
 
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress) {
@@ -178,7 +184,7 @@ mod CountryRestrictModule {
                 .restricted_countries
                 .entry(caller)
                 .entry(country);
-            assert(!country_restriction_storage_path.read(), 'Country already restricted');
+            assert(!country_restriction_storage_path.read(), Errors::COUNTRY_ALREADY_RESTRICTED);
             country_restriction_storage_path.write(true);
             self.emit(AddedRestrictedCountry { compliance: caller, country });
         }
@@ -190,7 +196,7 @@ mod CountryRestrictModule {
                 .restricted_countries
                 .entry(caller)
                 .entry(country);
-            assert(country_restriction_storage_path.read(), 'Country is not restricted');
+            assert(country_restriction_storage_path.read(), Errors::COUNTRY_NOT_RESTRICTED);
             country_restriction_storage_path.write(false);
             self.emit(RemovedRestrictedCountry { compliance: caller, country });
         }
@@ -198,11 +204,11 @@ mod CountryRestrictModule {
         fn batch_restrict_countries(ref self: ContractState, countries: Span<u16>) {
             self.abstract_module.only_compliance_call();
             let caller = starknet::get_caller_address();
-            assert(countries.len() < 195, 'max 195 country in one batch');
+            assert(countries.len() < 195, Errors::MAX_COUNTRIES_EXCEEDED);
             let compliance_restrictions_storage_path = self.restricted_countries.entry(caller);
             for country in countries {
                 let restricted_storage_path = compliance_restrictions_storage_path.entry(*country);
-                assert(!restricted_storage_path.read(), 'Country already restricted');
+                assert(!restricted_storage_path.read(), Errors::COUNTRY_ALREADY_RESTRICTED);
                 restricted_storage_path.write(true);
                 self.emit(AddedRestrictedCountry { compliance: caller, country: *country });
             };
@@ -211,11 +217,11 @@ mod CountryRestrictModule {
         fn batch_unrestrict_countries(ref self: ContractState, countries: Span<u16>) {
             self.abstract_module.only_compliance_call();
             let caller = starknet::get_caller_address();
-            assert(countries.len() < 195, 'max 195 country in one batch');
+            assert(countries.len() < 195, Errors::MAX_COUNTRIES_EXCEEDED);
             let compliance_restrictions_storage_path = self.restricted_countries.entry(caller);
             for country in countries {
                 let restricted_storage_path = compliance_restrictions_storage_path.entry(*country);
-                assert(restricted_storage_path.read(), 'Country is not restricted');
+                assert(restricted_storage_path.read(), Errors::COUNTRY_NOT_RESTRICTED);
                 restricted_storage_path.write(false);
                 self.emit(RemovedRestrictedCountry { compliance: caller, country: *country });
             };
@@ -227,6 +233,7 @@ mod CountryRestrictModule {
             self.restricted_countries.entry(compliance).entry(country).read()
         }
     }
+
     #[generate_trait]
     impl InternalImpl of InternalTrait {
         fn get_country(
