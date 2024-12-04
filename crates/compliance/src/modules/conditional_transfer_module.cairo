@@ -44,8 +44,10 @@ pub mod ConditionalTransferModule {
             AbstractModuleComponent, AbstractModuleComponent::AbstractFunctionsTrait
         }
     };
+    use openzeppelin_access::ownable::OwnableComponent;
+    use openzeppelin_upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
     use starknet::{
-        ContractAddress,
+        ContractAddress, ClassHash,
         storage::{Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry}
     };
 
@@ -55,11 +57,25 @@ pub mod ConditionalTransferModule {
     impl ModuleImpl = AbstractModuleComponent::AbstractModule<ContractState>;
     impl AbstractModuleInternalImpl = AbstractModuleComponent::InternalImpl<ContractState>;
 
+    component!(path: UpgradeableComponent, storage: upgrades, event: UpgradeableEvent);
+
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+
+    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+
+    #[abi(embed_v0)]
+    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
+    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
+
     #[storage]
     struct Storage {
         transfers_approved: Map<ContractAddress, Map<felt252, u256>>,
         #[substorage(v0)]
-        abstract_module: AbstractModuleComponent::Storage
+        abstract_module: AbstractModuleComponent::Storage,
+        #[substorage(v0)]
+        upgrades: UpgradeableComponent::Storage,
+        #[substorage(v0)]
+        ownable: OwnableComponent::Storage
     }
 
     #[event]
@@ -68,7 +84,11 @@ pub mod ConditionalTransferModule {
         TransferApproved: TransferApproved,
         ApprovalRemoved: ApprovalRemoved,
         #[flat]
-        AbstractModuleEvent: AbstractModuleComponent::Event
+        AbstractModuleEvent: AbstractModuleComponent::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event,
+        #[flat]
+        OwnableEvent: OwnableComponent::Event
     }
 
     #[derive(Drop, starknet::Event)]
@@ -85,6 +105,29 @@ pub mod ConditionalTransferModule {
         to: ContractAddress,
         amount: u256,
         token: ContractAddress,
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, owner: ContractAddress) {
+        self.ownable.initializer(owner);
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        /// Upgrades the implementation used by this contract.
+        ///
+        /// # Arguments
+        ///
+        /// - `new_class_hash` A `ClassHash` representing the implementation to update to.
+        ///
+        /// # Requirements
+        ///
+        /// - This function can only be called by the xerc20 owner.
+        /// - The `ClassHash` should already have been declared.
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.upgrades.upgrade(new_class_hash);
+        }
     }
 
     impl AbstractFunctionsImpl of AbstractFunctionsTrait<ContractState> {
