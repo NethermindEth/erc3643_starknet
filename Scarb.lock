@@ -45,7 +45,8 @@ dependencies = [
 [[package]]
 name = "openzeppelin_access"
 version = "0.19.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.19.0#8d49e8c445efd9bdc99b050c8b7d11ae5ad19628"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:0f5055ef443327bb613a56a812ccf31157abfd7d36a18739556f78b67f5b1116"
 dependencies = [
  "openzeppelin_introspection",
  "openzeppelin_utils",
@@ -54,17 +55,20 @@ dependencies = [
 [[package]]
 name = "openzeppelin_introspection"
 version = "0.19.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.19.0#8d49e8c445efd9bdc99b050c8b7d11ae5ad19628"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:a1dda07a91c447b83ccfcc4895897ec134917f0ff6d2ca876b93ea27466d7693"
 
 [[package]]
 name = "openzeppelin_upgrades"
 version = "0.19.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.19.0#8d49e8c445efd9bdc99b050c8b7d11ae5ad19628"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:3f2badf764a2219b0ea5b567b039daeb4c1707331f98e4f7b985ca2b562b4e10"
 
 [[package]]
 name = "openzeppelin_utils"
 version = "0.19.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.19.0#8d49e8c445efd9bdc99b050c8b7d11ae5ad19628"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:0e0e6f6b20b3c4075b92941a2c124430a59f1c207f8fbdfd56ce9239e6d666a8"
 
 [[package]]
 name = "registry"
@@ -88,13 +92,15 @@ dependencies = [
 
 [[package]]
 name = "snforge_scarb_plugin"
-version = "0.33.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.33.0#221b1dbff42d650e9855afd4283508da8f8cacba"
+version = "0.34.0"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:56f2b06ff2f0d8bbdfb7fb6c211fba7e4da6e5334ea70ba849af329a739faf11"
 
 [[package]]
 name = "snforge_std"
-version = "0.33.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.33.0#221b1dbff42d650e9855afd4283508da8f8cacba"
+version = "0.34.0"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:bd20964bde07e6fd0f7adb50d41216f05d66abd422ed82241030369333385876"
 dependencies = [
  "snforge_scarb_plugin",
 ]
