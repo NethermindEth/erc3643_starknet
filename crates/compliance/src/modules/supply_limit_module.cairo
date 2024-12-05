@@ -9,7 +9,7 @@ trait ISupplyLimitModule<TContractState> {
 #[starknet::contract]
 mod SupplyLimitModule {
     use starknet::ContractAddress;
-    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    use starknet::storage::{Map //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
     };
     #[storage]
     struct Storage {
@@ -19,12 +19,12 @@ mod SupplyLimitModule {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-        SupplyLimitSet: SupplyLimitSet
+        SupplyLimitSet: SupplyLimitSet,
     }
 
     #[derive(Drop, starknet::Event)]
     struct SupplyLimitSet {
         compliance: ContractAddress,
-        limit: u256
+        limit: u256,
     }
 }

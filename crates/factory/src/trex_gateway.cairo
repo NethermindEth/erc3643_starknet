@@ -3,7 +3,7 @@ mod TREXGateway {
     use factory::itrex_gateway::{ //ITREXGateway,
     Fee};
     use starknet::ContractAddress;
-    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    use starknet::storage::{Map //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
     };
 
     #[storage]
@@ -13,7 +13,7 @@ mod TREXGateway {
         deploymeny_fee: Fee,
         deployment_fee_enabled: bool,
         deployers: Map<ContractAddress, bool>,
-        fee_discount: Map<ContractAddress, u16>
+        fee_discount: Map<ContractAddress, u16>,
     }
 
     #[event]

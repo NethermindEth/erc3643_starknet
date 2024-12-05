@@ -8,14 +8,14 @@ pub trait IdentityABI<TContractState> {
         identity: ContractAddress,
         claim_topic: felt252,
         signature: Signature,
-        data: ByteArray
+        data: ByteArray,
     ) -> bool;
     // IERC734
     fn add_key(ref self: TContractState, key: felt252, purpose: felt252, key_type: felt252) -> bool;
     fn remove_key(ref self: TContractState, key: felt252, purpose: felt252) -> bool;
     fn approve(ref self: TContractState, execution_id: felt252, approve: bool) -> bool;
     fn execute(
-        ref self: TContractState, to: ContractAddress, selector: felt252, calldata: Span<felt252>
+        ref self: TContractState, to: ContractAddress, selector: felt252, calldata: Span<felt252>,
     ) -> felt252;
     fn get_key(ref self: TContractState, key: felt252) -> (Span<felt252>, felt252, felt252);
     fn get_key_purposes(ref self: TContractState, key: felt252) -> Span<felt252>;
@@ -29,11 +29,11 @@ pub trait IdentityABI<TContractState> {
         issuer: ContractAddress,
         signature: Signature,
         data: ByteArray,
-        uri: ByteArray
+        uri: ByteArray,
     ) -> felt252;
     fn remove_claim(ref self: TContractState, claim_id: felt252) -> bool;
     fn get_claim(
-        ref self: TContractState, claim_id: felt252
+        ref self: TContractState, claim_id: felt252,
     ) -> (felt252, felt252, ContractAddress, Signature, ByteArray, ByteArray);
     fn get_claim_ids_by_topics(ref self: TContractState, topic: felt252) -> Array<felt252>;
 }

@@ -11,23 +11,23 @@ pub trait IAgentRole<TState> {
 pub mod AgentRoleComponent {
     use core::num::traits::Zero;
     use openzeppelin_access::ownable::{
-        OwnableComponent, OwnableComponent::InternalTrait as OwnableInternalTrait
+        OwnableComponent, OwnableComponent::InternalTrait as OwnableInternalTrait,
     };
     use starknet::{
         ContractAddress,
-        storage::{Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry}
+        storage::{Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess},
     };
 
     #[storage]
     pub struct Storage {
-        AgentRole_agents: Map<ContractAddress, bool>
+        AgentRole_agents: Map<ContractAddress, bool>,
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
         AgentAdded: AgentAdded,
-        AgentRemoved: AgentRemoved
+        AgentRemoved: AgentRemoved,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -45,7 +45,7 @@ pub mod AgentRoleComponent {
         TContractState,
         +HasComponent<TContractState>,
         impl Ownable: OwnableComponent::HasComponent<TContractState>,
-        +Drop<TContractState>
+        +Drop<TContractState>,
     > of super::IAgentRole<ComponentState<TContractState>> {
         fn add_agent(ref self: ComponentState<TContractState>, agent: ContractAddress) {
             let ownable_comp = get_dep_component!(@self, Ownable);
@@ -68,12 +68,12 @@ pub mod AgentRoleComponent {
 
     #[generate_trait]
     pub impl InternalImpl<
-        TContractState, +HasComponent<TContractState>, +Drop<TContractState>
+        TContractState, +HasComponent<TContractState>, +Drop<TContractState>,
     > of InternalTrait<TContractState> {
         fn assert_only_agent(self: @ComponentState<TContractState>) {
             assert(
                 self.AgentRole_agents.entry(starknet::get_caller_address()).read(),
-                'Caller does not have agent role'
+                'Caller does not have agent role',
             );
         }
     }

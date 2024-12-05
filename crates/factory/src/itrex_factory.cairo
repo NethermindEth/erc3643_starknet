@@ -20,14 +20,14 @@ pub enum TREXFactoryEvent {
     Deployed: Deployed,
     IdFactorySet: IdFactorySet,
     ImplementationAuthoritySet: ImplementationAuthoritySet,
-    TREXSuiteDeployed: TREXSuiteDeployed
+    TREXSuiteDeployed: TREXSuiteDeployed,
 }
 
 #[derive(Serde, Drop)]
 pub struct ClaimDetails {
     claim_topics: Array<u256>,
     issuers: Array<ContractAddress>,
-    issuer_claims: Array<Array<u256>>
+    issuer_claims: Array<Array<u256>>,
 }
 
 #[derive(Drop, starknet::Event)]
@@ -55,7 +55,7 @@ pub struct TREXSuiteDeployed {
     tir: ContractAddress,
     ctr: ContractAddress,
     mc: ContractAddress,
-    salt: ByteArray
+    salt: ByteArray,
 }
 
 
@@ -67,10 +67,10 @@ pub trait ITREXFactory<TContractState> {
         ref self: TContractState,
         salt: ByteArray,
         token_details: TokenDetails,
-        claim_details: ClaimDetails
+        claim_details: ClaimDetails,
     );
     fn recover_contract_ownership(
-        ref self: TContractState, contract: ContractAddress, new_owner: ContractAddress
+        ref self: TContractState, contract: ContractAddress, new_owner: ContractAddress,
     );
     fn get_implementation_authority(self: @TContractState) -> ContractAddress;
     fn get_id_factory(self: @TContractState) -> ContractAddress;

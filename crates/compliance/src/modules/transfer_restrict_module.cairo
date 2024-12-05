@@ -7,20 +7,20 @@ trait ITransferRestrictModule<TContractState> {
     fn disallow_user(ref self: TContractState, user_address: ContractAddress);
     fn batch_disallow_users(ref self: TContractState, user_addresses: Span<ContractAddress>);
     fn is_user_allowed(
-        self: @TContractState, compliance: ContractAddress, user_address: ContractAddress
+        self: @TContractState, compliance: ContractAddress, user_address: ContractAddress,
     ) -> bool;
 }
 
 #[starknet::contract]
 mod TransferRestrictModule {
     use crate::modules::abstract_module::{
-        AbstractModuleComponent, AbstractModuleComponent::AbstractFunctionsTrait
+        AbstractModuleComponent, AbstractModuleComponent::AbstractFunctionsTrait,
     };
     use openzeppelin_access::ownable::OwnableComponent;
     use openzeppelin_upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
     use starknet::{
-        ContractAddress, ClassHash,
-        storage::{Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess}
+        ClassHash, ContractAddress,
+        storage::{Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess},
     };
 
     component!(path: AbstractModuleComponent, storage: abstract_module, event: AbstractModuleEvent);
@@ -47,7 +47,7 @@ mod TransferRestrictModule {
         #[substorage(v0)]
         upgrades: UpgradeableComponent::Storage,
         #[substorage(v0)]
-        ownable: OwnableComponent::Storage
+        ownable: OwnableComponent::Storage,
     }
 
     #[event]
@@ -60,19 +60,19 @@ mod TransferRestrictModule {
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
         #[flat]
-        OwnableEvent: OwnableComponent::Event
+        OwnableEvent: OwnableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
     struct UserAllowed {
         compliance: ContractAddress,
-        user_address: ContractAddress
+        user_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     struct UserDisallowed {
         compliance: ContractAddress,
-        user_address: ContractAddress
+        user_address: ContractAddress,
     }
 
     #[constructor]
@@ -103,10 +103,10 @@ mod TransferRestrictModule {
             ref self: AbstractModuleComponent::ComponentState<ContractState>,
             from: ContractAddress,
             to: ContractAddress,
-            value: u256
+            value: u256,
         ) {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self
+                ref self,
             );
             contract_state.abstract_module.only_compliance_call();
         }
@@ -114,10 +114,10 @@ mod TransferRestrictModule {
         fn module_mint_action(
             ref self: AbstractModuleComponent::ComponentState<ContractState>,
             to: ContractAddress,
-            value: u256
+            value: u256,
         ) {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self
+                ref self,
             );
             contract_state.abstract_module.only_compliance_call();
         }
@@ -125,10 +125,10 @@ mod TransferRestrictModule {
         fn module_burn_action(
             ref self: AbstractModuleComponent::ComponentState<ContractState>,
             from: ContractAddress,
-            value: u256
+            value: u256,
         ) {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self
+                ref self,
             );
             contract_state.abstract_module.only_compliance_call();
         }
@@ -138,7 +138,7 @@ mod TransferRestrictModule {
             from: ContractAddress,
             to: ContractAddress,
             value: u256,
-            compliance: ContractAddress
+            compliance: ContractAddress,
         ) -> bool {
             let contract_state = AbstractModuleComponent::HasComponent::get_contract(self);
             if contract_state.allowed_users.entry(compliance).entry(from).read() {
@@ -149,7 +149,7 @@ mod TransferRestrictModule {
 
         fn can_compliance_bind(
             self: @AbstractModuleComponent::ComponentState<ContractState>,
-            compliance: ContractAddress
+            compliance: ContractAddress,
         ) -> bool {
             true
         }
@@ -200,7 +200,7 @@ mod TransferRestrictModule {
         }
 
         fn is_user_allowed(
-            self: @ContractState, compliance: ContractAddress, user_address: ContractAddress
+            self: @ContractState, compliance: ContractAddress, user_address: ContractAddress,
         ) -> bool {
             self.allowed_users.entry(starknet::get_caller_address()).entry(user_address).read()
         }

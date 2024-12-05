@@ -8,7 +8,7 @@ trait ICountryAllowModule<TContractState> {
     fn remove_allowed_country(ref self: TContractState, country: u16);
     fn is_country_allowed(self: @TContractState, compliance: ContractAddress, country: u16) -> bool;
     fn compliance_check_on_country_whitelisting(
-        self: @TContractState, from: ContractAddress, to: ContractAddress, amount: u256
+        self: @TContractState, from: ContractAddress, to: ContractAddress, amount: u256,
     ) -> bool;
 }
 
@@ -17,15 +17,15 @@ mod CountryAllowModule {
     use crate::{
         imodular_compliance::{IModularComplianceDispatcher, IModularComplianceDispatcherTrait},
         modules::abstract_module::{
-            AbstractModuleComponent, AbstractModuleComponent::AbstractFunctionsTrait
-        }
+            AbstractModuleComponent, AbstractModuleComponent::AbstractFunctionsTrait,
+        },
     };
     use openzeppelin_access::ownable::OwnableComponent;
     use openzeppelin_upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
     use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
     use starknet::{
-        ContractAddress, ClassHash,
-        storage::{Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess}
+        ClassHash, ContractAddress,
+        storage::{Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess},
     };
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
 
@@ -53,7 +53,7 @@ mod CountryAllowModule {
         #[substorage(v0)]
         upgrades: UpgradeableComponent::Storage,
         #[substorage(v0)]
-        ownable: OwnableComponent::Storage
+        ownable: OwnableComponent::Storage,
     }
 
     #[event]
@@ -66,21 +66,21 @@ mod CountryAllowModule {
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
         #[flat]
-        OwnableEvent: OwnableComponent::Event
+        OwnableEvent: OwnableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
     struct CountryAllowed {
         #[key]
         compliance: ContractAddress,
-        country: u16
+        country: u16,
     }
 
     #[derive(Drop, starknet::Event)]
     struct CountryUnallowed {
         #[key]
         compliance: ContractAddress,
-        country: u16
+        country: u16,
     }
 
     pub mod Errors {
@@ -117,10 +117,10 @@ mod CountryAllowModule {
             ref self: AbstractModuleComponent::ComponentState<ContractState>,
             from: ContractAddress,
             to: ContractAddress,
-            value: u256
+            value: u256,
         ) {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self
+                ref self,
             );
             contract_state.abstract_module.only_compliance_call();
         }
@@ -128,10 +128,10 @@ mod CountryAllowModule {
         fn module_mint_action(
             ref self: AbstractModuleComponent::ComponentState<ContractState>,
             to: ContractAddress,
-            value: u256
+            value: u256,
         ) {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self
+                ref self,
             );
             contract_state.abstract_module.only_compliance_call();
         }
@@ -139,10 +139,10 @@ mod CountryAllowModule {
         fn module_burn_action(
             ref self: AbstractModuleComponent::ComponentState<ContractState>,
             from: ContractAddress,
-            value: u256
+            value: u256,
         ) {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self
+                ref self,
             );
             contract_state.abstract_module.only_compliance_call();
         }
@@ -152,7 +152,7 @@ mod CountryAllowModule {
             from: ContractAddress,
             to: ContractAddress,
             value: u256,
-            compliance: ContractAddress
+            compliance: ContractAddress,
         ) -> bool {
             let contract_state = AbstractModuleComponent::HasComponent::get_contract(self);
             let receiver_country = contract_state.get_country(compliance, to);
@@ -161,7 +161,7 @@ mod CountryAllowModule {
 
         fn can_compliance_bind(
             self: @AbstractModuleComponent::ComponentState<ContractState>,
-            compliance: ContractAddress
+            compliance: ContractAddress,
         ) -> bool {
             true
         }
@@ -229,13 +229,13 @@ mod CountryAllowModule {
         }
 
         fn is_country_allowed(
-            self: @ContractState, compliance: ContractAddress, country: u16
+            self: @ContractState, compliance: ContractAddress, country: u16,
         ) -> bool {
             self.allowed_countries.entry(compliance).entry(country).read()
         }
 
         fn compliance_check_on_country_whitelisting(
-            self: @ContractState, from: ContractAddress, to: ContractAddress, amount: u256
+            self: @ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
         ) -> bool {
             true
         }
@@ -244,11 +244,11 @@ mod CountryAllowModule {
     #[generate_trait]
     impl InternalImpl of InternalTrait {
         fn get_country(
-            self: @ContractState, compliance: ContractAddress, user_address: ContractAddress
+            self: @ContractState, compliance: ContractAddress, user_address: ContractAddress,
         ) -> u16 {
             ITokenDispatcher {
                 contract_address: IModularComplianceDispatcher { contract_address: compliance }
-                    .get_token_bound()
+                    .get_token_bound(),
             }
                 .identity_registry()
                 .investor_country(user_address)

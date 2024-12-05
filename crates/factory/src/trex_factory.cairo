@@ -2,7 +2,7 @@
 mod TREXFactory {
     //use factory::itrex_factory::{ITREXFactory, TokenDetails, ClaimDetails, TREXFactoryEvent};
     use starknet::ContractAddress;
-    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    use starknet::storage::{Map //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
     };
 
     #[storage]
@@ -20,6 +20,6 @@ mod TREXFactory {
     fn constructor(
         ref self: ContractState,
         implementation_authority: ContractAddress,
-        id_factory: ContractAddress
+        id_factory: ContractAddress,
     ) {}
 }

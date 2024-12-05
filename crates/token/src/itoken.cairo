@@ -13,7 +13,7 @@ pub enum Event {
     TokensFrozen: TokensFrozen,
     TokensUnfrozen: TokensUnfrozen,
     Paused: Paused,
-    Unpaused: Unpaused
+    Unpaused: Unpaused,
 }
 
 #[derive(Drop, starknet::Event)]
@@ -25,7 +25,7 @@ pub struct UpdatedTokenInformation {
     new_decimals: u8,
     new_version: ByteArray,
     #[key]
-    new_onchain_id: ContractAddress
+    new_onchain_id: ContractAddress,
 }
 
 #[derive(Drop, starknet::Event)]
@@ -47,7 +47,7 @@ pub struct RecoverySuccess {
     #[key]
     new_wallet: ContractAddress,
     #[key]
-    investor_onchain_id: ContractAddress
+    investor_onchain_id: ContractAddress,
 }
 
 #[derive(Drop, starknet::Event)]
@@ -57,21 +57,21 @@ pub struct AddressFrozen {
     #[key]
     is_frozen: bool,
     #[key]
-    owner: ContractAddress
+    owner: ContractAddress,
 }
 
 #[derive(Drop, starknet::Event)]
 pub struct TokensFrozen {
     #[key]
     user_address: ContractAddress,
-    amount: u256
+    amount: u256,
 }
 
 #[derive(Drop, starknet::Event)]
 pub struct TokensUnfrozen {
     #[key]
     user_address: ContractAddress,
-    amount: u256
+    amount: u256,
 }
 
 #[derive(Drop, starknet::Event)]
@@ -95,12 +95,12 @@ pub trait IToken<TContractState> {
     fn set_address_frozen(ref self: TContractState, user_address: ContractAddress, freeze: bool);
     fn freeze_partial_tokens(ref self: TContractState, user_address: ContractAddress, amount: u256);
     fn unfreeze_partial_tokens(
-        ref self: TContractState, user_address: ContractAddress, amount: u256
+        ref self: TContractState, user_address: ContractAddress, amount: u256,
     );
     fn set_identity_registry(ref self: TContractState, identity_registry: ContractAddress);
     fn set_compliance(ref self: TContractState, compliance: ContractAddress);
     fn forced_transfer(
-        ref self: TContractState, from: ContractAddress, to: ContractAddress, amount: u256
+        ref self: TContractState, from: ContractAddress, to: ContractAddress, amount: u256,
     ) -> bool;
     fn mint(ref self: TContractState, to: ContractAddress, amount: u256);
     fn burn(ref self: TContractState, user_address: ContractAddress, amount: u256);
@@ -108,32 +108,32 @@ pub trait IToken<TContractState> {
         ref self: TContractState,
         lost_wallet: ContractAddress,
         new_wallet: ContractAddress,
-        investor_onchain_id: ContractAddress
+        investor_onchain_id: ContractAddress,
     ) -> bool;
     fn batch_transfer(
         ref self: TContractState,
         from_list: Span<ContractAddress>,
         to_list: Span<ContractAddress>,
-        amounts: Span<u256>
+        amounts: Span<u256>,
     );
     fn batch_forced_transfer(
         ref self: TContractState,
         from_list: Span<ContractAddress>,
         to_list: Span<ContractAddress>,
-        amounts: Span<u256>
+        amounts: Span<u256>,
     );
     fn batch_mint(ref self: TContractState, to_list: Span<ContractAddress>, amounts: Span<u256>);
     fn batch_burn(
-        ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>
+        ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>,
     );
     fn batch_set_address_frozen(
-        ref self: TContractState, user_addresses: Span<ContractAddress>, freeze: Span<bool>
+        ref self: TContractState, user_addresses: Span<ContractAddress>, freeze: Span<bool>,
     );
     fn batch_freeze_partial_tokens(
-        ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>
+        ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>,
     );
     fn batch_unfreeze_partial_tokens(
-        ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>
+        ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>,
     );
     fn decimals(self: @TContractState) -> u8;
     fn name(self: @TContractState) -> ByteArray;

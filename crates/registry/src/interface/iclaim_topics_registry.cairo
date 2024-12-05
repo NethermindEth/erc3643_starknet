@@ -9,7 +9,7 @@ pub trait IClaimTopicsRegistry<TContractState> {
 #[derive(Drop, starknet::Event)]
 pub enum Event {
     ClaimTopicAddded: ClaimTopicAddded,
-    ClaimTopicRemoved: ClaimTopicRemoved
+    ClaimTopicRemoved: ClaimTopicRemoved,
 }
 
 #[derive(Drop, starknet::Event)]

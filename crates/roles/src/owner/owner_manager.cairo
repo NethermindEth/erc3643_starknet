@@ -3,20 +3,20 @@ mod OwnerManager {
     use core::poseidon::poseidon_hash_span;
     use crate::{
         OwnerRoles, agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait},
-        owner::iowner_manager::IOwnerManager
+        owner::iowner_manager::IOwnerManager,
     };
     use onchain_id::iidentity::{IdentityABIDispatcher, IdentityABIDispatcherTrait};
     use openzeppelin_access::{
         accesscontrol::AccessControlComponent,
-        ownable::{OwnableComponent, interface::{IOwnableDispatcher, IOwnableDispatcherTrait}}
+        ownable::{OwnableComponent, interface::{IOwnableDispatcher, IOwnableDispatcherTrait}},
     };
     use openzeppelin_introspection::src5::SRC5Component;
     use registry::interface::{
-        iidentity_registry::IIdentityRegistryDispatcherTrait,
         iclaim_topics_registry::IClaimTopicsRegistryDispatcherTrait,
-        itrusted_issuers_registry::ITrustedIssuersRegistryDispatcherTrait
+        iidentity_registry::IIdentityRegistryDispatcherTrait,
+        itrusted_issuers_registry::ITrustedIssuersRegistryDispatcherTrait,
     };
-    use starknet::{storage::{StoragePointerReadAccess, StoragePointerWriteAccess}, ContractAddress};
+    use starknet::{ContractAddress, storage::{StoragePointerReadAccess, StoragePointerWriteAccess}};
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
 
     // Ownable Component
@@ -49,7 +49,7 @@ mod OwnerManager {
         #[substorage(v0)]
         access: AccessControlComponent::Storage,
         #[substorage(v0)]
-        ownable: OwnableComponent::Storage
+        ownable: OwnableComponent::Storage,
     }
 
     #[event]
@@ -61,14 +61,14 @@ mod OwnerManager {
         #[flat]
         SRC5Event: SRC5Component::Event,
         #[flat]
-        OwnableEvent: OwnableComponent::Event
+        OwnableEvent: OwnableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
     struct ComplianceInteraction {
         #[key]
         target: ContractAddress,
-        selector: felt252
+        selector: felt252,
     }
 
     pub mod Errors {
@@ -107,32 +107,32 @@ mod OwnerManager {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::REGISTRY_ADDRESS_SETTER, onchain_id),
-                Errors::NOT_REGISTRY_ADDRESS_SETTER
+                Errors::NOT_REGISTRY_ADDRESS_SETTER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().set_identity_registry(identity_registry);
         }
 
         fn call_set_compliance(
-            ref self: ContractState, compliance: ContractAddress, onchain_id: ContractAddress
+            ref self: ContractState, compliance: ContractAddress, onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::COMPLIANCE_SETTER, onchain_id),
-                Errors::NOT_COMPLIANCE_SETTER
+                Errors::NOT_COMPLIANCE_SETTER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().set_compliance(compliance);
         }
@@ -141,19 +141,19 @@ mod OwnerManager {
             ref self: ContractState,
             selector: felt252,
             calldata: Span<felt252>,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::COMPLIANCE_MANAGER, onchain_id),
-                Errors::NOT_COMPLIANCE_MANAGER
+                Errors::NOT_COMPLIANCE_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             let target_address = self.token.read().compliance().contract_address;
             starknet::syscalls::call_contract_syscall(target_address, selector, calldata).unwrap();
@@ -161,55 +161,55 @@ mod OwnerManager {
         }
 
         fn call_set_token_name(
-            ref self: ContractState, name: ByteArray, onchain_id: ContractAddress
+            ref self: ContractState, name: ByteArray, onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::TOKEN_INFO_MANAGER, onchain_id),
-                Errors::NOT_TOKEN_INFO_MANAGER
+                Errors::NOT_TOKEN_INFO_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().set_name(name);
         }
 
         fn call_set_token_symbol(
-            ref self: ContractState, symbol: ByteArray, onchain_id: ContractAddress
+            ref self: ContractState, symbol: ByteArray, onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::TOKEN_INFO_MANAGER, onchain_id),
-                Errors::NOT_TOKEN_INFO_MANAGER
+                Errors::NOT_TOKEN_INFO_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().set_symbol(symbol);
         }
 
         fn call_set_token_onchain_id(
-            ref self: ContractState, token_onchain_id: ContractAddress, onchain_id: ContractAddress
+            ref self: ContractState, token_onchain_id: ContractAddress, onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::TOKEN_INFO_MANAGER, onchain_id),
-                Errors::NOT_TOKEN_INFO_MANAGER
+                Errors::NOT_TOKEN_INFO_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().set_onchain_id(token_onchain_id);
         }
@@ -217,19 +217,19 @@ mod OwnerManager {
         fn call_set_claim_topics_registry(
             ref self: ContractState,
             claim_topics_registry: ContractAddress,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::REGISTRY_ADDRESS_SETTER, onchain_id),
-                Errors::NOT_REGISTRY_ADDRESS_SETTER
+                Errors::NOT_REGISTRY_ADDRESS_SETTER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().identity_registry().set_claim_topics_registry(claim_topics_registry);
         }
@@ -237,19 +237,19 @@ mod OwnerManager {
         fn call_set_trusted_issuers_registry(
             ref self: ContractState,
             trusted_issuers_registry: ContractAddress,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::REGISTRY_ADDRESS_SETTER, onchain_id),
-                Errors::NOT_REGISTRY_ADDRESS_SETTER
+                Errors::NOT_REGISTRY_ADDRESS_SETTER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self
                 .token
@@ -262,19 +262,19 @@ mod OwnerManager {
             ref self: ContractState,
             trusted_issuer: ContractAddress,
             claim_topics: Span<felt252>,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::ISSUERS_REGISTRY_MANAGER, onchain_id),
-                Errors::NOT_ISSUERS_REGISTRY_MANAGER
+                Errors::NOT_ISSUERS_REGISTRY_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self
                 .token
@@ -288,19 +288,19 @@ mod OwnerManager {
             ref self: ContractState,
             trusted_issuer: ContractAddress,
             claim_topics: Span<felt252>,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::ISSUERS_REGISTRY_MANAGER, onchain_id),
-                Errors::NOT_ISSUERS_REGISTRY_MANAGER
+                Errors::NOT_ISSUERS_REGISTRY_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self
                 .token
@@ -314,19 +314,19 @@ mod OwnerManager {
             ref self: ContractState,
             trusted_issuer: ContractAddress,
             claim_topics: Span<felt252>,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::ISSUERS_REGISTRY_MANAGER, onchain_id),
-                Errors::NOT_ISSUERS_REGISTRY_MANAGER
+                Errors::NOT_ISSUERS_REGISTRY_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self
                 .token
@@ -337,43 +337,43 @@ mod OwnerManager {
         }
 
         fn call_add_claim_topic(
-            ref self: ContractState, claim_topic: felt252, onchain_id: ContractAddress
+            ref self: ContractState, claim_topic: felt252, onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::CLAIM_REGISTRY_MANAGER, onchain_id),
-                Errors::NOT_CLAIM_REGISTRY_MANAGER
+                Errors::NOT_CLAIM_REGISTRY_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().identity_registry().topics_registry().add_claim_topic(claim_topic);
         }
 
         fn call_remove_claim_topic(
-            ref self: ContractState, claim_topic: felt252, onchain_id: ContractAddress
+            ref self: ContractState, claim_topic: felt252, onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::CLAIM_REGISTRY_MANAGER, onchain_id),
-                Errors::NOT_CLAIM_REGISTRY_MANAGER
+                Errors::NOT_CLAIM_REGISTRY_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().identity_registry().topics_registry().remove_claim_topic(claim_topic);
         }
 
         fn call_transfer_ownership_on_token_contract(
-            ref self: ContractState, new_owner: ContractAddress
+            ref self: ContractState, new_owner: ContractAddress,
         ) {
             self.assert_only_admin();
             IOwnableDispatcher { contract_address: self.token.read().contract_address }
@@ -381,17 +381,17 @@ mod OwnerManager {
         }
 
         fn call_transfer_ownership_on_identity_registry_contract(
-            ref self: ContractState, new_owner: ContractAddress
+            ref self: ContractState, new_owner: ContractAddress,
         ) {
             self.assert_only_admin();
             IOwnableDispatcher {
-                contract_address: self.token.read().identity_registry().contract_address
+                contract_address: self.token.read().identity_registry().contract_address,
             }
                 .transfer_ownership(new_owner);
         }
 
         fn call_transfer_ownership_on_compliance_contract(
-            ref self: ContractState, new_owner: ContractAddress
+            ref self: ContractState, new_owner: ContractAddress,
         ) {
             self.assert_only_admin();
             IOwnableDispatcher { contract_address: self.token.read().compliance().contract_address }
@@ -399,7 +399,7 @@ mod OwnerManager {
         }
 
         fn call_transfer_ownership_on_claim_topics_registry_contract(
-            ref self: ContractState, new_owner: ContractAddress
+            ref self: ContractState, new_owner: ContractAddress,
         ) {
             self.assert_only_admin();
             IOwnableDispatcher {
@@ -408,13 +408,13 @@ mod OwnerManager {
                     .read()
                     .identity_registry()
                     .topics_registry()
-                    .contract_address
+                    .contract_address,
             }
                 .transfer_ownership(new_owner);
         }
 
         fn call_transfer_ownership_on_issuers_registry_contract(
-            ref self: ContractState, new_owner: ContractAddress
+            ref self: ContractState, new_owner: ContractAddress,
         ) {
             self.assert_only_admin();
             IOwnableDispatcher {
@@ -423,7 +423,7 @@ mod OwnerManager {
                     .read()
                     .identity_registry()
                     .issuers_registry()
-                    .contract_address
+                    .contract_address,
             }
                 .transfer_ownership(new_owner);
         }
@@ -441,21 +441,21 @@ mod OwnerManager {
         }
 
         fn call_add_agent_on_identity_registry_contract(
-            ref self: ContractState, agent: ContractAddress
+            ref self: ContractState, agent: ContractAddress,
         ) {
             self.assert_only_admin();
             IAgentRoleDispatcher {
-                contract_address: self.token.read().identity_registry().contract_address
+                contract_address: self.token.read().identity_registry().contract_address,
             }
                 .add_agent(agent);
         }
 
         fn call_remove_agent_on_identity_registry_contract(
-            ref self: ContractState, agent: ContractAddress
+            ref self: ContractState, agent: ContractAddress,
         ) {
             self.assert_only_admin();
             IAgentRoleDispatcher {
-                contract_address: self.token.read().identity_registry().contract_address
+                contract_address: self.token.read().identity_registry().contract_address,
             }
                 .remove_agent(agent);
         }
@@ -468,7 +468,7 @@ mod OwnerManager {
             assert(
                 caller == self.ownable.owner()
                     || self.access.has_role(OwnerRoles::OWNER_ADMIN, caller),
-                'Caller is not owner nor admin'
+                'Caller is not owner nor admin',
             );
         }
     }

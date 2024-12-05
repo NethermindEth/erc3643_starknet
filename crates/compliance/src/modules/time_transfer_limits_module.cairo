@@ -10,19 +10,19 @@ trait ITimeTransferLimitsModule<TContractState> {
 #[derive(Drop, Copy, Serde, starknet::Store)]
 pub struct TransferCounter {
     value: u256,
-    timer: u256
+    timer: u256,
 }
 
 #[derive(Drop, Copy, Serde, starknet::Store)]
 pub struct Limit {
     limit_time: u256,
-    limit_value: u256
+    limit_value: u256,
 }
 
 #[derive(Drop, Copy, Serde, starknet::Store)]
 pub struct IndexLimit {
     attributed_limit: bool,
-    limit_index: u8
+    limit_index: u8,
 }
 
 #[starknet::contract]
@@ -30,10 +30,10 @@ mod TimeTransferLimitsModule {
     use starknet::ContractAddress;
     use starknet::storage::{
         Vec, // VecTrait, MutableVecTrait,
-         Map, //StoragePathEntry, StorageMapReadAccess,
+        Map //StoragePathEntry, StorageMapReadAccess,
         //StorageMapWriteAccess
     };
-    use super::{TransferCounter, Limit, IndexLimit};
+    use super::{IndexLimit, Limit, TransferCounter};
 
     #[storage]
     struct Storage {

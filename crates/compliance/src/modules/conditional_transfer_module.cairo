@@ -6,32 +6,32 @@ pub trait IConditionalTransferModule<ContractState> {
         ref self: ContractState,
         from: Span<ContractAddress>,
         to: Span<ContractAddress>,
-        amount: Span<u256>
+        amount: Span<u256>,
     );
     fn batch_unapprove_transfers(
         ref self: ContractState,
         from: Span<ContractAddress>,
         to: Span<ContractAddress>,
-        amount: Span<u256>
+        amount: Span<u256>,
     );
     fn approve_transfer(
-        ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256
+        ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
     );
     fn unapprove_transfer(
-        ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256
+        ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
     );
     fn is_transfer_approved(
-        self: @ContractState, compliance: ContractAddress, transfer_hash: felt252
+        self: @ContractState, compliance: ContractAddress, transfer_hash: felt252,
     ) -> bool;
     fn get_transfer_approvals(
-        self: @ContractState, compliance: ContractAddress, transfer_hash: felt252
+        self: @ContractState, compliance: ContractAddress, transfer_hash: felt252,
     ) -> u256;
     fn calculate_transfer_hash(
         self: @ContractState,
         from: ContractAddress,
         to: ContractAddress,
         amount: u256,
-        token: ContractAddress
+        token: ContractAddress,
     ) -> felt252;
 }
 
@@ -41,14 +41,14 @@ pub mod ConditionalTransferModule {
     use crate::{
         imodular_compliance::{IModularComplianceDispatcher, IModularComplianceDispatcherTrait},
         modules::abstract_module::{
-            AbstractModuleComponent, AbstractModuleComponent::AbstractFunctionsTrait
-        }
+            AbstractModuleComponent, AbstractModuleComponent::AbstractFunctionsTrait,
+        },
     };
     use openzeppelin_access::ownable::OwnableComponent;
     use openzeppelin_upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
     use starknet::{
-        ContractAddress, ClassHash,
-        storage::{Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry}
+        ClassHash, ContractAddress,
+        storage::{Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess},
     };
 
     component!(path: AbstractModuleComponent, storage: abstract_module, event: AbstractModuleEvent);
@@ -75,7 +75,7 @@ pub mod ConditionalTransferModule {
         #[substorage(v0)]
         upgrades: UpgradeableComponent::Storage,
         #[substorage(v0)]
-        ownable: OwnableComponent::Storage
+        ownable: OwnableComponent::Storage,
     }
 
     #[event]
@@ -88,7 +88,7 @@ pub mod ConditionalTransferModule {
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
         #[flat]
-        OwnableEvent: OwnableComponent::Event
+        OwnableEvent: OwnableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -96,7 +96,7 @@ pub mod ConditionalTransferModule {
         from: ContractAddress,
         to: ContractAddress,
         amount: u256,
-        token: ContractAddress
+        token: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -135,15 +135,15 @@ pub mod ConditionalTransferModule {
             ref self: AbstractModuleComponent::ComponentState<ContractState>,
             from: ContractAddress,
             to: ContractAddress,
-            value: u256
+            value: u256,
         ) {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self
+                ref self,
             );
             contract_state.abstract_module.only_compliance_call();
             let caller = starknet::get_caller_address();
             let modular_compliance_dispatcher = IModularComplianceDispatcher {
-                contract_address: caller
+                contract_address: caller,
             };
             let token_bound = modular_compliance_dispatcher.get_token_bound();
 
@@ -165,10 +165,10 @@ pub mod ConditionalTransferModule {
         fn module_mint_action(
             ref self: AbstractModuleComponent::ComponentState<ContractState>,
             to: ContractAddress,
-            value: u256
+            value: u256,
         ) {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self
+                ref self,
             );
             contract_state.abstract_module.only_compliance_call();
         }
@@ -176,10 +176,10 @@ pub mod ConditionalTransferModule {
         fn module_burn_action(
             ref self: AbstractModuleComponent::ComponentState<ContractState>,
             from: ContractAddress,
-            value: u256
+            value: u256,
         ) {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self
+                ref self,
             );
             contract_state.abstract_module.only_compliance_call();
         }
@@ -189,7 +189,7 @@ pub mod ConditionalTransferModule {
             from: ContractAddress,
             to: ContractAddress,
             value: u256,
-            compliance: ContractAddress
+            compliance: ContractAddress,
         ) -> bool {
             let contract_state = AbstractModuleComponent::HasComponent::get_contract(self);
             let transfer_hash = contract_state
@@ -197,14 +197,14 @@ pub mod ConditionalTransferModule {
                     from,
                     to,
                     value,
-                    IModularComplianceDispatcher { contract_address: compliance }.get_token_bound()
+                    IModularComplianceDispatcher { contract_address: compliance }.get_token_bound(),
                 );
             contract_state.is_transfer_approved(compliance, transfer_hash)
         }
 
         fn can_compliance_bind(
             self: @AbstractModuleComponent::ComponentState<ContractState>,
-            compliance: ContractAddress
+            compliance: ContractAddress,
         ) -> bool {
             true
         }
@@ -224,35 +224,33 @@ pub mod ConditionalTransferModule {
             ref self: ContractState,
             from: Span<ContractAddress>,
             to: Span<ContractAddress>,
-            amount: Span<u256>
+            amount: Span<u256>,
         ) {
             self.abstract_module.only_compliance_call();
-            for i in 0
-                ..from.len() {
-                    self.approve_transfer(*from.at(i), *to.at(i), *amount.at(i));
-                };
+            for i in 0..from.len() {
+                self.approve_transfer(*from.at(i), *to.at(i), *amount.at(i));
+            };
         }
 
         fn batch_unapprove_transfers(
             ref self: ContractState,
             from: Span<ContractAddress>,
             to: Span<ContractAddress>,
-            amount: Span<u256>
+            amount: Span<u256>,
         ) {
             self.abstract_module.only_compliance_call();
-            for i in 0
-                ..from.len() {
-                    self.unapprove_transfer(*from.at(i), *to.at(i), *amount.at(i));
-                };
+            for i in 0..from.len() {
+                self.unapprove_transfer(*from.at(i), *to.at(i), *amount.at(i));
+            };
         }
 
         fn approve_transfer(
-            ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256
+            ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
         ) {
             self.abstract_module.only_compliance_call();
             let caller = starknet::get_caller_address();
             let modular_compliance_dispatcher = IModularComplianceDispatcher {
-                contract_address: caller
+                contract_address: caller,
             };
             let token_bound = modular_compliance_dispatcher.get_token_bound();
             let transfer_hash = self.calculate_transfer_hash(from, to, amount, token_bound);
@@ -265,12 +263,12 @@ pub mod ConditionalTransferModule {
         }
 
         fn unapprove_transfer(
-            ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256
+            ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
         ) {
             self.abstract_module.only_compliance_call();
             let caller = starknet::get_caller_address();
             let modular_compliance_dispatcher = IModularComplianceDispatcher {
-                contract_address: caller
+                contract_address: caller,
             };
             let token_bound = modular_compliance_dispatcher.get_token_bound();
             let transfer_hash = self.calculate_transfer_hash(from, to, amount, token_bound);
@@ -284,13 +282,13 @@ pub mod ConditionalTransferModule {
         }
 
         fn is_transfer_approved(
-            self: @ContractState, compliance: ContractAddress, transfer_hash: felt252
+            self: @ContractState, compliance: ContractAddress, transfer_hash: felt252,
         ) -> bool {
             self.transfers_approved.entry(compliance).entry(transfer_hash).read() > 0
         }
 
         fn get_transfer_approvals(
-            self: @ContractState, compliance: ContractAddress, transfer_hash: felt252
+            self: @ContractState, compliance: ContractAddress, transfer_hash: felt252,
         ) -> u256 {
             self.transfers_approved.entry(compliance).entry(transfer_hash).read()
         }
@@ -300,7 +298,7 @@ pub mod ConditionalTransferModule {
             from: ContractAddress,
             to: ContractAddress,
             amount: u256,
-            token: ContractAddress
+            token: ContractAddress,
         ) -> felt252 {
             let mut serialized_data: Array<felt252> = array![];
             from.serialize(ref serialized_data);

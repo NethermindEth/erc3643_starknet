@@ -9,13 +9,13 @@ trait ITransferFeesModule<TContractState> {
 #[derive(Drop, Serde, starknet::Store)]
 struct Fee {
     rate: u256,
-    collector: ContractAddress
+    collector: ContractAddress,
 }
 
 #[starknet::contract]
 mod TransferFeesModule {
     use starknet::ContractAddress;
-    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    use starknet::storage::{Map //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
     };
     use super::{Fee};
 
@@ -27,7 +27,7 @@ mod TransferFeesModule {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
-        FeeUpdated: FeeUpdated
+        FeeUpdated: FeeUpdated,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -35,6 +35,6 @@ mod TransferFeesModule {
         #[key]
         compliance: ContractAddress,
         rate: u256,
-        collector: ContractAddress
+        collector: ContractAddress,
     }
 }

@@ -4,17 +4,17 @@ use starknet::ContractAddress;
 trait IMaxBalanceModule<TContractState> {
     fn set_max_balance(ref self: TContractState, max: u256);
     fn preset_module_state(
-        ref self: TContractState, compliance: ContractAddress, id: ContractAddress, balance: u256
+        ref self: TContractState, compliance: ContractAddress, id: ContractAddress, balance: u256,
     );
     fn batch_preset_module_state(
         ref self: TContractState,
         compliance: ContractAddress,
         id: Array<ContractAddress>,
-        balance: Array<u256>
+        balance: Array<u256>,
     );
     fn preset_completed(ref self: TContractState, compliance: ContractAddress);
     fn get_id_balance(
-        self: @TContractState, compliance: ContractAddress, identity: ContractAddress
+        self: @TContractState, compliance: ContractAddress, identity: ContractAddress,
     ) -> u256;
 }
 
@@ -22,7 +22,7 @@ trait IMaxBalanceModule<TContractState> {
 #[starknet::contract]
 mod MaxBalanceModule {
     use starknet::ContractAddress;
-    use starknet::storage::{Map, //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
+    use starknet::storage::{Map //StoragePathEntry, StorageMapReadAccess, StorageMapWriteAccess
     };
 
     #[storage]

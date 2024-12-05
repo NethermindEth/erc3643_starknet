@@ -4,14 +4,14 @@ use core::num::traits::Zero;
 pub struct StarkSignature {
     pub r: felt252,
     pub s: felt252,
-    pub public_key: felt252
+    pub public_key: felt252,
 }
 
 #[derive(Copy, Drop, Serde, Hash, Default, starknet::Store)]
 pub struct EthSignature {
     pub r: u256,
     pub s: u256,
-    pub public_key: starknet::EthAddress
+    pub public_key: starknet::EthAddress,
 }
 
 impl DefaultEthAddress of Default<starknet::EthAddress> {

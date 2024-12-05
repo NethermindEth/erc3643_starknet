@@ -7,7 +7,7 @@ mod AgentManager {
     use openzeppelin_access::{accesscontrol::AccessControlComponent, ownable::OwnableComponent};
     use openzeppelin_introspection::src5::SRC5Component;
     use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
-    use starknet::{storage::{StoragePointerReadAccess, StoragePointerWriteAccess}, ContractAddress};
+    use starknet::{ContractAddress, storage::{StoragePointerReadAccess, StoragePointerWriteAccess}};
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
 
     // Ownable Component
@@ -40,7 +40,7 @@ mod AgentManager {
         #[substorage(v0)]
         access: AccessControlComponent::Storage,
         #[substorage(v0)]
-        ownable: OwnableComponent::Storage
+        ownable: OwnableComponent::Storage,
     }
 
     #[event]
@@ -51,7 +51,7 @@ mod AgentManager {
         #[flat]
         SRC5Event: SRC5Component::Event,
         #[flat]
-        OwnableEvent: OwnableComponent::Event
+        OwnableEvent: OwnableComponent::Event,
     }
 
     pub mod Errors {
@@ -87,19 +87,19 @@ mod AgentManager {
             from: ContractAddress,
             to: ContractAddress,
             amount: u256,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(AgentRoles::TRANSFER_MANAGER, onchain_id),
-                Errors::NOT_TRANSFER_MANAGER
+                Errors::NOT_TRANSFER_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().forced_transfer(from, to, amount);
         }
@@ -109,19 +109,19 @@ mod AgentManager {
             from_list: Span<ContractAddress>,
             to_list: Span<ContractAddress>,
             amounts: Span<u256>,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(AgentRoles::TRANSFER_MANAGER, onchain_id),
-                Errors::NOT_TRANSFER_MANAGER
+                Errors::NOT_TRANSFER_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().batch_forced_transfer(from_list, to_list, amounts);
         }
@@ -132,9 +132,9 @@ mod AgentManager {
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().pause();
         }
@@ -145,27 +145,27 @@ mod AgentManager {
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().unpause();
         }
 
         fn call_mint(
-            ref self: ContractState, to: ContractAddress, amount: u256, onchain_id: ContractAddress
+            ref self: ContractState, to: ContractAddress, amount: u256, onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(AgentRoles::SUPPLY_MODIFIER, onchain_id),
-                Errors::NOT_SUPPLY_MODIFIER
+                Errors::NOT_SUPPLY_MODIFIER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().mint(to, amount);
         }
@@ -174,19 +174,19 @@ mod AgentManager {
             ref self: ContractState,
             to_list: Span<ContractAddress>,
             amounts: Span<u256>,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(AgentRoles::SUPPLY_MODIFIER, onchain_id),
-                Errors::NOT_SUPPLY_MODIFIER
+                Errors::NOT_SUPPLY_MODIFIER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().batch_mint(to_list, amounts);
         }
@@ -195,19 +195,19 @@ mod AgentManager {
             ref self: ContractState,
             user_address: ContractAddress,
             amount: u256,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(AgentRoles::SUPPLY_MODIFIER, onchain_id),
-                Errors::NOT_SUPPLY_MODIFIER
+                Errors::NOT_SUPPLY_MODIFIER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().burn(user_address, amount);
         }
@@ -216,19 +216,19 @@ mod AgentManager {
             ref self: ContractState,
             user_addresses: Span<ContractAddress>,
             amounts: Span<u256>,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(AgentRoles::SUPPLY_MODIFIER, onchain_id),
-                Errors::NOT_SUPPLY_MODIFIER
+                Errors::NOT_SUPPLY_MODIFIER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().batch_burn(user_addresses, amounts);
         }
@@ -237,16 +237,16 @@ mod AgentManager {
             ref self: ContractState,
             user_address: ContractAddress,
             freeze: bool,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(self.access.has_role(AgentRoles::FREEZER, onchain_id), Errors::NOT_FREEZER);
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().set_address_frozen(user_address, freeze);
         }
@@ -255,16 +255,16 @@ mod AgentManager {
             ref self: ContractState,
             user_addresses: Span<ContractAddress>,
             freeze: Span<bool>,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(self.access.has_role(AgentRoles::FREEZER, onchain_id), Errors::NOT_FREEZER);
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().batch_set_address_frozen(user_addresses, freeze);
         }
@@ -273,16 +273,16 @@ mod AgentManager {
             ref self: ContractState,
             user_address: ContractAddress,
             amount: u256,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(self.access.has_role(AgentRoles::FREEZER, onchain_id), Errors::NOT_FREEZER);
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().freeze_partial_tokens(user_address, amount);
         }
@@ -291,16 +291,16 @@ mod AgentManager {
             ref self: ContractState,
             user_addresses: Span<ContractAddress>,
             amounts: Span<u256>,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(self.access.has_role(AgentRoles::FREEZER, onchain_id), Errors::NOT_FREEZER);
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().batch_freeze_partial_tokens(user_addresses, amounts);
         }
@@ -316,9 +316,9 @@ mod AgentManager {
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().unfreeze_partial_tokens(user_address, amount);
         }
@@ -327,16 +327,16 @@ mod AgentManager {
             ref self: ContractState,
             user_addresses: Span<ContractAddress>,
             amounts: Span<u256>,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(self.access.has_role(AgentRoles::FREEZER, onchain_id), Errors::NOT_FREEZER);
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().batch_unfreeze_partial_tokens(user_addresses, amounts);
         }
@@ -346,19 +346,19 @@ mod AgentManager {
             lost_wallet: ContractAddress,
             new_wallet: ContractAddress,
             onchain_id: ContractAddress,
-            manager_onchain_id: ContractAddress
+            manager_onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: manager_onchain_id };
             assert(
                 self.access.has_role(AgentRoles::RECOVERY_AGENT, manager_onchain_id),
-                Errors::NOT_RECOVERY_AGENT
+                Errors::NOT_RECOVERY_AGENT,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
             self.token.read().recovery_address(lost_wallet, new_wallet, onchain_id);
         }
@@ -368,19 +368,19 @@ mod AgentManager {
             user_address: ContractAddress,
             onchain_id: ContractAddress,
             country: u16,
-            manager_onchain_id: ContractAddress
+            manager_onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: manager_onchain_id };
             assert(
                 self.access.has_role(AgentRoles::WHITELIST_MANAGER, manager_onchain_id),
-                Errors::NOT_WHITELIST_MANAGER
+                Errors::NOT_WHITELIST_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
 
             self
@@ -394,19 +394,19 @@ mod AgentManager {
             ref self: ContractState,
             user_address: ContractAddress,
             identity: ContractAddress,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(AgentRoles::WHITELIST_MANAGER, onchain_id),
-                Errors::NOT_WHITELIST_MANAGER
+                Errors::NOT_WHITELIST_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
 
             self.token.read().identity_registry().update_identity(user_address, identity);
@@ -416,38 +416,38 @@ mod AgentManager {
             ref self: ContractState,
             user_address: ContractAddress,
             country: u16,
-            onchain_id: ContractAddress
+            onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(AgentRoles::WHITELIST_MANAGER, onchain_id),
-                Errors::NOT_WHITELIST_MANAGER
+                Errors::NOT_WHITELIST_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
 
             self.token.read().identity_registry().update_country(user_address, country);
         }
 
         fn call_delete_identity(
-            ref self: ContractState, user_address: ContractAddress, onchain_id: ContractAddress
+            ref self: ContractState, user_address: ContractAddress, onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(AgentRoles::WHITELIST_MANAGER, onchain_id),
-                Errors::NOT_WHITELIST_MANAGER
+                Errors::NOT_WHITELIST_MANAGER,
             );
             assert(
                 oid_disatcher
                     .key_has_purpose(
-                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2
+                        poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY
+                Errors::CALLER_NOT_MANAGEMENT_KEY,
             );
 
             self.token.read().identity_registry().delete_identity(user_address);

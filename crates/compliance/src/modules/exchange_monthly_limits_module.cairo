@@ -3,13 +3,13 @@ use starknet::ContractAddress;
 #[starknet::interface]
 trait IExchangeMonthlyLimitsModule<TContractState> {
     fn set_exchange_monthly_limit(
-        ref self: TContractState, exchange_id: ContractAddress, new_exchange_monthly_limit: u256
+        ref self: TContractState, exchange_id: ContractAddress, new_exchange_monthly_limit: u256,
     );
     fn get_exchange_monthly_limit(
         self: @TContractState,
         compliance: ContractAddress,
         exchange_id: ContractAddress,
-        investor_id: ContractAddress
+        investor_id: ContractAddress,
     ) -> u256;
     fn add_exchange_id(ref self: TContractState, exchange_id: ContractAddress);
     fn remove_exchange_id(ref self: TContractState, exchange_id: ContractAddress);
@@ -18,13 +18,13 @@ trait IExchangeMonthlyLimitsModule<TContractState> {
         self: @TContractState,
         compliance: ContractAddress,
         exchange_id: ContractAddress,
-        investor_id: ContractAddress
+        investor_id: ContractAddress,
     ) -> u256;
     fn get_monthly_timer(
         self: @TContractState,
         compliance: ContractAddress,
         exchange_id: ContractAddress,
-        investor_id: ContractAddress
+        investor_id: ContractAddress,
     ) -> u256;
 }
 
