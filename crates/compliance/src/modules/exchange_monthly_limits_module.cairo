@@ -402,7 +402,9 @@ mod ExchangeMonthlyLimitsModule {
                 contract_address: IModularComplianceDispatcher { contract_address: compliance }
                     .get_token_bound(),
             };
-            token_dispatcher.identity_registry().identity(user_address)
+            let identity = token_dispatcher.identity_registry().identity(user_address);
+            assert(identity.is_non_zero(), 'Identity not found');
+            identity
         }
     }
 }
