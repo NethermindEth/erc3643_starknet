@@ -5,7 +5,6 @@ use registry::interface::{
 };
 use starknet::ContractAddress;
 
-// TODO: might convert ContractAddress to IIdentity in required places
 #[starknet::interface]
 pub trait IIdentityRegistry<TContractState> {
     fn register_identity(
@@ -34,7 +33,7 @@ pub trait IIdentityRegistry<TContractState> {
     );
     fn contains(self: @TContractState, user_address: ContractAddress) -> bool;
     fn is_verified(self: @TContractState, user_address: ContractAddress) -> bool;
-    fn identity(self: @TContractState, user_address: ContractAddress); //-> IIdentity;
+    fn identity(self: @TContractState, user_address: ContractAddress) -> ContractAddress;
     fn investor_country(self: @TContractState, user_address: ContractAddress) -> u16;
     fn identity_storage(self: @TContractState) -> IIdentityRegistryStorageDispatcher;
     fn issuers_registry(self: @TContractState) -> ITrustedIssuersRegistryDispatcher;
