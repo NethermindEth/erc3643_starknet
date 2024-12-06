@@ -106,6 +106,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "storage"
+version = "0.1.0"
+dependencies = [
+ "snforge_std",
+]
+
+[[package]]
 name = "token"
 version = "0.1.0"
 dependencies = [

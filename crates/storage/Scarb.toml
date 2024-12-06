@@ -1,0 +1,19 @@
+[package]
+name = "storage"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+starknet.workspace = true
+
+[dev-dependencies]
+snforge_std.workspace = true
+
+[[target.starknet-contract]]
+sierra = true
+
+[tool]
+fmt.workspace = true
+
+[lib]
+name= "storage"
