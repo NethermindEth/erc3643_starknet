@@ -1,6 +1,5 @@
 pub mod imodular_compliance;
 pub mod modular_compliance;
-//pub mod removable_vec;
 pub mod modules {
     pub mod abstract_module;
     pub mod conditional_transfer_module;

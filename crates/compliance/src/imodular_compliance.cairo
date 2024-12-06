@@ -1,44 +1,5 @@
 use starknet::ContractAddress;
 
-#[event]
-#[derive(Drop, starknet::Event)]
-pub enum ModularComplianceEvent {
-    ModuleInteraction: ModuleInteraction,
-    TokenBound: TokenBound,
-    TokenUnbound: TokenUnbound,
-    ModuleAdded: ModuleAdded,
-    ModuleRemoved: ModuleRemoved,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct ModuleInteraction {
-    #[key]
-    target: ContractAddress,
-    selector: u32
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct TokenBound {
-    token: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct TokenUnbound {
-    token: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct ModuleAdded {
-    #[key]
-    module: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct ModuleRemoved {
-    #[key]
-    module: ContractAddress,
-}
-
 #[starknet::interface]
 pub trait IModularCompliance<TContractState> {
     ///  @dev binds a token to the compliance contract
@@ -73,7 +34,12 @@ pub trait IModularCompliance<TContractState> {
     /// @param _module The address of the module
     /// This function can be called only by the modular compliance owner
     /// emits a `ModuleInteraction` event
-    fn call_module_function(ref self: TContractState, calldata: ByteArray, module: ContractAddress);
+    fn call_module_function(
+        ref self: TContractState,
+        selector: felt252,
+        calldata: Span<felt252>,
+        module: ContractAddress,
+    );
 
     /// @dev function called whenever tokens are transferred
     /// from one wallet to another
@@ -87,7 +53,7 @@ pub trait IModularCompliance<TContractState> {
     /// @param _amount The amount of tokens involved in the transfer
     /// This function calls moduleTransferAction() on each module bound to the compliance contract
     fn transferred(
-        ref self: TContractState, from: ContractAddress, to: ContractAddress, amount: u256
+        ref self: TContractState, from: ContractAddress, to: ContractAddress, amount: u256,
     );
 
     ///  @dev function called whenever tokens are created on a wallet
@@ -123,7 +89,7 @@ pub trait IModularCompliance<TContractState> {
     ///  If each of the module checks return TRUE, this function will return TRUE as well
     ///  returns FALSE otherwise
     fn can_transfer(
-        self: @TContractState, from: ContractAddress, to: ContractAddress, amount: u256
+        self: @TContractState, from: ContractAddress, to: ContractAddress, amount: u256,
     ) -> bool;
 
     ///  @dev getter for the modules bound to the compliance contract
