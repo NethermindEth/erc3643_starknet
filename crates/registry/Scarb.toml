@@ -5,7 +5,9 @@ edition = "2024_07"
 
 [dependencies]
 starknet.workspace = true
+storage = { path = "../storage"}
 openzeppelin_access.workspace = true
+openzeppelin_upgrades.workspace = true
 
 [dev-dependencies]
 snforge_std.workspace = true
