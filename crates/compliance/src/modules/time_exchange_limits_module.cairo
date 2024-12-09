@@ -321,7 +321,7 @@ pub mod TimeExchangeLimitsModule {
                 Errors::LimitsArraySizeExceeded(caller, limit_count);
             }
 
-            if !limit_is_attributed && limit_count < 4 {
+            if !is_attributed_limit && limit_count < 4 {
                 let new_limit_storage_path = exchange_limits_storage_path.append();
                 new_limit_storage_path.limit_time.write(limit.limit_time);
                 new_limit_storage_path.limit_value.write(limit.limit_value);
