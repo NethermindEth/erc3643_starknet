@@ -154,8 +154,12 @@ pub mod TimeExchangeLimitsModule {
         pub fn OnchainIDNotTaggedAsExchange(exchange_id: ContractAddress) {
             panic!("Onchain ID not tagges as exchange! OID {:?}", exchange_id);
         }
-        pub fn LimitsArraySizeExceeded(compliance: ContractAddress, array_size: u64) {
-            panic!("LimitsArraySizeExceeded");
+        pub fn LimitsArraySizeExceeded(compliance: ContractAddress, exchange_id: ContractAddress) {
+            panic!(
+                "Limits array size exceeded. Compliance: {:?}, Exchange ID: {:?}",
+                compliance,
+                exchange_id,
+            );
         }
     }
 
@@ -318,7 +322,7 @@ pub mod TimeExchangeLimitsModule {
                 .entry(exchange_id);
             let limit_count = exchange_limits_storage_path.len();
             if !is_attributed_limit && limit_count >= 4 {
-                Errors::LimitsArraySizeExceeded(caller, limit_count);
+                Errors::LimitsArraySizeExceeded(caller, exchange_id);
             }
 
             if !is_attributed_limit && limit_count < 4 {
