@@ -178,7 +178,7 @@ pub mod TimeExchangeLimitsModule {
         ///
         /// # Requirements
         ///
-        /// - This function can only be called by the xerc20 owner.
+        /// - This function can only be called by the owner.
         /// - The `ClassHash` should already have been declared.
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             self.ownable.assert_only_owner();
