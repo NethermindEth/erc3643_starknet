@@ -130,7 +130,7 @@ mod TransferFeesModule {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
             let caller = starknet::get_caller_address();
             let sender_identity = contract_state.get_identity(caller, from);
             let receiver_identity = contract_state.get_identity(caller, to);
@@ -161,10 +161,7 @@ mod TransferFeesModule {
             to: ContractAddress,
             value: u256,
         ) {
-            let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self,
-            );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
         }
 
         fn module_burn_action(
@@ -172,10 +169,7 @@ mod TransferFeesModule {
             from: ContractAddress,
             value: u256,
         ) {
-            let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self,
-            );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
         }
 
         fn module_check(

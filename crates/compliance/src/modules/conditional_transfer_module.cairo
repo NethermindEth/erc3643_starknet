@@ -140,7 +140,7 @@ pub mod ConditionalTransferModule {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
             let caller = starknet::get_caller_address();
             let modular_compliance_dispatcher = IModularComplianceDispatcher {
                 contract_address: caller,
@@ -167,10 +167,7 @@ pub mod ConditionalTransferModule {
             to: ContractAddress,
             value: u256,
         ) {
-            let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self,
-            );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
         }
 
         fn module_burn_action(
@@ -178,10 +175,7 @@ pub mod ConditionalTransferModule {
             from: ContractAddress,
             value: u256,
         ) {
-            let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self,
-            );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
         }
 
         fn module_check(

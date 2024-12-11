@@ -119,10 +119,7 @@ mod CountryAllowModule {
             to: ContractAddress,
             value: u256,
         ) {
-            let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self,
-            );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
         }
 
         fn module_mint_action(
@@ -130,10 +127,7 @@ mod CountryAllowModule {
             to: ContractAddress,
             value: u256,
         ) {
-            let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self,
-            );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
         }
 
         fn module_burn_action(
@@ -141,10 +135,7 @@ mod CountryAllowModule {
             from: ContractAddress,
             value: u256,
         ) {
-            let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self,
-            );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
         }
 
         fn module_check(

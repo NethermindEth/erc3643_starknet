@@ -161,7 +161,7 @@ mod MaxBalanceModule {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
             let caller = starknet::get_caller_address();
             let id_from = contract_state.get_identity(caller, from);
             let id_to = contract_state.get_identity(caller, to);
@@ -188,7 +188,7 @@ mod MaxBalanceModule {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
             let caller = starknet::get_caller_address();
             let id_to = contract_state.get_identity(caller, to);
 
@@ -214,7 +214,7 @@ mod MaxBalanceModule {
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
             let caller = starknet::get_caller_address();
             let id_from = contract_state.get_identity(caller, from);
             let id_from_balance_storage_path = contract_state
