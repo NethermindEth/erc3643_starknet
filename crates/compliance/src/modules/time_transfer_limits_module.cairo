@@ -379,14 +379,14 @@ mod TimeTransferLimitsModule {
 
         fn _remove_time_transfer_limit(ref self: ContractState, limit_time: u64) {
             let mut limit_found = false;
-            let mut index: u256 = Default::default();
+            let mut index: u64 = Default::default();
             let caller = starknet::get_caller_address();
             let transfer_limits_storage_path = self.transfer_limits.entry(caller);
             for i in 0..transfer_limits_storage_path.len() {
                 let limit = transfer_limits_storage_path.at(i).read();
                 if (limit.limit_time == limit_time) {
                     limit_found = true;
-                    index = i.into();
+                    index = i;
                     break;
                 }
             };
@@ -395,7 +395,7 @@ mod TimeTransferLimitsModule {
                 Errors::LimitTimeNotFound(caller, limit_time);
             }
 
-            transfer_limits_storage_path.delete(index.try_into().expect('Index out of bound'));
+            transfer_limits_storage_path.delete(index);
             self.limit_values.entry((caller, limit_time)).write(Zero::zero());
             self.emit(TimeTransferLimitRemoved { compliance: caller, limit_time });
         }
