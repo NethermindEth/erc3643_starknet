@@ -99,6 +99,7 @@ checksum = "sha256:0e0e6f6b20b3c4075b92941a2c124430a59f1c207f8fbdfd56ce9239e6d66
 name = "registry"
 version = "0.1.0"
 dependencies = [
+ "onchain_id",
  "openzeppelin_access",
  "openzeppelin_upgrades",
  "roles",

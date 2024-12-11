@@ -7,6 +7,7 @@ edition = "2024_07"
 starknet.workspace = true
 storage = { path = "../storage"}
 roles = { path = "../roles"}
+onchain_id = { path = "../onchain_id"}
 openzeppelin_access.workspace = true
 openzeppelin_upgrades.workspace = true
 
