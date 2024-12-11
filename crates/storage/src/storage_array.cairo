@@ -21,6 +21,7 @@ pub trait MutableStorageArrayTrait<T> {
     fn delete(self: T, index: u64);
     fn clear(self: T);
 }
+
 //********************************************************
 //              StorageArray for felt252
 //********************************************************
@@ -261,6 +262,127 @@ pub impl MutableContractAddressVecToContractAddressArray of Into<
     StoragePath<Mutable<StorageArrayContractAddress>>, Array<ContractAddress>,
 > {
     fn into(self: StoragePath<Mutable<StorageArrayContractAddress>>) -> Array<ContractAddress> {
+        let mut array = array![];
+        for i in 0..self.len() {
+            array.append(self[i].read());
+        };
+        array
+    }
+}
+
+//********************************************************
+//             StorageArray for Limit
+//********************************************************
+use compliance::modules::time_transfer_limits_module::Limit;
+
+#[starknet::storage_node]
+pub struct StorageArrayLimit {
+    vec: Map<u64, Limit>,
+    len: u64,
+}
+
+pub impl StorageArrayLimitImpl of StorageArrayTrait<StoragePath<StorageArrayLimit>> {
+    type ElementType = Limit;
+    fn get(
+        self: StoragePath<StorageArrayLimit>, index: u64,
+    ) -> Option<StoragePath<Self::ElementType>> {
+        let vec_len = self.len.read();
+        if index < vec_len {
+            return Option::Some(self.vec.entry(index));
+        }
+        Option::None
+    }
+
+    fn at(self: StoragePath<StorageArrayLimit>, index: u64) -> StoragePath<Self::ElementType> {
+        assert!(index < self.len.read(), "Index out of bounds");
+        self.vec.entry(index)
+    }
+
+    fn len(self: StoragePath<StorageArrayLimit>) -> u64 {
+        self.len.read()
+    }
+}
+
+pub impl MutableStorageArrayLimitImpl of MutableStorageArrayTrait<
+    StoragePath<Mutable<StorageArrayLimit>>,
+> {
+    type ElementType = Limit;
+    fn delete(self: StoragePath<Mutable<StorageArrayLimit>>, index: u64) {
+        let len = self.len.read();
+        assert!(index < len, "Index out of bounds");
+        let last_element_storage_path = self.vec.entry(len - 1);
+        if index != len - 1 {
+            let last_element = last_element_storage_path.read();
+            self.vec.entry(index).write(last_element);
+        }
+        last_element_storage_path.write(Zero::zero());
+        self.len.write(len - 1);
+    }
+
+    fn append(
+        self: StoragePath<Mutable<StorageArrayLimit>>,
+    ) -> StoragePath<Mutable<Self::ElementType>> {
+        let len = self.len.read();
+        self.len.write(len + 1);
+        self.vec.entry(len)
+    }
+
+    fn get(
+        self: StoragePath<Mutable<StorageArrayLimit>>, index: u64,
+    ) -> Option<StoragePath<Mutable<Self::ElementType>>> {
+        let vec_len = self.len.read();
+        if index < vec_len {
+            return Option::Some(self.vec.entry(index));
+        }
+        Option::None
+    }
+
+    fn at(
+        self: StoragePath<Mutable<StorageArrayLimit>>, index: u64,
+    ) -> StoragePath<Mutable<Self::ElementType>> {
+        assert!(index < self.len.read(), "Index out of bounds");
+        self.vec.entry(index)
+    }
+
+    fn len(self: StoragePath<Mutable<StorageArrayLimit>>) -> u64 {
+        self.len.read()
+    }
+
+    fn clear(self: StoragePath<Mutable<StorageArrayLimit>>) {
+        self.len.write(0);
+    }
+}
+
+pub impl StorageArrayLimitIndexView of core::ops::IndexView<StoragePath<StorageArrayLimit>, u64> {
+    type Target = StoragePath<Limit>;
+    fn index(self: @StoragePath<StorageArrayLimit>, index: u64) -> Self::Target {
+        (*self).at(index)
+    }
+}
+
+pub impl MutableStorageArrayLimitIndexView of core::ops::IndexView<
+    StoragePath<Mutable<StorageArrayLimit>>, u64,
+> {
+    type Target = StoragePath<Mutable<Limit>>;
+    fn index(self: @StoragePath<Mutable<StorageArrayLimit>>, index: u64) -> Self::Target {
+        (*self).at(index)
+    }
+}
+
+pub impl LimitVecToLimitArray of Into<StoragePath<StorageArrayLimit>, Array<Limit>> {
+    fn into(self: StoragePath<StorageArrayLimit>) -> Array<Limit> {
+        let mut array = array![];
+        for i in 0..self.len() {
+            array.append(self[i].read());
+        };
+        array
+    }
+}
+
+pub impl MutableLimitVecToLimitArray of Into<
+    StoragePath<Mutable<StorageArrayLimit>>, Array<Limit>,
+> {
+    fn into(self: StoragePath<Mutable<StorageArrayLimit>>) -> Array<Limit> {
         let mut array = array![];
         for i in 0..self.len() {
             array.append(self[i].read());
