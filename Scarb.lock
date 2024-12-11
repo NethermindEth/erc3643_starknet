@@ -101,6 +101,7 @@ version = "0.1.0"
 dependencies = [
  "openzeppelin_access",
  "openzeppelin_upgrades",
+ "roles",
  "snforge_std",
  "storage",
 ]
