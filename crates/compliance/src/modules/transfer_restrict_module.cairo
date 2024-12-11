@@ -132,10 +132,11 @@ mod TransferRestrictModule {
             compliance: ContractAddress,
         ) -> bool {
             let contract_state = AbstractModuleComponent::HasComponent::get_contract(self);
-            if contract_state.allowed_users.entry(compliance).entry(from).read() {
+            let compliance_allowed_users = contract_state.allowed_users.entry(compliance);
+            if compliance_allowed_users.entry(from).read() {
                 return true;
             }
-            contract_state.allowed_users.entry(compliance).entry(to).read()
+            compliance_allowed_users.entry(to).read()
         }
 
         fn can_compliance_bind(
@@ -193,7 +194,7 @@ mod TransferRestrictModule {
         fn is_user_allowed(
             self: @ContractState, compliance: ContractAddress, user_address: ContractAddress,
         ) -> bool {
-            self.allowed_users.entry(starknet::get_caller_address()).entry(user_address).read()
+            self.allowed_users.entry(compliance).entry(user_address).read()
         }
     }
 }

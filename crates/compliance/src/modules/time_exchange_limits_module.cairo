@@ -77,13 +77,11 @@ pub mod TimeExchangeLimitsModule {
 
     #[storage]
     struct Storage {
-        limit_values: Map<ContractAddress, Map<ContractAddress, Map<u64, IndexLimitStorageNode>>>,
-        exchange_limits: Map<ContractAddress, Map<ContractAddress, Vec<LimitStorageNode>>>,
+        limit_values: Map<(ContractAddress, ContractAddress, u64), IndexLimitStorageNode>,
+        exchange_limits: Map<(ContractAddress, ContractAddress), Vec<LimitStorageNode>>,
         exchange_counters: Map<
-            ContractAddress,
-            Map<
-                ContractAddress, Map<ContractAddress, Map<u64, ExchangeTransferCounterStorageNode>>,
-            >,
+            (ContractAddress, ContractAddress, ContractAddress),
+            Map<u64, ExchangeTransferCounterStorageNode>,
         >,
         exchange_ids: Map<ContractAddress, bool>,
         #[substorage(v0)]
@@ -248,8 +246,7 @@ pub mod TimeExchangeLimitsModule {
 
             let receiver_limits_storage_path = contract_state
                 .exchange_limits
-                .entry(compliance)
-                .entry(receiver_identity);
+                .entry((compliance, receiver_identity));
 
             let mut check = true;
             for i in 0..receiver_limits_storage_path.len() {
@@ -267,9 +264,7 @@ pub mod TimeExchangeLimitsModule {
                     )
                     && contract_state
                         .exchange_counters
-                        .entry(compliance)
-                        .entry(receiver_identity)
-                        .entry(sender_identity)
+                        .entry((compliance, receiver_identity, sender_identity))
                         .entry(limit_time)
                         .value
                         .read()
@@ -304,16 +299,11 @@ pub mod TimeExchangeLimitsModule {
             let caller = starknet::get_caller_address();
             let index_limit_storage_path = self
                 .limit_values
-                .entry(caller)
-                .entry(exchange_id)
-                .entry(limit.limit_time)
+                .entry((caller, exchange_id, limit.limit_time))
                 .deref();
             let is_attributed_limit = index_limit_storage_path.attributed_limit.read();
 
-            let exchange_limits_storage_path = self
-                .exchange_limits
-                .entry(caller)
-                .entry(exchange_id);
+            let exchange_limits_storage_path = self.exchange_limits.entry((caller, exchange_id));
             let limit_count = exchange_limits_storage_path.len();
             if !is_attributed_limit && limit_count >= 4 {
                 Errors::LimitsArraySizeExceeded(caller, exchange_id);
@@ -374,9 +364,7 @@ pub mod TimeExchangeLimitsModule {
         ) -> ExchangeTransferCounter {
             let storage_node = self
                 .exchange_counters
-                .entry(compliance)
-                .entry(exchange_id)
-                .entry(investor_id)
+                .entry((compliance, exchange_id, investor_id))
                 .entry(limit_time)
                 .deref();
             ExchangeTransferCounter {
@@ -387,7 +375,7 @@ pub mod TimeExchangeLimitsModule {
         fn get_exchange_limits(
             self: @ContractState, compliance: ContractAddress, exchange_id: ContractAddress,
         ) -> Array<Limit> {
-            let limits_storage_path = self.exchange_limits.entry(compliance).entry(exchange_id);
+            let limits_storage_path = self.exchange_limits.entry((compliance, exchange_id));
 
             let mut limits = array![];
             for i in 0..limits_storage_path.len() {
@@ -419,14 +407,11 @@ pub mod TimeExchangeLimitsModule {
         ) {
             let exchange_limits_storage_path = self
                 .exchange_limits
-                .entry(compliance)
-                .entry(exchange_id);
+                .entry((compliance, exchange_id));
 
             let exchange_counter_storage_path = self
                 .exchange_counters
-                .entry(compliance)
-                .entry(exchange_id)
-                .entry(investor_id);
+                .entry((compliance, exchange_id, investor_id));
 
             for i in 0..exchange_limits_storage_path.len() {
                 let limit_time = exchange_limits_storage_path.at(i).limit_time.read();
@@ -454,9 +439,7 @@ pub mod TimeExchangeLimitsModule {
             if self.is_exchange_counter_finished(compliance, exchange_id, investor_id, limit_time) {
                 let exchange_counter_storage_path = self
                     .exchange_counters
-                    .entry(compliance)
-                    .entry(exchange_id)
-                    .entry(investor_id)
+                    .entry((compliance, exchange_id, investor_id))
                     .entry(limit_time)
                     .deref();
                 exchange_counter_storage_path
@@ -475,9 +458,7 @@ pub mod TimeExchangeLimitsModule {
         ) -> bool {
             self
                 .exchange_counters
-                .entry(compliance)
-                .entry(exchange_id)
-                .entry(identity)
+                .entry((compliance, exchange_id, identity))
                 .entry(limit_time)
                 .timer
                 .read() <= starknet::get_block_timestamp()

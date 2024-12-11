@@ -288,7 +288,8 @@ mod MaxBalanceModule {
                 Errors::TokenAlreadyBound(compliance);
             };
 
-            self._preset_module_state(compliance, id, balance);
+            self.id_balance.entry(compliance).entry(id).write(balance);
+            self.emit(IDBalancePreSet { compliance, id, balance });
         }
 
         fn batch_preset_module_state(
@@ -313,8 +314,11 @@ mod MaxBalanceModule {
                 Errors::TokenAlreadyBound(compliance);
             }
 
+            let compliance_id_balances = self.id_balance.entry(compliance);
             for i in 0..id.len() {
-                self._preset_module_state(compliance, *id.at(i), *balance.at(i));
+                let (_id, _balance) = (*id.at(i), *balance.at(i));
+                compliance_id_balances.entry(_id).write(_balance);
+                self.emit(IDBalancePreSet { compliance, id: _id, balance: _balance });  
             };
 
             self.compliance_preset_status.entry(compliance).write(true);
@@ -339,16 +343,6 @@ mod MaxBalanceModule {
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
-        fn _preset_module_state(
-            ref self: ContractState,
-            compliance: ContractAddress,
-            id: ContractAddress,
-            balance: u256,
-        ) {
-            self.id_balance.entry(compliance).entry(id).write(balance);
-            self.emit(IDBalancePreSet { compliance, id, balance });
-        }
-
         fn get_identity(
             self: @ContractState, compliance: ContractAddress, user_address: ContractAddress,
         ) -> ContractAddress {

@@ -69,7 +69,7 @@ pub mod ConditionalTransferModule {
 
     #[storage]
     struct Storage {
-        transfers_approved: Map<ContractAddress, Map<felt252, u256>>,
+        transfers_approved: Map<(ContractAddress, felt252), u256>,
         #[substorage(v0)]
         abstract_module: AbstractModuleComponent::Storage,
         #[substorage(v0)]
@@ -151,8 +151,7 @@ pub mod ConditionalTransferModule {
                 .calculate_transfer_hash(from, to, value, token_bound);
             let transfers_approved_storage_path = contract_state
                 .transfers_approved
-                .entry(caller)
-                .entry(transfer_hash);
+                .entry((caller, transfer_hash));
             let approval_count = transfers_approved_storage_path.read();
 
             if approval_count > 0 {
@@ -249,7 +248,7 @@ pub mod ConditionalTransferModule {
             let token_bound = modular_compliance_dispatcher.get_token_bound();
             let transfer_hash = self.calculate_transfer_hash(from, to, amount, token_bound);
 
-            let storage_path = self.transfers_approved.entry(caller).entry(transfer_hash);
+            let storage_path = self.transfers_approved.entry((caller, transfer_hash));
             let approval_count = storage_path.read();
             storage_path.write(approval_count + 1);
 
@@ -267,7 +266,7 @@ pub mod ConditionalTransferModule {
             let token_bound = modular_compliance_dispatcher.get_token_bound();
             let transfer_hash = self.calculate_transfer_hash(from, to, amount, token_bound);
 
-            let storage_path = self.transfers_approved.entry(caller).entry(transfer_hash);
+            let storage_path = self.transfers_approved.entry((caller, transfer_hash));
             let approval_count = storage_path.read();
             assert(approval_count > 0, 'Not Approved');
             storage_path.write(approval_count - 1);
@@ -278,13 +277,13 @@ pub mod ConditionalTransferModule {
         fn is_transfer_approved(
             self: @ContractState, compliance: ContractAddress, transfer_hash: felt252,
         ) -> bool {
-            self.transfers_approved.entry(compliance).entry(transfer_hash).read() > 0
+            self.transfers_approved.entry((compliance, transfer_hash)).read() > 0
         }
 
         fn get_transfer_approvals(
             self: @ContractState, compliance: ContractAddress, transfer_hash: felt252,
         ) -> u256 {
-            self.transfers_approved.entry(compliance).entry(transfer_hash).read()
+            self.transfers_approved.entry((compliance, transfer_hash)).read()
         }
 
         fn calculate_transfer_hash(

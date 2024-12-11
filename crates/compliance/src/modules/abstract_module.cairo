@@ -7,7 +7,7 @@ pub mod AbstractModuleComponent {
 
     #[storage]
     pub struct Storage {
-        pub AbstractModule_compliance_bound: Map<ContractAddress, bool>,
+        AbstractModule_compliance_bound: Map<ContractAddress, bool>,
     }
 
     #[event]

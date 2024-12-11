@@ -64,9 +64,9 @@ mod ExchangeMonthlyLimitsModule {
 
     #[storage]
     struct Storage {
-        exchange_monthly_limits: Map<ContractAddress, Map<ContractAddress, u256>>,
+        exchange_monthly_limits: Map<(ContractAddress, ContractAddress), u256>,
         exchange_counters: Map<
-            ContractAddress, Map<ContractAddress, Map<ContractAddress, ExchangeTransferCounter>>,
+            (ContractAddress, ContractAddress, ContractAddress), ExchangeTransferCounter,
         >,
         exchange_ids: Map<ContractAddress, bool>,
         #[substorage(v0)]
@@ -211,8 +211,7 @@ mod ExchangeMonthlyLimitsModule {
 
             let receiver_monthly_limit = contract_state
                 .exchange_monthly_limits
-                .entry(compliance)
-                .entry(receiver_identity)
+                .entry((compliance, receiver_identity))
                 .read();
             if value > receiver_monthly_limit {
                 return false;
@@ -256,8 +255,7 @@ mod ExchangeMonthlyLimitsModule {
             let caller = starknet::get_caller_address();
             self
                 .exchange_monthly_limits
-                .entry(caller)
-                .entry(exchange_id)
+                .entry((caller, exchange_id))
                 .write(new_exchange_monthly_limit);
             self
                 .emit(
@@ -270,7 +268,7 @@ mod ExchangeMonthlyLimitsModule {
         fn get_exchange_monthly_limit(
             self: @ContractState, compliance: ContractAddress, exchange_id: ContractAddress,
         ) -> u256 {
-            self.exchange_monthly_limits.entry(compliance).entry(exchange_id).read()
+            self.exchange_monthly_limits.entry((compliance, exchange_id)).read()
         }
 
         fn add_exchange_id(ref self: ContractState, exchange_id: ContractAddress) {
@@ -303,9 +301,7 @@ mod ExchangeMonthlyLimitsModule {
         ) -> u256 {
             self
                 .exchange_counters
-                .entry(compliance)
-                .entry(exchange_id)
-                .entry(investor_id)
+                .entry((compliance, exchange_id, investor_id))
                 .monthly_count
                 .read()
         }
@@ -318,9 +314,7 @@ mod ExchangeMonthlyLimitsModule {
         ) -> u64 {
             self
                 .exchange_counters
-                .entry(compliance)
-                .entry(exchange_id)
-                .entry(investor_id)
+                .entry((compliance, exchange_id, investor_id))
                 .monthly_timer
                 .read()
         }
@@ -338,9 +332,7 @@ mod ExchangeMonthlyLimitsModule {
             self.reset_exchange_monthly_cooldown(compliance, exchange_id, investor_id);
             let monthly_count_storage_path = self
                 .exchange_counters
-                .entry(compliance)
-                .entry(exchange_id)
-                .entry(investor_id)
+                .entry((compliance, exchange_id, investor_id))
                 .monthly_count
                 .deref();
 
@@ -357,9 +349,7 @@ mod ExchangeMonthlyLimitsModule {
             if self.is_exchange_month_finished(compliance, exchange_id, investor_id) {
                 let exchange_counter_storage_path = self
                     .exchange_counters
-                    .entry(compliance)
-                    .entry(exchange_id)
-                    .entry(investor_id)
+                    .entry((compliance, exchange_id, investor_id))
                     .deref();
                 exchange_counter_storage_path
                     .monthly_timer
