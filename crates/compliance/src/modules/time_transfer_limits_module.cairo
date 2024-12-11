@@ -4,21 +4,21 @@ use starknet::ContractAddress;
 #[starknet::interface]
 pub trait ITimeTransferLimitsModule<TContractState> {
     fn batch_set_time_transfer_limit(ref self: TContractState, limits: Span<Limit>);
-    fn batch_remove_time_transfer_limit(ref self: TContractState, limit_times: Span<u32>);
+    fn batch_remove_time_transfer_limit(ref self: TContractState, limit_times: Span<u64>);
     fn set_time_transfer_limit(ref self: TContractState, limit: Limit);
-    fn remove_time_transfer_limit(ref self: TContractState, limit_time: u32);
+    fn remove_time_transfer_limit(ref self: TContractState, limit_time: u64);
     fn get_time_transfer_limit(self: @TContractState, compliance: ContractAddress) -> Span<Limit>;
 }
 
 #[derive(Drop, Copy, Serde, starknet::Store)]
 pub struct TransferCounter {
     value: u256,
-    timer: u256,
+    timer: u64,
 }
 
 #[derive(Drop, Copy, Serde, starknet::Store)]
 pub struct Limit {
-    limit_time: u32,
+    limit_time: u64,
     limit_value: u256,
 }
 
@@ -78,6 +78,7 @@ impl LimitIndexZero of Zero<IndexLimit> {
 
 #[starknet::contract]
 mod TimeTransferLimitsModule {
+    use AbstractModuleComponent::InternalTrait as AbstractModuleInternalTrait;
     use core::num::traits::Zero;
     use crate::{
         imodular_compliance::{IModularComplianceDispatcher, IModularComplianceDispatcherTrait},
@@ -85,10 +86,12 @@ mod TimeTransferLimitsModule {
             AbstractModuleComponent, AbstractModuleComponent::AbstractFunctionsTrait,
         },
     };
+    use openzeppelin_access::ownable::OwnableComponent;
+    use openzeppelin_upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
     use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
     use roles::agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait};
     use starknet::{
-        ContractAddress,
+        ClassHash, ContractAddress,
         storage::{Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess},
     };
     use storage::storage_array::{
@@ -103,13 +106,27 @@ mod TimeTransferLimitsModule {
     impl ModuleImpl = AbstractModuleComponent::AbstractModule<ContractState>;
     impl AbstractModuleInternalImpl = AbstractModuleComponent::InternalImpl<ContractState>;
 
+    component!(path: UpgradeableComponent, storage: upgrades, event: UpgradeableEvent);
+
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+
+    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+
+    #[abi(embed_v0)]
+    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
+    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
+
     #[storage]
     struct Storage {
-        limit_values: Map<(ContractAddress, u32), IndexLimit>,
+        limit_values: Map<(ContractAddress, u64), IndexLimit>,
         transfer_limits: Map<ContractAddress, StorageArrayLimit>,
-        users_counter: Map<(ContractAddress, ContractAddress, u32), TransferCounter>,
+        users_counter: Map<(ContractAddress, ContractAddress, u64), TransferCounter>,
         #[substorage(v0)]
         abstract_module: AbstractModuleComponent::Storage,
+        #[substorage(v0)]
+        upgrades: UpgradeableComponent::Storage,
+        #[substorage(v0)]
+        ownable: OwnableComponent::Storage,
     }
 
     #[event]
@@ -119,13 +136,17 @@ mod TimeTransferLimitsModule {
         TimeTransferLimitRemoved: TimeTransferLimitRemoved,
         #[flat]
         AbstractModuleEvent: AbstractModuleComponent::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event,
+        #[flat]
+        OwnableEvent: OwnableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct TimeTransferLimitUpdated {
         #[key]
         compliance: ContractAddress,
-        limit_time: u32,
+        limit_time: u64,
         limit_value: u256,
     }
 
@@ -133,17 +154,30 @@ mod TimeTransferLimitsModule {
     pub struct TimeTransferLimitRemoved {
         #[key]
         compliance: ContractAddress,
-        limit_time: u32,
+        limit_time: u64,
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.upgrades.upgrade(new_class_hash);
+        }
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, owner: ContractAddress) {
+        self.ownable.initializer(owner);
     }
 
     pub mod Errors {
         use starknet::ContractAddress;
 
-        pub fn LimitsArraySizeExceeded(compliance: ContractAddress, array_size: u32) {
+        pub fn LimitsArraySizeExceeded(compliance: ContractAddress, array_size: u64) {
             panic!("Limits array size {} exceeded for compliance {:x}", array_size, compliance);
         }
 
-        pub fn LimitTimeNotFound(compliance: ContractAddress, limit_time: u32) {
+        pub fn LimitTimeNotFound(compliance: ContractAddress, limit_time: u64) {
             panic!("Limit time {} not found for compliance {:x}", limit_time, compliance);
         }
     }
@@ -168,10 +202,7 @@ mod TimeTransferLimitsModule {
             to: ContractAddress,
             value: u256,
         ) {
-            let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self,
-            );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
         }
 
         fn module_burn_action(
@@ -179,10 +210,7 @@ mod TimeTransferLimitsModule {
             from: ContractAddress,
             value: u256,
         ) {
-            let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
-                ref self,
-            );
-            contract_state.abstract_module.only_compliance_call();
+            self.only_compliance_call();
         }
 
         fn module_check(
@@ -247,27 +275,132 @@ mod TimeTransferLimitsModule {
         fn get_time_transfer_limit(
             self: @ContractState, compliance: ContractAddress,
         ) -> Span<Limit> {
-            let transfer_limits_storage_path = self.transfer_limits.entry(compliance);
-            let mut limits = array![];
-            for i in 0..transfer_limits_storage_path.len() {
-                limits.append(transfer_limits_storage_path.at(i).read());
-            };
-            limits.span()
+            LimitVecToLimitArray::into(self.transfer_limits.entry(compliance)).span()
         }
 
         fn batch_set_time_transfer_limit(ref self: ContractState, limits: Span<Limit>) {
+            self.abstract_module.only_compliance_call();
             for limit in limits {
-                self.set_time_transfer_limit(*limit);
+                self._set_time_transfer_limit(*limit);
             }
         }
 
-        fn batch_remove_time_transfer_limit(ref self: ContractState, limit_times: Span<u32>) {
+        fn batch_remove_time_transfer_limit(ref self: ContractState, limit_times: Span<u64>) {
+            self.abstract_module.only_compliance_call();
             for limit_time in limit_times {
-                self.remove_time_transfer_limit(*limit_time);
+                self._remove_time_transfer_limit(*limit_time);
             }
         }
 
         fn set_time_transfer_limit(ref self: ContractState, limit: Limit) {
+            self.abstract_module.only_compliance_call();
+            self._set_time_transfer_limit(limit);
+        }
+
+        fn remove_time_transfer_limit(ref self: ContractState, limit_time: u64) {
+            self.abstract_module.only_compliance_call();
+            self._remove_time_transfer_limit(limit_time);
+        }
+    }
+
+    #[generate_trait]
+    impl InternalImpl of InternalTrait {
+        fn increase_counters(
+            ref self: ContractState,
+            compliance: ContractAddress,
+            user_address: ContractAddress,
+            value: u256,
+        ) {
+            let identity = self.get_identity(compliance, user_address);
+            let transfer_limits_storage_path = self.transfer_limits.entry(compliance);
+            for i in 0..transfer_limits_storage_path.len() {
+                let limit = transfer_limits_storage_path.at(i).read();
+                self.reset_user_counter(compliance, identity, limit.limit_time);
+                let user_counter_storage_path = self
+                    .users_counter
+                    .entry((compliance, identity, limit.limit_time));
+                user_counter_storage_path
+                    .value
+                    .write(user_counter_storage_path.value.read() + value)
+            };
+        }
+
+        fn reset_user_counter(
+            ref self: ContractState,
+            compliance: ContractAddress,
+            identity: ContractAddress,
+            limit_time: u64,
+        ) {
+            if self.is_user_counter_finished(compliance, identity, limit_time) {
+                let user_counter_storage_path = self
+                    .users_counter
+                    .entry((compliance, identity, limit_time))
+                    .deref();
+                user_counter_storage_path
+                    .timer
+                    .write((starknet::get_block_timestamp() + limit_time.into()).into());
+                user_counter_storage_path.value.write(Zero::zero());
+            }
+        }
+
+        fn is_user_counter_finished(
+            self: @ContractState,
+            compliance: ContractAddress,
+            identity: ContractAddress,
+            limit_time: u64,
+        ) -> bool {
+            self
+                .users_counter
+                .entry((compliance, identity, limit_time))
+                .read()
+                .timer <= starknet::get_block_timestamp()
+                .into()
+        }
+
+        fn get_identity(
+            self: @ContractState, compliance: ContractAddress, user_address: ContractAddress,
+        ) -> ContractAddress {
+            let token_dispatcher = ITokenDispatcher {
+                contract_address: IModularComplianceDispatcher { contract_address: compliance }
+                    .get_token_bound(),
+            };
+            let identity = token_dispatcher.identity_registry().identity(user_address);
+            assert(identity.is_non_zero(), 'Identity not found');
+            identity
+        }
+
+        fn is_token_agent(
+            self: @ContractState, compliance: ContractAddress, user_address: ContractAddress,
+        ) -> bool {
+            let token_bound = IModularComplianceDispatcher { contract_address: compliance }
+                .get_token_bound();
+            IAgentRoleDispatcher { contract_address: token_bound }.is_agent(user_address)
+        }
+
+        fn _remove_time_transfer_limit(ref self: ContractState, limit_time: u64) {
+            let mut limit_found = false;
+            let mut index: u256 = Default::default();
+            let caller = starknet::get_caller_address();
+            let transfer_limits_storage_path = self.transfer_limits.entry(caller);
+            for i in 0..transfer_limits_storage_path.len() {
+                let limit = transfer_limits_storage_path.at(i).read();
+                if (limit.limit_time == limit_time) {
+                    limit_found = true;
+                    index = i.into();
+                    break;
+                }
+            };
+
+            if (!limit_found) {
+                Errors::LimitTimeNotFound(caller, limit_time);
+            }
+
+            transfer_limits_storage_path.delete(index.try_into().expect('Index out of bound'));
+            self.limit_values.entry((caller, limit_time)).write(Zero::zero());
+            self.emit(TimeTransferLimitRemoved { compliance: caller, limit_time });
+        }
+
+        fn _set_time_transfer_limit(ref self: ContractState, limit: Limit) {
             let caller = starknet::get_caller_address();
             let limit_values_storage_path = self.limit_values.entry((caller, limit.limit_time));
             let transfer_limits_storage_path = self.transfer_limits.entry(caller);
@@ -298,115 +431,6 @@ mod TimeTransferLimitsModule {
                         limit_value: limit.limit_value,
                     },
                 );
-        }
-
-        fn remove_time_transfer_limit(ref self: ContractState, limit_time: u32) {
-            let mut limit_found = false;
-            let mut index: u256 = Default::default();
-            let caller = starknet::get_caller_address();
-            let transfer_limits_storage_path = self.transfer_limits.entry(caller);
-            for i in 0..transfer_limits_storage_path.len() {
-                let limit = transfer_limits_storage_path.at(i).read();
-                if (limit.limit_time == limit_time) {
-                    limit_found = true;
-                    index = i.into();
-                    break;
-                }
-            };
-
-            if (!limit_found) {
-                Errors::LimitTimeNotFound(caller, limit_time);
-            }
-
-            if (transfer_limits_storage_path.len() > 1
-                && index != (transfer_limits_storage_path.len() - 1).into()) {
-                transfer_limits_storage_path
-                    .at(index.try_into().expect('index out of bounds'))
-                    .write(
-                        transfer_limits_storage_path
-                            .at((transfer_limits_storage_path.len() - 1))
-                            .read(),
-                    );
-            }
-
-            transfer_limits_storage_path.delete((transfer_limits_storage_path.len() - 1).into());
-            self.limit_values.entry((caller, limit_time)).write(Zero::zero());
-            self.emit(TimeTransferLimitRemoved { compliance: caller, limit_time });
-        }
-    }
-
-    #[generate_trait]
-    impl InternalImpl of InternalTrait {
-        fn increase_counters(
-            ref self: ContractState,
-            compliance: ContractAddress,
-            user_address: ContractAddress,
-            value: u256,
-        ) {
-            let identity = self.get_identity(compliance, user_address);
-            let transfer_limits_storage_path = self.transfer_limits.entry(compliance);
-            for i in 0..transfer_limits_storage_path.len() {
-                let limit = transfer_limits_storage_path.at(i).read();
-                self.reset_user_counter(compliance, identity, limit.limit_time);
-                let user_counter_storage_path = self
-                    .users_counter
-                    .entry((compliance, identity, limit.limit_time));
-                user_counter_storage_path
-                    .value
-                    .write(user_counter_storage_path.value.read() + value)
-            };
-        }
-
-        fn reset_user_counter(
-            ref self: ContractState,
-            compliance: ContractAddress,
-            identity: ContractAddress,
-            limit_time: u32,
-        ) {
-            if self.is_user_counter_finished(compliance, identity, limit_time) {
-                let user_counter_storage_path = self
-                    .users_counter
-                    .entry((compliance, identity, limit_time))
-                    .deref();
-                user_counter_storage_path
-                    .timer
-                    .write((starknet::get_block_timestamp() + limit_time.into()).into());
-                user_counter_storage_path.value.write(Zero::zero());
-            }
-        }
-
-        fn is_user_counter_finished(
-            self: @ContractState,
-            compliance: ContractAddress,
-            identity: ContractAddress,
-            limit_time: u32,
-        ) -> bool {
-            self
-                .users_counter
-                .entry((compliance, identity, limit_time))
-                .read()
-                .timer <= starknet::get_block_timestamp()
-                .into()
-        }
-
-        fn get_identity(
-            self: @ContractState, compliance: ContractAddress, user_address: ContractAddress,
-        ) -> ContractAddress {
-            let token_dispatcher = ITokenDispatcher {
-                contract_address: IModularComplianceDispatcher { contract_address: compliance }
-                    .get_token_bound(),
-            };
-            let identity = token_dispatcher.identity_registry().identity(user_address);
-            assert(identity.is_non_zero(), 'Identity not found');
-            identity
-        }
-
-        fn is_token_agent(
-            self: @ContractState, compliance: ContractAddress, user_address: ContractAddress,
-        ) -> bool {
-            let token_bound = IModularComplianceDispatcher { contract_address: compliance }
-                .get_token_bound();
-            IAgentRoleDispatcher { contract_address: token_bound }.is_agent(user_address)
         }
     }
 }
