@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait IExchangeMonthlyLimitsModule<TContractState> {
+pub trait IExchangeMonthlyLimitsModule<TContractState> {
     fn set_exchange_monthly_limit(
         ref self: TContractState, exchange_id: ContractAddress, new_exchange_monthly_limit: u256,
     );
@@ -85,7 +85,7 @@ mod ExchangeMonthlyLimitsModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         ExchangeMonthlyLimitUpdated: ExchangeMonthlyLimitUpdated,
         ExchangeIDAdded: ExchangeIDAdded,
         ExchangeIDRemoved: ExchangeIDRemoved,
@@ -98,21 +98,21 @@ mod ExchangeMonthlyLimitsModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ExchangeMonthlyLimitUpdated {
+    pub struct ExchangeMonthlyLimitUpdated {
         #[key]
-        compliance: ContractAddress,
-        exchange_id: ContractAddress,
-        new_exchange_monthly_limit: u256,
+        pub compliance: ContractAddress,
+        pub exchange_id: ContractAddress,
+        pub new_exchange_monthly_limit: u256,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ExchangeIDAdded {
-        new_exchange_id: ContractAddress,
+    pub struct ExchangeIDAdded {
+        pub new_exchange_id: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ExchangeIDRemoved {
-        exchange_id: ContractAddress,
+    pub struct ExchangeIDRemoved {
+        pub exchange_id: ContractAddress,
     }
 
     pub mod Errors {

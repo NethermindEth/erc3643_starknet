@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait ICountryRestrictModule<ContractState> {
+pub trait ICountryRestrictModule<ContractState> {
     fn add_country_restriction(ref self: ContractState, country: u16);
     fn remove_country_restriction(ref self: ContractState, country: u16);
     fn batch_restrict_countries(ref self: ContractState, countries: Span<u16>);
@@ -57,7 +57,7 @@ mod CountryRestrictModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         AddedRestrictedCountry: AddedRestrictedCountry,
         RemovedRestrictedCountry: RemovedRestrictedCountry,
         #[flat]
@@ -69,17 +69,17 @@ mod CountryRestrictModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct AddedRestrictedCountry {
+    pub struct AddedRestrictedCountry {
         #[key]
-        compliance: ContractAddress,
-        country: u16,
+        pub compliance: ContractAddress,
+        pub country: u16,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct RemovedRestrictedCountry {
+    pub struct RemovedRestrictedCountry {
         #[key]
-        compliance: ContractAddress,
-        country: u16,
+        pub compliance: ContractAddress,
+        pub country: u16,
     }
 
     pub mod Errors {

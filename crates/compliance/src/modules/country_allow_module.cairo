@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait ICountryAllowModule<TContractState> {
+pub trait ICountryAllowModule<TContractState> {
     fn batch_allow_countries(ref self: TContractState, countries: Span<u16>);
     fn batch_disallow_countries(ref self: TContractState, countries: Span<u16>);
     fn add_allowed_country(ref self: TContractState, country: u16);
@@ -58,7 +58,7 @@ mod CountryAllowModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         CountryAllowed: CountryAllowed,
         CountryUnallowed: CountryUnallowed,
         #[flat]
@@ -70,17 +70,17 @@ mod CountryAllowModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct CountryAllowed {
+    pub struct CountryAllowed {
         #[key]
-        compliance: ContractAddress,
-        country: u16,
+        pub compliance: ContractAddress,
+        pub country: u16,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct CountryUnallowed {
+    pub struct CountryUnallowed {
         #[key]
-        compliance: ContractAddress,
-        country: u16,
+        pub compliance: ContractAddress,
+        pub country: u16,
     }
 
     pub mod Errors {

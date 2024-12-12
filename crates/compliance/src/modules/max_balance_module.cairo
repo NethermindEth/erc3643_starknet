@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait IMaxBalanceModule<TContractState> {
+pub trait IMaxBalanceModule<TContractState> {
     fn set_max_balance(ref self: TContractState, max: u256);
     fn preset_module_state(
         ref self: TContractState, compliance: ContractAddress, id: ContractAddress, balance: u256,
@@ -70,7 +70,7 @@ mod MaxBalanceModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         MaxBalanceSet: MaxBalanceSet,
         IDBalancePreSet: IDBalancePreSet,
         PresetCompleted: PresetCompleted,
@@ -83,26 +83,26 @@ mod MaxBalanceModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct MaxBalanceSet {
+    pub struct MaxBalanceSet {
         #[key]
-        compliance: ContractAddress,
+        pub compliance: ContractAddress,
         #[key]
-        max_balance: u256,
+        pub max_balance: u256,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct IDBalancePreSet {
+    pub struct IDBalancePreSet {
         #[key]
-        compliance: ContractAddress,
+        pub compliance: ContractAddress,
         #[key]
         id: ContractAddress,
         balance: u256,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct PresetCompleted {
+    pub struct PresetCompleted {
         #[key]
-        compliance: ContractAddress,
+        pub compliance: ContractAddress,
     }
 
     /// TODO: write better error messages

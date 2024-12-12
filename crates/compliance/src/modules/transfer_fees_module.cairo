@@ -61,7 +61,7 @@ mod TransferFeesModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         FeeUpdated: FeeUpdated,
         #[flat]
         AbstractModuleEvent: AbstractModuleComponent::Event,
@@ -72,7 +72,7 @@ mod TransferFeesModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct FeeUpdated {
+    pub struct FeeUpdated {
         #[key]
         pub compliance: ContractAddress,
         pub rate: u16,
@@ -82,7 +82,7 @@ mod TransferFeesModule {
     pub mod Errors {
         use starknet::ContractAddress;
 
-        pub fn FeeIsOutOfRange(compliance: ContractAddress, rate: u256) {
+        pub fn FeeIsOutOfRange(compliance: ContractAddress, rate: u16) {
             panic!("Fee is out of range! Compliance: {:?}, rate: {}", compliance, rate);
         }
         pub fn CollectorAddressIsNotVerified(

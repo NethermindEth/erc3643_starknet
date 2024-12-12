@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait ISupplyLimitModule<TContractState> {
+pub trait ISupplyLimitModule<TContractState> {
     fn set_supply_limit(ref self: TContractState, limit: u256);
     fn get_supply_limit(self: @TContractState, compliance: ContractAddress) -> u256;
 }
@@ -52,7 +52,7 @@ mod SupplyLimitModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         SupplyLimitSet: SupplyLimitSet,
         #[flat]
         AbstractModuleEvent: AbstractModuleComponent::Event,
@@ -63,9 +63,9 @@ mod SupplyLimitModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SupplyLimitSet {
-        compliance: ContractAddress,
-        limit: u256,
+    pub struct SupplyLimitSet {
+        pub compliance: ContractAddress,
+        pub limit: u256,
     }
 
     #[constructor]

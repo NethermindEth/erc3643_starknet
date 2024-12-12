@@ -2,20 +2,20 @@ use starknet::ContractAddress;
 
 #[derive(Drop, Copy, Serde)]
 pub struct ExchangeTransferCounter {
-    value: u256,
-    timer: u64,
+    pub value: u256,
+    pub timer: u64,
 }
 
 #[derive(Drop, Copy, Serde)]
 pub struct Limit {
-    limit_time: u64,
-    limit_value: u256,
+    pub limit_time: u64,
+    pub limit_value: u256,
 }
 
 #[derive(Drop, Copy, Serde)]
 pub struct IndexLimit {
-    attributed_limit: bool,
-    limit_index: u8,
+    pub attributed_limit: bool,
+    pub limit_index: u8,
 }
 
 #[starknet::interface]
@@ -112,7 +112,7 @@ pub mod TimeExchangeLimitsModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         ExchangeLimitUpdated: ExchangeLimitUpdated,
         ExchangeIDAdded: ExchangeIDAdded,
         ExchangeIDRemoved: ExchangeIDRemoved,
@@ -125,22 +125,22 @@ pub mod TimeExchangeLimitsModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ExchangeLimitUpdated {
+    pub struct ExchangeLimitUpdated {
         #[key]
-        compliance: ContractAddress,
-        exchange_id: ContractAddress,
-        limit_value: u256,
-        limit_time: u64,
+        pub compliance: ContractAddress,
+        pub exchange_id: ContractAddress,
+        pub limit_value: u256,
+        pub limit_time: u64,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ExchangeIDAdded {
-        new_exchange_id: ContractAddress,
+    pub struct ExchangeIDAdded {
+        pub new_exchange_id: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ExchangeIDRemoved {
-        exchange_id: ContractAddress,
+    pub struct ExchangeIDRemoved {
+        pub exchange_id: ContractAddress,
     }
 
     pub mod Errors {

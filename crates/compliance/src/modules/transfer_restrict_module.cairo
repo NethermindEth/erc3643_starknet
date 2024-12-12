@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait ITransferRestrictModule<TContractState> {
+pub trait ITransferRestrictModule<TContractState> {
     fn allow_user(ref self: TContractState, user_address: ContractAddress);
     fn batch_allow_users(ref self: TContractState, user_addresses: Span<ContractAddress>);
     fn disallow_user(ref self: TContractState, user_address: ContractAddress);
@@ -53,7 +53,7 @@ mod TransferRestrictModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         UserAllowed: UserAllowed,
         UserDisallowed: UserDisallowed,
         #[flat]
@@ -65,15 +65,15 @@ mod TransferRestrictModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct UserAllowed {
-        compliance: ContractAddress,
-        user_address: ContractAddress,
+    pub struct UserAllowed {
+        pub compliance: ContractAddress,
+        pub user_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct UserDisallowed {
-        compliance: ContractAddress,
-        user_address: ContractAddress,
+    pub struct UserDisallowed {
+        pub compliance: ContractAddress,
+        pub user_address: ContractAddress,
     }
 
     #[constructor]

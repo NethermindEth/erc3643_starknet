@@ -80,7 +80,7 @@ pub mod ConditionalTransferModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         TransferApproved: TransferApproved,
         ApprovalRemoved: ApprovalRemoved,
         #[flat]
@@ -92,19 +92,19 @@ pub mod ConditionalTransferModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct TransferApproved {
-        from: ContractAddress,
-        to: ContractAddress,
-        amount: u256,
-        token: ContractAddress,
+    pub struct TransferApproved {
+        pub from: ContractAddress,
+        pub to: ContractAddress,
+        pub amount: u256,
+        pub token: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ApprovalRemoved {
-        from: ContractAddress,
-        to: ContractAddress,
-        amount: u256,
-        token: ContractAddress,
+    pub struct ApprovalRemoved {
+        pub from: ContractAddress,
+        pub to: ContractAddress,
+        pub amount: u256,
+        pub token: ContractAddress,
     }
 
     #[constructor]
