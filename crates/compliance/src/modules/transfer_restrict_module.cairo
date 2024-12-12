@@ -13,6 +13,7 @@ trait ITransferRestrictModule<TContractState> {
 
 #[starknet::contract]
 mod TransferRestrictModule {
+    use core::num::traits::Zero;
     use crate::modules::abstract_module::{
         AbstractModuleComponent, AbstractModuleComponent::AbstractFunctionsTrait,
     };
@@ -131,6 +132,10 @@ mod TransferRestrictModule {
             value: u256,
             compliance: ContractAddress,
         ) -> bool {
+            if from.is_zero() || to.is_zero() {
+                return true;
+            }
+
             let contract_state = AbstractModuleComponent::HasComponent::get_contract(self);
             let compliance_allowed_users = contract_state.allowed_users.entry(compliance);
             if compliance_allowed_users.entry(from).read() {
@@ -161,7 +166,7 @@ mod TransferRestrictModule {
             self.abstract_module.only_compliance_call();
             let caller = starknet::get_caller_address();
             self.allowed_users.entry(caller).entry(user_address).write(true);
-            self.emit(UserDisallowed { compliance: caller, user_address });
+            self.emit(UserAllowed { compliance: caller, user_address });
         }
 
         fn batch_allow_users(ref self: ContractState, user_addresses: Span<ContractAddress>) {
@@ -170,7 +175,7 @@ mod TransferRestrictModule {
             let allowed_users_storage_path = self.allowed_users.entry(caller);
             for user_address in user_addresses {
                 allowed_users_storage_path.entry(*user_address).write(true);
-                self.emit(UserDisallowed { compliance: caller, user_address: *user_address });
+                self.emit(UserAllowed { compliance: caller, user_address: *user_address });
             };
         }
 

@@ -137,15 +137,13 @@ pub mod ConditionalTransferModule {
             to: ContractAddress,
             value: u256,
         ) {
+            self.only_compliance_call();
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            self.only_compliance_call();
             let caller = starknet::get_caller_address();
-            let modular_compliance_dispatcher = IModularComplianceDispatcher {
-                contract_address: caller,
-            };
-            let token_bound = modular_compliance_dispatcher.get_token_bound();
+            let token_bound = IModularComplianceDispatcher { contract_address: caller }
+                .get_token_bound();
 
             let transfer_hash = contract_state
                 .calculate_transfer_hash(from, to, value, token_bound);
@@ -221,7 +219,7 @@ pub mod ConditionalTransferModule {
         ) {
             self.abstract_module.only_compliance_call();
             for i in 0..from.len() {
-                self.approve_transfer(*from.at(i), *to.at(i), *amount.at(i));
+                self._approve_transfer(*from.at(i), *to.at(i), *amount.at(i));
             };
         }
 
@@ -233,7 +231,7 @@ pub mod ConditionalTransferModule {
         ) {
             self.abstract_module.only_compliance_call();
             for i in 0..from.len() {
-                self.unapprove_transfer(*from.at(i), *to.at(i), *amount.at(i));
+                self._unapprove_transfer(*from.at(i), *to.at(i), *amount.at(i));
             };
         }
 
@@ -241,37 +239,14 @@ pub mod ConditionalTransferModule {
             ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
         ) {
             self.abstract_module.only_compliance_call();
-            let caller = starknet::get_caller_address();
-            let modular_compliance_dispatcher = IModularComplianceDispatcher {
-                contract_address: caller,
-            };
-            let token_bound = modular_compliance_dispatcher.get_token_bound();
-            let transfer_hash = self.calculate_transfer_hash(from, to, amount, token_bound);
-
-            let storage_path = self.transfers_approved.entry((caller, transfer_hash));
-            let approval_count = storage_path.read();
-            storage_path.write(approval_count + 1);
-
-            self.emit(TransferApproved { from, to, amount, token: token_bound });
+            self._approve_transfer(from, to, amount);
         }
 
         fn unapprove_transfer(
             ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
         ) {
             self.abstract_module.only_compliance_call();
-            let caller = starknet::get_caller_address();
-            let modular_compliance_dispatcher = IModularComplianceDispatcher {
-                contract_address: caller,
-            };
-            let token_bound = modular_compliance_dispatcher.get_token_bound();
-            let transfer_hash = self.calculate_transfer_hash(from, to, amount, token_bound);
-
-            let storage_path = self.transfers_approved.entry((caller, transfer_hash));
-            let approval_count = storage_path.read();
-            assert(approval_count > 0, 'Not Approved');
-            storage_path.write(approval_count - 1);
-
-            self.emit(ApprovalRemoved { from, to, amount, token: token_bound });
+            self._unapprove_transfer(from, to, amount);
         }
 
         fn is_transfer_approved(
@@ -299,6 +274,43 @@ pub mod ConditionalTransferModule {
             amount.serialize(ref serialized_data);
             token.serialize(ref serialized_data);
             poseidon_hash_span(serialized_data.span())
+        }
+    }
+
+    #[generate_trait]
+    impl InternalImpl of InternalTrait {
+        fn _approve_transfer(
+            ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
+        ) {
+            let caller = starknet::get_caller_address();
+            let token_bound = IModularComplianceDispatcher { contract_address: caller }
+                .get_token_bound();
+
+            let transfer_hash = self.calculate_transfer_hash(from, to, amount, token_bound);
+
+            let storage_path = self.transfers_approved.entry((caller, transfer_hash));
+            let approval_count = storage_path.read();
+            storage_path.write(approval_count + 1);
+
+            self.emit(TransferApproved { from, to, amount, token: token_bound });
+        }
+
+
+        fn _unapprove_transfer(
+            ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
+        ) {
+            let caller = starknet::get_caller_address();
+            let token_bound = IModularComplianceDispatcher { contract_address: caller }
+                .get_token_bound();
+
+            let transfer_hash = self.calculate_transfer_hash(from, to, amount, token_bound);
+
+            let storage_path = self.transfers_approved.entry((caller, transfer_hash));
+            let approval_count = storage_path.read();
+            assert(approval_count > 0, 'Not Approved');
+            storage_path.write(approval_count - 1);
+
+            self.emit(ApprovalRemoved { from, to, amount, token: token_bound });
         }
     }
 }

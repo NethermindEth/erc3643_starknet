@@ -230,12 +230,11 @@ mod CountryRestrictModule {
         fn get_country(
             self: @ContractState, compliance: ContractAddress, user_address: ContractAddress,
         ) -> u16 {
-            ITokenDispatcher {
-                contract_address: IModularComplianceDispatcher { contract_address: compliance }
-                    .get_token_bound(),
-            }
-                .identity_registry()
-                .investor_country(user_address)
+            let token_bound = IModularComplianceDispatcher { contract_address: compliance }
+                .get_token_bound();
+            let token_dispatcher = ITokenDispatcher { contract_address: token_bound };
+
+            token_dispatcher.identity_registry().investor_country(user_address)
         }
     }
 }

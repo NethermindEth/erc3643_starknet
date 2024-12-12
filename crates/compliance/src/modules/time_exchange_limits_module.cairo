@@ -23,6 +23,7 @@ pub trait ITimeExchangeLimitsModule<TContractState> {
     fn set_exchange_limit(ref self: TContractState, exchange_id: ContractAddress, limit: Limit);
     fn add_exchange_id(ref self: TContractState, exchange_id: ContractAddress);
     fn remove_exchange_id(ref self: TContractState, exchange_id: ContractAddress);
+    fn is_exchange_id(self: @TContractState, exchange_id: ContractAddress) -> bool;
     fn get_exchange_counter(
         self: @TContractState,
         compliance: ContractAddress,
@@ -32,8 +33,7 @@ pub trait ITimeExchangeLimitsModule<TContractState> {
     ) -> ExchangeTransferCounter;
     fn get_exchange_limits(
         self: @TContractState, compliance: ContractAddress, exchange_id: ContractAddress,
-    ) -> Array<Limit>;
-    fn is_exchange_id(self: @TContractState, exchange_id: ContractAddress) -> bool;
+    ) -> Span<Limit>;
 }
 
 #[starknet::contract]
@@ -191,10 +191,10 @@ pub mod TimeExchangeLimitsModule {
             to: ContractAddress,
             value: u256,
         ) {
+            self.only_compliance_call();
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            self.only_compliance_call();
             let caller = starknet::get_caller_address();
             let sender_identity = contract_state.get_identity(caller, from);
             let receiver_identity = contract_state.get_identity(caller, to);
@@ -249,6 +249,9 @@ pub mod TimeExchangeLimitsModule {
                 .entry((compliance, receiver_identity));
 
             let mut check = true;
+            let exchange_counter_storage_path = contract_state
+                .exchange_counters
+                .entry((compliance, receiver_identity, sender_identity));
             for i in 0..receiver_limits_storage_path.len() {
                 let receiver_limits_at_i = receiver_limits_storage_path.at(i).deref();
                 let limit_value = receiver_limits_at_i.limit_value.read();
@@ -262,12 +265,7 @@ pub mod TimeExchangeLimitsModule {
                     .is_exchange_counter_finished(
                         compliance, receiver_identity, sender_identity, limit_time,
                     )
-                    && contract_state
-                        .exchange_counters
-                        .entry((compliance, receiver_identity, sender_identity))
-                        .entry(limit_time)
-                        .value
-                        .read()
+                    && exchange_counter_storage_path.entry(limit_time).value.read()
                     + value > limit_value {
                     check = false;
                     break;
@@ -309,7 +307,7 @@ pub mod TimeExchangeLimitsModule {
                 Errors::LimitsArraySizeExceeded(caller, exchange_id);
             }
 
-            if !is_attributed_limit && limit_count < 4 {
+            if !is_attributed_limit {
                 let new_limit_storage_path = exchange_limits_storage_path.append();
                 new_limit_storage_path.limit_time.write(limit.limit_time);
                 new_limit_storage_path.limit_value.write(limit.limit_value);
@@ -362,19 +360,19 @@ pub mod TimeExchangeLimitsModule {
             investor_id: ContractAddress,
             limit_time: u64,
         ) -> ExchangeTransferCounter {
-            let storage_node = self
+            let exchange_counter = self
                 .exchange_counters
                 .entry((compliance, exchange_id, investor_id))
                 .entry(limit_time)
                 .deref();
             ExchangeTransferCounter {
-                value: storage_node.value.read(), timer: storage_node.timer.read(),
+                value: exchange_counter.value.read(), timer: exchange_counter.timer.read(),
             }
         }
 
         fn get_exchange_limits(
             self: @ContractState, compliance: ContractAddress, exchange_id: ContractAddress,
-        ) -> Array<Limit> {
+        ) -> Span<Limit> {
             let limits_storage_path = self.exchange_limits.entry((compliance, exchange_id));
 
             let mut limits = array![];
@@ -388,7 +386,7 @@ pub mod TimeExchangeLimitsModule {
                         },
                     );
             };
-            limits
+            limits.span()
         }
 
         fn is_exchange_id(self: @ContractState, exchange_id: ContractAddress) -> bool {

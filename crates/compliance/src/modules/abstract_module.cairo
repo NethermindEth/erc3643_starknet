@@ -144,13 +144,6 @@ pub mod AbstractModuleComponent {
         TContractState, +Drop<TContractState>, +HasComponent<TContractState>,
     > of InternalTrait<TContractState> {
         #[inline]
-        fn only_bound_compliance(
-            self: @ComponentState<TContractState>, compliance: ContractAddress,
-        ) {
-            assert!(self.AbstractModule_compliance_bound.read(compliance), "compliance not bound");
-        }
-
-        #[inline]
         fn only_compliance_call(self: @ComponentState<TContractState>) {
             assert!(
                 self.AbstractModule_compliance_bound.read(starknet::get_caller_address()),

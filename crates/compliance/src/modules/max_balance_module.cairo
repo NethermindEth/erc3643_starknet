@@ -158,15 +158,15 @@ mod MaxBalanceModule {
             to: ContractAddress,
             value: u256,
         ) {
+            self.only_compliance_call();
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            self.only_compliance_call();
             let caller = starknet::get_caller_address();
-            let id_from = contract_state.get_identity(caller, from);
-            let id_to = contract_state.get_identity(caller, to);
 
             let compliance_balances = contract_state.id_balance.entry(caller);
+
+            let id_to = contract_state.get_identity(caller, to);
             let id_to_balance_storage_path = compliance_balances.entry(id_to).deref();
             let new_to_balance = id_to_balance_storage_path.read() + value;
 
@@ -176,6 +176,7 @@ mod MaxBalanceModule {
 
             id_to_balance_storage_path.write(new_to_balance);
 
+            let id_from = contract_state.get_identity(caller, from);
             let id_from_balance_storage_path = compliance_balances.entry(id_from).deref();
             id_from_balance_storage_path.write(id_from_balance_storage_path.read() - value);
         }
@@ -185,10 +186,10 @@ mod MaxBalanceModule {
             to: ContractAddress,
             value: u256,
         ) {
+            self.only_compliance_call();
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            self.only_compliance_call();
             let caller = starknet::get_caller_address();
             let id_to = contract_state.get_identity(caller, to);
 
@@ -211,10 +212,10 @@ mod MaxBalanceModule {
             from: ContractAddress,
             value: u256,
         ) {
+            self.only_compliance_call();
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            self.only_compliance_call();
             let caller = starknet::get_caller_address();
             let id_from = contract_state.get_identity(caller, from);
             let id_from_balance_storage_path = contract_state
@@ -249,11 +250,21 @@ mod MaxBalanceModule {
             self: @AbstractModuleComponent::ComponentState<ContractState>,
             compliance: ContractAddress,
         ) -> bool {
-            true
+            let contract_state = AbstractModuleComponent::HasComponent::get_contract(self);
+            if contract_state.compliance_preset_status.entry(compliance).read() {
+                return true;
+            }
+
+            let erc20_dispatcher = IERC20Dispatcher {
+                contract_address: IModularComplianceDispatcher { contract_address: compliance }
+                    .get_token_bound(),
+            };
+
+            erc20_dispatcher.total_supply().is_zero()
         }
 
         fn is_plug_and_play(self: @AbstractModuleComponent::ComponentState<ContractState>) -> bool {
-            true
+            false
         }
 
         fn name(self: @AbstractModuleComponent::ComponentState<ContractState>) -> ByteArray {
@@ -318,10 +329,11 @@ mod MaxBalanceModule {
             for i in 0..id.len() {
                 let (_id, _balance) = (*id.at(i), *balance.at(i));
                 compliance_id_balances.entry(_id).write(_balance);
-                self.emit(IDBalancePreSet { compliance, id: _id, balance: _balance });  
+                self.emit(IDBalancePreSet { compliance, id: _id, balance: _balance });
             };
 
             self.compliance_preset_status.entry(compliance).write(true);
+            self.emit(PresetCompleted { compliance });
         }
 
         fn preset_completed(ref self: ContractState, compliance: ContractAddress) {

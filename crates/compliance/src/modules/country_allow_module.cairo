@@ -147,7 +147,7 @@ mod CountryAllowModule {
         ) -> bool {
             let contract_state = AbstractModuleComponent::HasComponent::get_contract(self);
             let receiver_country = contract_state.get_country(compliance, to);
-            !contract_state.is_country_allowed(compliance, receiver_country)
+            contract_state.is_country_allowed(compliance, receiver_country)
         }
 
         fn can_compliance_bind(

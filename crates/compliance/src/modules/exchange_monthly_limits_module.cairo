@@ -156,10 +156,10 @@ mod ExchangeMonthlyLimitsModule {
             to: ContractAddress,
             value: u256,
         ) {
+            self.only_compliance_call();
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            self.only_compliance_call();
             let caller = starknet::get_caller_address();
             let sender_identity = contract_state.get_identity(caller, from);
             let receiver_identity = contract_state.get_identity(caller, to);
@@ -265,12 +265,6 @@ mod ExchangeMonthlyLimitsModule {
                 );
         }
 
-        fn get_exchange_monthly_limit(
-            self: @ContractState, compliance: ContractAddress, exchange_id: ContractAddress,
-        ) -> u256 {
-            self.exchange_monthly_limits.entry((compliance, exchange_id)).read()
-        }
-
         fn add_exchange_id(ref self: ContractState, exchange_id: ContractAddress) {
             self.ownable.assert_only_owner();
             if self.is_exchange_id(exchange_id) {
@@ -291,6 +285,12 @@ mod ExchangeMonthlyLimitsModule {
 
         fn is_exchange_id(self: @ContractState, exchange_id: ContractAddress) -> bool {
             self.exchange_ids.entry(exchange_id).read()
+        }
+
+        fn get_exchange_monthly_limit(
+            self: @ContractState, compliance: ContractAddress, exchange_id: ContractAddress,
+        ) -> u256 {
+            self.exchange_monthly_limits.entry((compliance, exchange_id)).read()
         }
 
         fn get_monthly_counter(
@@ -335,7 +335,8 @@ mod ExchangeMonthlyLimitsModule {
                 .entry((compliance, exchange_id, investor_id))
                 .monthly_count
                 .deref();
-
+            /// NOTE: since reset_exchange_monthly_cooldown sets monthly count to 0. We can save one
+            /// storage read here if we remove current count.
             let current_count = monthly_count_storage_path.read();
             monthly_count_storage_path.write(current_count + value);
         }
@@ -368,7 +369,6 @@ mod ExchangeMonthlyLimitsModule {
                 .get_monthly_timer(
                     compliance, exchange_id, investor_id,
                 ) <= starknet::get_block_timestamp()
-                .into()
         }
 
         fn is_token_agent(
@@ -376,6 +376,7 @@ mod ExchangeMonthlyLimitsModule {
         ) -> bool {
             let token_bound = IModularComplianceDispatcher { contract_address: compliance }
                 .get_token_bound();
+
             IAgentRoleDispatcher { contract_address: token_bound }.is_agent(user_address)
         }
 

@@ -1,14 +1,14 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait ITransferFeesModule<TContractState> {
-    fn set_fee(ref self: TContractState, rate: u256, collector: ContractAddress);
+pub trait ITransferFeesModule<TContractState> {
+    fn set_fee(ref self: TContractState, rate: u16, collector: ContractAddress);
     fn get_fee(self: @TContractState, compliance: ContractAddress) -> Fee;
 }
 
 #[derive(Drop, Serde, starknet::Store)]
-struct Fee {
-    rate: u256,
+pub struct Fee {
+    rate: u16, // [0, 10_000]
     collector: ContractAddress,
 }
 
@@ -48,7 +48,6 @@ mod TransferFeesModule {
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
-
     #[storage]
     struct Storage {
         fees: Map<ContractAddress, Fee>,
@@ -75,9 +74,9 @@ mod TransferFeesModule {
     #[derive(Drop, starknet::Event)]
     struct FeeUpdated {
         #[key]
-        compliance: ContractAddress,
-        rate: u256,
-        collector: ContractAddress,
+        pub compliance: ContractAddress,
+        pub rate: u16,
+        pub collector: ContractAddress,
     }
 
     pub mod Errors {
@@ -127,10 +126,11 @@ mod TransferFeesModule {
             to: ContractAddress,
             value: u256,
         ) {
+            self.only_compliance_call();
             let mut contract_state = AbstractModuleComponent::HasComponent::get_contract_mut(
                 ref self,
             );
-            self.only_compliance_call();
+
             let caller = starknet::get_caller_address();
             let sender_identity = contract_state.get_identity(caller, from);
             let receiver_identity = contract_state.get_identity(caller, to);
@@ -144,7 +144,7 @@ mod TransferFeesModule {
                 return;
             }
 
-            let fee_amount = (value * fee.rate) / 10_000;
+            let fee_amount = (value * fee.rate.into()) / 10_000;
             if fee_amount.is_zero() {
                 return;
             }
@@ -203,12 +203,14 @@ mod TransferFeesModule {
 
     #[abi(embed_v0)]
     impl TransferFeesModuleImpl of ITransferFeesModule<ContractState> {
-        fn set_fee(ref self: ContractState, rate: u256, collector: ContractAddress) {
+        fn set_fee(ref self: ContractState, rate: u16, collector: ContractAddress) {
             self.abstract_module.only_compliance_call();
             let caller = starknet::get_caller_address();
-            if rate > 1000 {
+
+            if rate > 10_000 {
                 Errors::FeeIsOutOfRange(caller, rate);
             }
+
             let token_address = IModularComplianceDispatcher { contract_address: caller }
                 .get_token_bound();
             let identity_registry = ITokenDispatcher { contract_address: token_address }
