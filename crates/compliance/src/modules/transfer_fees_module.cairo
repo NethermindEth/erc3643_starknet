@@ -94,6 +94,12 @@ mod TransferFeesModule {
                 collector,
             );
         }
+
+        pub fn IdentityNotFound(compliance: ContractAddress, address: ContractAddress) {
+            panic!("Identity not found for compliance: {:?}, address: {:?}", compliance, address);
+        }
+        /// NOTE: Might convert this to fn to be more consistent
+        pub const FEE_TRANSFER_FAILED: felt252 = 'Transfer fee collection failed';
     }
 
     #[constructor]
@@ -153,7 +159,7 @@ mod TransferFeesModule {
                 .get_token_bound();
             let mut token_dispatcher = ITokenDispatcher { contract_address: token_address };
             let sent = token_dispatcher.forced_transfer(to, fee.collector, fee_amount);
-            assert(sent, 'Transfer fee collection failed');
+            assert(sent, Errors::FEE_TRANSFER_FAILED);
         }
 
         fn module_mint_action(
@@ -238,7 +244,9 @@ mod TransferFeesModule {
                     .get_token_bound(),
             };
             let identity = token_dispatcher.identity_registry().identity(user_address);
-            assert(identity.is_non_zero(), 'Identity not found');
+            if identity.is_zero() {
+                Errors::IdentityNotFound(compliance, user_address);
+            }
             identity
         }
     }

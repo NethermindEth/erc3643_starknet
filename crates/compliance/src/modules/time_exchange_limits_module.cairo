@@ -159,6 +159,9 @@ pub mod TimeExchangeLimitsModule {
                 exchange_id,
             );
         }
+        pub fn IdentityNotFound(compliance: ContractAddress, address: ContractAddress) {
+            panic!("Identity not found for compliance: {:?}, address: {:?}", compliance, address);
+        }
     }
 
     #[constructor]
@@ -478,7 +481,9 @@ pub mod TimeExchangeLimitsModule {
                     .get_token_bound(),
             };
             let identity = token_dispatcher.identity_registry().identity(user_address);
-            assert(identity.is_non_zero(), 'Identity not found');
+            if identity.is_zero() {
+                Errors::IdentityNotFound(compliance, user_address);
+            }
             identity
         }
     }

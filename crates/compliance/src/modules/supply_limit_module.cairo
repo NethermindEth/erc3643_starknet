@@ -130,6 +130,7 @@ mod SupplyLimitModule {
                     .get_token_bound(),
             };
             let compliance_supply_limit = contract_state.supply_limits.entry(compliance).read();
+
             !(from.is_zero() && erc20_dispatcher.total_supply() + value > compliance_supply_limit)
         }
 

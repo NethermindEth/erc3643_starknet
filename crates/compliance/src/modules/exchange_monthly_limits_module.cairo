@@ -124,6 +124,9 @@ mod ExchangeMonthlyLimitsModule {
         pub fn OnchainIDNotTaggedAsExchange(exchange_id: ContractAddress) {
             panic!("Onchain ID not tagges as exchange! OID {:?}", exchange_id);
         }
+        pub fn IdentityNotFound(compliance: ContractAddress, address: ContractAddress) {
+            panic!("Identity not found for compliance: {:?}, address: {:?}", compliance, address);
+        }
     }
 
     #[constructor]
@@ -388,7 +391,9 @@ mod ExchangeMonthlyLimitsModule {
                     .get_token_bound(),
             };
             let identity = token_dispatcher.identity_registry().identity(user_address);
-            assert(identity.is_non_zero(), 'Identity not found');
+            if identity.is_zero() {
+                Errors::IdentityNotFound(compliance, user_address);
+            }
             identity
         }
     }

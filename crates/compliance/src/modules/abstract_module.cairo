@@ -20,13 +20,21 @@ pub mod AbstractModuleComponent {
     #[derive(Drop, starknet::Event)]
     pub struct ComplianceBound {
         #[key]
-        compliance: ContractAddress,
+        pub compliance: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct ComplianceUnbound {
         #[key]
-        compliance: ContractAddress,
+        pub compliance: ContractAddress,
+    }
+
+    pub mod Errors {
+        pub const COMPLIANCE_ADDRESS_ZERO: felt252 = 'Compliance address zero';
+        pub const COMPLIANCE_ALREADY_BOUND: felt252 = 'Compliance already bound';
+        pub const COMPLIANCE_NOT_BOUND: felt252 = 'Compliance not bound';
+        pub const ONLY_COMPLIANCE_CAN_CALL: felt252 = 'Only compliance can call';
+        pub const ONLY_BOUND_COMPLIANCE_CAN_CALL: felt252 = 'Only bound compliance can call';
     }
 
     pub trait AbstractFunctionsTrait<TContractState> {
@@ -64,13 +72,13 @@ pub mod AbstractModuleComponent {
         +AbstractFunctionsTrait<TContractState>,
     > of IModule<ComponentState<TContractState>> {
         fn bind_compliance(ref self: ComponentState<TContractState>, compliance: ContractAddress) {
-            assert!(compliance.is_non_zero(), "compliance address zero");
-            assert!(
-                !self.AbstractModule_compliance_bound.read(compliance), "compliance already bound",
+            /// NOTE: can use caller address directly instead and eliminate those checks?
+            assert(compliance.is_non_zero(), Errors::COMPLIANCE_ADDRESS_ZERO);
+            assert(
+                !self.AbstractModule_compliance_bound.read(compliance),
+                Errors::COMPLIANCE_ALREADY_BOUND,
             );
-            assert!(
-                starknet::get_caller_address() == compliance, "only compliance contract can call",
-            );
+            assert(starknet::get_caller_address() == compliance, Errors::ONLY_COMPLIANCE_CAN_CALL);
             self.AbstractModule_compliance_bound.write(compliance, true);
             self.emit(ComplianceBound { compliance });
         }
@@ -79,10 +87,9 @@ pub mod AbstractModuleComponent {
             ref self: ComponentState<TContractState>, compliance: ContractAddress,
         ) {
             self.only_compliance_call();
-            assert!(compliance.is_non_zero(), "compliance address zero");
-            assert!(
-                starknet::get_caller_address() == compliance, "only compliance contract can call",
-            );
+            /// NOTE: can use caller address directly instead and eliminate those checks?
+            assert(compliance.is_non_zero(), Errors::COMPLIANCE_ADDRESS_ZERO);
+            assert(starknet::get_caller_address() == compliance, Errors::ONLY_COMPLIANCE_CAN_CALL);
             self.AbstractModule_compliance_bound.write(compliance, false);
             self.emit(ComplianceUnbound { compliance });
         }
@@ -145,9 +152,9 @@ pub mod AbstractModuleComponent {
     > of InternalTrait<TContractState> {
         #[inline]
         fn only_compliance_call(self: @ComponentState<TContractState>) {
-            assert!(
+            assert(
                 self.AbstractModule_compliance_bound.read(starknet::get_caller_address()),
-                "only bound compliance can call",
+                Errors::ONLY_BOUND_COMPLIANCE_CAN_CALL,
             );
         }
     }

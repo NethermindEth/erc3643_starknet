@@ -30,6 +30,7 @@ mod MaxBalanceModule {
     use openzeppelin_access::ownable::{
         OwnableComponent, interface::{IOwnableDispatcher, IOwnableDispatcherTrait},
     };
+    use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use openzeppelin_upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
     use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
     use starknet::{
@@ -109,21 +110,21 @@ mod MaxBalanceModule {
         use starknet::ContractAddress;
 
         pub fn MaxBalanceExceeded(compliance: ContractAddress, value: u256) {
-            panic!("Max balance exceeded!");
+            panic!("Max balance exceeded! compliance {:?}, value: {:?}", compliance, value);
         }
-
+        // TODO: Finalize this error message
         pub fn InvalidPresetValues(
             compliance: ContractAddress, id: Span<ContractAddress>, balance: Span<u256>,
         ) {
-            panic!("InvalidPresetValues");
+            panic!("Invalid pre set values!");
         }
 
         pub fn OnlyComplianceOwnerCanCall(compliance: ContractAddress) {
-            panic!("OnlyComplianceOwnerCanCall");
+            panic!("Only compliance owner can call! Compliance: {:?}", compliance);
         }
 
         pub fn TokenAlreadyBound(compliance: ContractAddress) {
-            panic!("TokenAlreadyBound");
+            panic!("Token already bound! Compliance {:?}", compliance);
         }
     }
 
