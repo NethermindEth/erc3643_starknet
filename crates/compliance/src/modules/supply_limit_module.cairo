@@ -7,7 +7,7 @@ pub trait ISupplyLimitModule<TContractState> {
 }
 
 #[starknet::contract]
-mod SupplyLimitModule {
+pub mod SupplyLimitModule {
     use core::num::traits::Zero;
     use crate::{
         imodular_compliance::{IModularComplianceDispatcher, IModularComplianceDispatcherTrait},

@@ -12,7 +12,7 @@ pub trait ICountryRestrictModule<ContractState> {
 }
 
 #[starknet::contract]
-mod CountryRestrictModule {
+pub mod CountryRestrictModule {
     use crate::{
         imodular_compliance::{IModularComplianceDispatcher, IModularComplianceDispatcherTrait},
         modules::abstract_module::{

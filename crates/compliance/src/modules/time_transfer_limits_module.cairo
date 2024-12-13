@@ -77,7 +77,7 @@ impl LimitIndexZero of Zero<IndexLimit> {
 }
 
 #[starknet::contract]
-mod TimeTransferLimitsModule {
+pub mod TimeTransferLimitsModule {
     use AbstractModuleComponent::InternalTrait as AbstractModuleInternalTrait;
     use core::num::traits::Zero;
     use crate::{
@@ -145,16 +145,16 @@ mod TimeTransferLimitsModule {
     #[derive(Drop, starknet::Event)]
     pub struct TimeTransferLimitUpdated {
         #[key]
-        compliance: ContractAddress,
-        limit_time: u64,
-        limit_value: u256,
+        pub compliance: ContractAddress,
+        pub limit_time: u64,
+        pub limit_value: u256,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct TimeTransferLimitRemoved {
         #[key]
-        compliance: ContractAddress,
-        limit_time: u64,
+        pub compliance: ContractAddress,
+        pub limit_time: u64,
     }
 
     #[abi(embed_v0)]

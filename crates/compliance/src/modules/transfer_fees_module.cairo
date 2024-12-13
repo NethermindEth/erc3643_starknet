@@ -13,7 +13,7 @@ pub struct Fee {
 }
 
 #[starknet::contract]
-mod TransferFeesModule {
+pub mod TransferFeesModule {
     use core::num::traits::Zero;
     use crate::{
         imodular_compliance::{IModularComplianceDispatcher, IModularComplianceDispatcherTrait},

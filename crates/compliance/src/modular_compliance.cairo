@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod ModularCompliance {
+pub mod ModularCompliance {
     use core::num::traits::Zero;
     use crate::{
         imodular_compliance::IModularCompliance,
@@ -42,7 +42,7 @@ mod ModularCompliance {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         ModuleInteraction: ModuleInteraction,
         TokenBound: TokenBound,
         TokenUnbound: TokenUnbound,
@@ -55,32 +55,32 @@ mod ModularCompliance {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ModuleInteraction {
+    pub struct ModuleInteraction {
         #[key]
-        target: ContractAddress,
-        selector: felt252,
+        pub target: ContractAddress,
+        pub selector: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct TokenBound {
-        token: ContractAddress,
+    pub struct TokenBound {
+        pub token: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct TokenUnbound {
-        token: ContractAddress,
+    pub struct TokenUnbound {
+        pub token: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ModuleAdded {
+    pub struct ModuleAdded {
         #[key]
-        module: ContractAddress,
+        pub module: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct ModuleRemoved {
+    pub struct ModuleRemoved {
         #[key]
-        module: ContractAddress,
+        pub module: ContractAddress,
     }
 
     #[abi(embed_v0)]

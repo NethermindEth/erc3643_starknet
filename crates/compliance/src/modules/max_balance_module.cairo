@@ -19,7 +19,7 @@ pub trait IMaxBalanceModule<TContractState> {
 }
 
 #[starknet::contract]
-mod MaxBalanceModule {
+pub mod MaxBalanceModule {
     use core::num::traits::Zero;
     use crate::{
         imodular_compliance::{IModularComplianceDispatcher, IModularComplianceDispatcherTrait},

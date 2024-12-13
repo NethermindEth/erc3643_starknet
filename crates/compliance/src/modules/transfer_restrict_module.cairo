@@ -12,7 +12,7 @@ pub trait ITransferRestrictModule<TContractState> {
 }
 
 #[starknet::contract]
-mod TransferRestrictModule {
+pub mod TransferRestrictModule {
     use core::num::traits::Zero;
     use crate::modules::abstract_module::{
         AbstractModuleComponent, AbstractModuleComponent::AbstractFunctionsTrait,

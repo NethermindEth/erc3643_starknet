@@ -26,7 +26,7 @@ pub trait IExchangeMonthlyLimitsModule<TContractState> {
 }
 
 #[starknet::contract]
-mod ExchangeMonthlyLimitsModule {
+pub mod ExchangeMonthlyLimitsModule {
     use core::num::traits::Zero;
     use crate::{
         imodular_compliance::{IModularComplianceDispatcher, IModularComplianceDispatcherTrait},
