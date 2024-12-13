@@ -313,7 +313,9 @@ pub mod IdentityRegistry {
                 for trusted_issuer in trusted_issuers {
                     claim_ids
                         .append(
-                            poseidon_hash_span(array![trusted_issuer.into(), claim_topic].span()),
+                            poseidon_hash_span(
+                                array![(*trusted_issuer).into(), claim_topic].span(),
+                            ),
                         );
                 };
 
