@@ -50,15 +50,13 @@ pub mod AgentRoleComponent {
         fn add_agent(ref self: ComponentState<TContractState>, agent: ContractAddress) {
             let ownable_comp = get_dep_component!(@self, Ownable);
             ownable_comp.assert_only_owner();
-            assert(agent.is_non_zero(), 'Agent address zero!');
-            self.AgentRole_agents.entry(agent).write(true);
+            self._add_agent(agent);
         }
 
         fn remove_agent(ref self: ComponentState<TContractState>, agent: ContractAddress) {
             let ownable_comp = get_dep_component!(@self, Ownable);
             ownable_comp.assert_only_owner();
-            assert(agent.is_non_zero(), 'Agent address zero!');
-            self.AgentRole_agents.entry(agent).write(false);
+            self._remove_agent(agent);
         }
 
         fn is_agent(self: @ComponentState<TContractState>, agent: ContractAddress) -> bool {
@@ -75,6 +73,16 @@ pub mod AgentRoleComponent {
                 self.AgentRole_agents.entry(starknet::get_caller_address()).read(),
                 'Caller does not have agent role',
             );
+        }
+
+        fn _add_agent(ref self: ComponentState<TContractState>, agent: ContractAddress) {
+            assert(agent.is_non_zero(), 'Agent address zero!');
+            self.AgentRole_agents.entry(agent).write(true);
+        }
+
+        fn _remove_agent(ref self: ComponentState<TContractState>, agent: ContractAddress) {
+            assert(agent.is_non_zero(), 'Agent address zero!');
+            self.AgentRole_agents.entry(agent).write(false);
         }
     }
 }
