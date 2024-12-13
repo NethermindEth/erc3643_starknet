@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod IdentityRegistryStorage {
+pub mod IdentityRegistryStorage {
     use core::num::traits::Zero;
     use crate::interface::iidentity_registry_storage::IIdentityRegistryStorage;
     use openzeppelin_access::ownable::OwnableComponent;
@@ -10,8 +10,8 @@ mod IdentityRegistryStorage {
         storage::{Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess},
     };
     use storage::storage_array::{
-        ContractAddressVecToContractAddressArray, MutableStorageArrayTrait,
-        StorageArrayContractAddress,
+        ContractAddressVecToContractAddressArray as ContractAddressVecInto,
+        MutableStorageArrayTrait, StorageArrayContractAddress,
     };
 
     component!(path: UpgradeableComponent, storage: upgrades, event: UpgradeableEvent);
@@ -50,7 +50,7 @@ mod IdentityRegistryStorage {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         IdentityStored: IdentityStored,
         IdentityUnstored: IdentityUnstored,
         IdentityModified: IdentityModified,
@@ -66,47 +66,56 @@ mod IdentityRegistryStorage {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct IdentityStored {
+    pub struct IdentityStored {
         #[key]
-        investor_address: ContractAddress,
+        pub investor_address: ContractAddress,
         #[key]
-        identity: ContractAddress,
+        pub identity: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct IdentityUnstored {
+    pub struct IdentityUnstored {
         #[key]
-        investor_address: ContractAddress,
+        pub investor_address: ContractAddress,
         #[key]
-        identity: ContractAddress,
+        pub identity: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct IdentityModified {
+    pub struct IdentityModified {
         #[key]
-        old_identity: ContractAddress,
+        pub old_identity: ContractAddress,
         #[key]
-        new_identity: ContractAddress,
+        pub new_identity: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct CountryModified {
+    pub struct CountryModified {
         #[key]
-        investor_address: ContractAddress,
+        pub investor_address: ContractAddress,
         #[key]
-        country: u16,
+        pub country: u16,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct IdentityRegistryBound {
+    pub struct IdentityRegistryBound {
         #[key]
-        identity_registry: ContractAddress,
+        pub identity_registry: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct IdentityRegistryUnbound {
+    pub struct IdentityRegistryUnbound {
         #[key]
-        identity_registry: ContractAddress,
+        pub identity_registry: ContractAddress,
+    }
+
+    pub mod Errors {
+        pub const ZERO_ADDRESS: felt252 = 'Zero Address';
+        pub const IDENTITY_ALREADY_STORED: felt252 = 'Identity already stored';
+        pub const IDENTITY_NOT_STORED: felt252 = 'Identity not stored';
+        pub const MAX_IR_EXCEEDED: felt252 = 'Cannot bind more than 300 IR';
+        pub const REGISTRY_ALREADY_BOUNDED: felt252 = 'Registry already binded';
+        pub const REGISTRY_NOT_BOUNDED: felt252 = 'Registry already binded';
     }
 
     #[constructor]
@@ -141,10 +150,11 @@ mod IdentityRegistryStorage {
             country: u16,
         ) {
             self.agent_role.assert_only_agent();
-            assert(user_address.is_non_zero() && identity.is_non_zero(), 'Zero Address');
+            assert(user_address.is_non_zero() && identity.is_non_zero(), Errors::ZERO_ADDRESS);
             let identity_storage_path = self.identities.entry(user_address).deref();
             assert(
-                identity_storage_path.identity_contract.read().is_zero(), 'Identity already stored',
+                identity_storage_path.identity_contract.read().is_zero(),
+                Errors::IDENTITY_ALREADY_STORED,
             );
             identity_storage_path.identity_contract.write(identity);
             identity_storage_path.investor_country.write(country);
@@ -153,10 +163,10 @@ mod IdentityRegistryStorage {
 
         fn remove_identity_from_storage(ref self: ContractState, user_address: ContractAddress) {
             self.agent_role.assert_only_agent();
-            assert(user_address.is_non_zero(), 'Zero Address');
+            assert(user_address.is_non_zero(), Errors::ZERO_ADDRESS);
             let identity_storage_path = self.identities.entry(user_address).deref();
             let old_identity = identity_storage_path.identity_contract.read();
-            assert(old_identity.is_non_zero(), 'Identity not stored yet');
+            assert(old_identity.is_non_zero(), Errors::IDENTITY_NOT_STORED);
             identity_storage_path.identity_contract.write(Zero::zero());
             identity_storage_path.investor_country.write(Zero::zero());
             self.emit(IdentityUnstored { investor_address: user_address, identity: old_identity });
@@ -166,11 +176,11 @@ mod IdentityRegistryStorage {
             ref self: ContractState, user_address: ContractAddress, country: u16,
         ) {
             self.agent_role.assert_only_agent();
-            assert(user_address.is_non_zero(), 'Zero Address');
+            assert(user_address.is_non_zero(), Errors::ZERO_ADDRESS);
             let identity_storage_path = self.identities.entry(user_address).deref();
             assert(
                 identity_storage_path.identity_contract.read().is_non_zero(),
-                'Identity not stored yet',
+                Errors::IDENTITY_NOT_STORED,
             );
             identity_storage_path.investor_country.write(country);
             self.emit(CountryModified { investor_address: user_address, country });
@@ -180,38 +190,38 @@ mod IdentityRegistryStorage {
             ref self: ContractState, user_address: ContractAddress, identity: ContractAddress,
         ) {
             self.agent_role.assert_only_agent();
-            assert(user_address.is_non_zero() && identity.is_non_zero(), 'Zero Address');
+            assert(user_address.is_non_zero() && identity.is_non_zero(), Errors::ZERO_ADDRESS);
             let identity_contract_storage_path = self
                 .identities
                 .entry(user_address)
                 .identity_contract
                 .deref();
             let old_identity = identity_contract_storage_path.read();
-            assert(old_identity.is_non_zero(), 'Identity not stored yet');
+            assert(old_identity.is_non_zero(), Errors::IDENTITY_NOT_STORED);
             identity_contract_storage_path.write(identity);
             self.emit(IdentityModified { old_identity, new_identity: identity });
         }
 
-        /// Only callable by the owner, add agent method asserts only owner.
         fn bind_identity_registry(ref self: ContractState, identity_registry: ContractAddress) {
-            assert(identity_registry.is_non_zero(), 'Zero Address');
+            self.ownable.assert_only_owner();
+            assert(identity_registry.is_non_zero(), Errors::ZERO_ADDRESS);
             let identity_registries = self.identity_registries.deref();
-            assert(identity_registries.len() < 300, 'Cannot bind more than 300 IR');
-            assert(!self.agent_role.is_agent(identity_registry), 'IR already binded');
+            assert(identity_registries.len() < 300, Errors::MAX_IR_EXCEEDED);
+            assert(!self.agent_role.is_agent(identity_registry), Errors::REGISTRY_ALREADY_BOUNDED);
             identity_registries.append().write(identity_registry);
-            self.agent_role.add_agent(identity_registry);
+            self.agent_role._add_agent(identity_registry);
             self.emit(IdentityRegistryBound { identity_registry });
         }
 
-        /// Only callable by the owner, add agent method asserts only owner.
         fn unbind_identity_registry(ref self: ContractState, identity_registry: ContractAddress) {
-            assert(identity_registry.is_non_zero(), 'Zero Address');
+            self.ownable.assert_only_owner();
+            assert(identity_registry.is_non_zero(), Errors::ZERO_ADDRESS);
             let identity_registries = self.identity_registries.deref();
-            assert(self.agent_role.is_agent(identity_registry), 'Identity registry not binded');
+            assert(self.agent_role.is_agent(identity_registry), Errors::REGISTRY_NOT_BOUNDED);
             for i in 0..identity_registries.len() {
                 if identity_registries.at(i).read() == identity_registry {
                     identity_registries.delete(i);
-                    self.agent_role.remove_agent(identity_registry);
+                    self.agent_role._remove_agent(identity_registry);
                     self.emit(IdentityRegistryUnbound { identity_registry });
                     break;
                 }
@@ -219,8 +229,7 @@ mod IdentityRegistryStorage {
         }
 
         fn linked_identity_registries(self: @ContractState) -> Span<ContractAddress> {
-            let irs: Array<ContractAddress> = self.identity_registries.deref().into();
-            irs.span()
+            ContractAddressVecInto::into(self.identity_registries.deref()).span()
         }
 
         fn stored_identity(self: @ContractState, user_address: ContractAddress) -> ContractAddress {

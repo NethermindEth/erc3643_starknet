@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod ClaimTopicsRegistry {
+pub mod ClaimTopicsRegistry {
     use crate::interface::iclaim_topics_registry::IClaimTopicsRegistry;
     use openzeppelin_access::ownable::OwnableComponent;
     use openzeppelin_upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
@@ -43,13 +43,18 @@ mod ClaimTopicsRegistry {
     #[derive(Drop, starknet::Event)]
     pub struct ClaimTopicAdded {
         #[key]
-        claim_topic: felt252,
+        pub claim_topic: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct ClaimTopicRemoved {
         #[key]
-        claim_topic: felt252,
+        pub claim_topic: felt252,
+    }
+
+    pub mod Errors {
+        pub const MAX_CLAIM_TOPICS_EXCEEDED: felt252 = 'max 15 claim topics exceeded';
+        pub const CLAIM_TOPIC_ALREADY_EXIST: felt252 = 'claim topic already exist';
     }
 
     #[constructor]
@@ -82,11 +87,11 @@ mod ClaimTopicsRegistry {
             let claim_topics_storge_path = self.claim_topics.deref();
             let claim_topics_len = claim_topics_storge_path.len();
 
-            assert!(claim_topics_len < 15, "Cannot have more than 15 claim topics");
+            assert(claim_topics_len < 15, Errors::MAX_CLAIM_TOPICS_EXCEEDED);
             for i in 0..claim_topics_len {
                 assert(
                     claim_topics_storge_path.at(i).read() != claim_topic,
-                    'claim topic already exist',
+                    Errors::CLAIM_TOPIC_ALREADY_EXIST,
                 );
             };
             claim_topics_storge_path.append().write(claim_topic);

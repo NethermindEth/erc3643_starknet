@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod IdentityRegistry {
+pub mod IdentityRegistry {
     use core::num::traits::Zero;
     use core::poseidon::poseidon_hash_span;
     use crate::interface::{
@@ -75,51 +75,59 @@ mod IdentityRegistry {
     #[derive(Drop, starknet::Event)]
     pub struct ClaimTopicsRegistrySet {
         #[key]
-        claim_topics_registry: ContractAddress,
+        pub claim_topics_registry: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct IdentityStorageSet {
         #[key]
-        identity_storage: ContractAddress,
+        pub identity_storage: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct TrustedIssuersRegistrySet {
         #[key]
-        trusted_issuers_registry: ContractAddress,
+        pub trusted_issuers_registry: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct IdentityRegistered {
         #[key]
-        investor_address: ContractAddress,
+        pub investor_address: ContractAddress,
         #[key]
-        identity: ContractAddress,
+        pub identity: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct IdentityRemoved {
         #[key]
-        investor_address: ContractAddress,
+        pub investor_address: ContractAddress,
         #[key]
-        identity: ContractAddress,
+        pub identity: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct IdentityUpdated {
         #[key]
-        old_identity: ContractAddress,
+        pub old_identity: ContractAddress,
         #[key]
-        new_identity: ContractAddress,
+        pub new_identity: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct CountryUpdated {
         #[key]
-        investor_address: ContractAddress,
+        pub investor_address: ContractAddress,
         #[key]
-        country: u16,
+        pub country: u16,
+    }
+
+    pub mod Errors {
+        pub const TRUSTED_ISSUERS_REGISTRY_ADDRESS_ZERO: felt252 = 'Zero Address: TIR';
+        pub const CLAIM_TOPICS_REGISTRY_ADDRESS_ZERO: felt252 = 'Zero Address: CTR';
+        pub const IDENTITY_STORAGE_ADDRESS_ZERO: felt252 = 'Zero Address: IRS';
+        pub const OWNER_ADDRESS_ZERO: felt252 = 'Zero Address: Owner';
+        pub const ARRAY_LEN_MISMATCH: felt252 = 'Arrays lenghts not equal';
     }
 
     #[constructor]
@@ -131,11 +139,11 @@ mod IdentityRegistry {
         owner: ContractAddress,
     ) {
         assert(
-            trusted_issuers_registry.is_non_zero()
-                && claim_topics_registry.is_non_zero()
-                && identity_storage.is_non_zero(),
-            'Zero Address',
+            trusted_issuers_registry.is_non_zero(), Errors::TRUSTED_ISSUERS_REGISTRY_ADDRESS_ZERO,
         );
+        assert(claim_topics_registry.is_non_zero(), Errors::CLAIM_TOPICS_REGISTRY_ADDRESS_ZERO);
+        assert(identity_storage.is_non_zero(), Errors::IDENTITY_STORAGE_ADDRESS_ZERO);
+        assert(owner.is_non_zero(), Errors::OWNER_ADDRESS_ZERO);
         self
             .token_topics_registry
             .write(IClaimTopicsRegistryDispatcher { contract_address: claim_topics_registry });
@@ -259,7 +267,7 @@ mod IdentityRegistry {
             let identity_registry_storage_dispatcher = self.token_identity_storage.read();
             assert(
                 user_addresses.len() == identities.len() && identities.len() == countries.len(),
-                'Arrays len not equal',
+                Errors::ARRAY_LEN_MISMATCH,
             );
 
             for i in 0..user_addresses.len() {
