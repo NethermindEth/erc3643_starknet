@@ -40,8 +40,8 @@ pub mod AgentRoleComponent {
         pub agent: ContractAddress,
     }
 
-    #[embeddable_as(AgentRole)]
-    pub impl AgentRoleImpl<
+    #[embeddable_as(AgentRoleImpl)]
+    pub impl AgentRole<
         TContractState,
         +HasComponent<TContractState>,
         impl Ownable: OwnableComponent::HasComponent<TContractState>,

@@ -27,7 +27,7 @@ pub mod IdentityRegistryStorage {
     component!(path: AgentRoleComponent, storage: agent_role, event: AgentRoleEvent);
 
     #[abi(embed_v0)]
-    impl AgentRoleImpl = AgentRoleComponent::AgentRole<ContractState>;
+    impl AgentRoleImpl = AgentRoleComponent::AgentRoleImpl<ContractState>;
     impl AgentRoleInternalImpl = AgentRoleComponent::InternalImpl<ContractState>;
 
     #[storage]
