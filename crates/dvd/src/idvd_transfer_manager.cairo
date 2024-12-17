@@ -56,7 +56,7 @@ pub trait IDVDTransferManager<TContractState> {
     fn is_trex_owner(self: @TContractState, token: ContractAddress, user: ContractAddress) -> bool;
     fn is_trex_agent(self: @TContractState, token: ContractAddress, user: ContractAddress) -> bool;
     fn calculate_fee(self: @TContractState, transfer_id: felt252) -> TxFees;
-    fn calcualate_parity(
+    fn calculate_parity(
         self: @TContractState, token1: ContractAddress, token2: ContractAddress,
     ) -> felt252;
     fn calculate_transfer_id(

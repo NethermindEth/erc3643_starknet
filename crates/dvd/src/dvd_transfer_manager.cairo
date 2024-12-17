@@ -79,6 +79,16 @@ mod DVDTransferManager {
         fee_2_wallet: ContractAddress,
     }
 
+    pub mod Errors {
+        pub const FEE_BASE_OUT_OF_RANGE: felt252 = 'fee base out of range';
+        pub const FEE_OUT_OF_RANGE: felt252 = 'fee out of range';
+        pub const ZERO_ADDRESS: felt252 = 'Zero address';
+        pub const TRANSFER_ID_NOT_EXIST: felt252 = 'Transfer ID does not exist';
+        pub const ONLY_COUNTERPART_OR_AGENT: felt252 = 'Only counterpart or by owner';
+        pub const NOT_AUTHORIZED_TO_CANCEL: felt252 = 'Not authorized to cancel';
+        pub const ONLY_OWNER_CAN_CALL: felt252 = 'Only owner can call';
+    }
+
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress) {
         self.ownable.initializer(owner);
@@ -101,27 +111,22 @@ mod DVDTransferManager {
                 caller == self.ownable.owner()
                     || self.is_trex_owner(token1, caller)
                     || self.is_trex_owner(token2, caller),
-                'Only owner can call',
+                Errors::ONLY_OWNER_CAN_CALL,
             );
-            assert(
-                IERC20Dispatcher { contract_address: token1 }.total_supply().is_non_zero()
-                    && IERC20Dispatcher { contract_address: token2 }.total_supply().is_non_zero(),
-                'Address is not an ERC20',
-            );
-            assert(fee_base > 1 && fee_base < 6, 'fee_base out of range');
+            assert(fee_base > 1 && fee_base < 6, Errors::FEE_BASE_OUT_OF_RANGE);
             let ten_pow_fee_base = 10_u256.pow(fee_base);
-            assert(fee1 <= ten_pow_fee_base, 'fee1 out of range');
-            assert(fee2 <= ten_pow_fee_base, 'fee2 out of range');
+            assert(fee1 <= ten_pow_fee_base, Errors::FEE_OUT_OF_RANGE);
+            assert(fee2 <= ten_pow_fee_base, Errors::FEE_OUT_OF_RANGE);
 
             if fee1.is_non_zero() {
-                assert(fee1_wallet.is_non_zero(), 'fee wallet 1 zero address!');
+                assert(fee1_wallet.is_non_zero(), Errors::ZERO_ADDRESS);
             }
 
             if fee2.is_non_zero() {
-                assert(fee2_wallet.is_non_zero(), 'fee wallet 2 zero address!');
+                assert(fee2_wallet.is_non_zero(), Errors::ZERO_ADDRESS);
             }
 
-            let parity = self.calcualate_parity(token1, token2);
+            let parity = self.calculate_parity(token1, token2);
             let parity_fee = Fee {
                 token_1_fee: fee1,
                 token_2_fee: fee2,
@@ -143,29 +148,6 @@ mod DVDTransferManager {
                         fee_2_wallet: fee2_wallet,
                     },
                 );
-            /// NOTE: We might not need this. we can sort addresses and store in single key.
-            let reflect_parity = self.calcualate_parity(token2, token1);
-            let reflect_parity_fee = Fee {
-                token_1_fee: fee2,
-                token_2_fee: fee1,
-                fee_base,
-                fee_1_wallet: fee2_wallet,
-                fee_2_wallet: fee1_wallet,
-            };
-            self.fee.entry(reflect_parity).write(reflect_parity_fee);
-            self
-                .emit(
-                    FeeModified {
-                        parity: reflect_parity,
-                        token_1: token2,
-                        token_2: token1,
-                        fee_1: fee2,
-                        fee_2: fee1,
-                        fee_base,
-                        fee_1_wallet: fee2_wallet,
-                        fee_2_wallet: fee1_wallet,
-                    },
-                );
         }
 
         fn initiate_dvd_transfer(
@@ -176,23 +158,11 @@ mod DVDTransferManager {
             token2: ContractAddress,
             token2_amount: u256,
         ) {
-            let token_1_erc20_dispatcher = IERC20Dispatcher { contract_address: token1 };
             let caller = starknet::get_caller_address();
-            /// NOTE: This allowance etc... looks redundant. This does not give any guarantees on
-            /// settlement time.
-            assert(
-                token_1_erc20_dispatcher.balance_of(caller) >= token1_amount, 'Not enough balance',
-            );
-            assert(
-                token_1_erc20_dispatcher
-                    .allowance(caller, starknet::get_contract_address()) >= token1_amount,
-                'Not enough allowance',
-            );
-            assert(counterpart.is_non_zero(), 'Counterpart cannot be null');
-            assert(
-                IERC20Dispatcher { contract_address: token2 }.total_supply().is_non_zero(),
-                'Address is not an ERC20',
-            );
+
+            assert(counterpart.is_non_zero(), Errors::ZERO_ADDRESS);
+            assert(token1.is_non_zero() && token2.is_non_zero(), Errors::ZERO_ADDRESS),
+
             let token1_delivery = Delivery {
                 counterpart: caller, token: token1, amount: token1_amount,
             };
@@ -230,7 +200,7 @@ mod DVDTransferManager {
             let token2 = self.token_2_to_deliver.entry(transfer_id).read();
             assert(
                 token1.counterpart.is_non_zero() && token2.counterpart.is_non_zero(),
-                'Transfer ID does not exist',
+                Errors::TRANSFER_ID_NOT_EXIST,
             );
 
             let caller = starknet::get_caller_address();
@@ -238,22 +208,12 @@ mod DVDTransferManager {
                 caller == token2.counterpart
                     || self.is_trex_agent(token1.token, caller)
                     || self.is_trex_agent(token2.token, caller),
-                "Transfer has to be done by the counterpart or by owner",
+                Errors::ONLY_COUNTERPART_OR_AGENT,
             );
 
             let token1_dispatcher = IERC20Dispatcher { contract_address: token1.token };
             let token2_dispatcher = IERC20Dispatcher { contract_address: token2.token };
-            /// NOTE: This allowance etc... looks redundant if transfer fromm succeeds it succeeds
-            assert(
-                token2_dispatcher.balance_of(token2.counterpart) >= token2.amount,
-                'Not enough balance',
-            );
-            assert(
-                token2_dispatcher
-                    .allowance(token2.counterpart, starknet::get_contract_address()) >= token2
-                    .amount,
-                'Not enough allowance',
-            );
+
             let fees = self.calculate_fee(transfer_id);
             if fees.tx_fee_1.is_non_zero() {
                 token1_dispatcher
@@ -289,7 +249,7 @@ mod DVDTransferManager {
             let token2 = self.token_2_to_deliver.entry(transfer_id).read();
             assert(
                 token1.counterpart.is_non_zero() && token2.counterpart.is_non_zero(),
-                'Transfer ID does not exist',
+                Errors::TRANSFER_ID_NOT_EXIST,
             );
             let caller = starknet::get_caller_address();
             assert!(
@@ -298,7 +258,7 @@ mod DVDTransferManager {
                     || caller == token2.counterpart
                     || self.is_trex_agent(token1.token, caller)
                     || self.is_trex_agent(token2.token, caller),
-                "Not allowed to cancel this transfer",
+                Errors::NOT_AUTHORIZED_TO_CANCEL,
             );
 
             self.token_1_to_deliver.entry(transfer_id).write(Default::default());
@@ -307,6 +267,7 @@ mod DVDTransferManager {
         }
 
         fn is_trex(self: @ContractState, token: ContractAddress) -> bool {
+            /// NOTE: in solidity entrypoint error is handled, here it panics
             ITokenDispatcher { contract_address: token }
                 .identity_registry()
                 .contract_address
@@ -338,9 +299,9 @@ mod DVDTransferManager {
             let token2 = self.token_2_to_deliver.entry(transfer_id).read();
             assert(
                 token1.counterpart.is_non_zero() && token2.counterpart.is_non_zero(),
-                'Transfer ID does not exist',
+                Errors::TRANSFER_ID_NOT_EXIST,
             );
-            let parity = self.calcualate_parity(token1.token, token2.token);
+            let parity = self.calculate_parity(token1.token, token2.token);
             let fee_details = self.fee.entry(parity).read();
             if fee_details.token_1_fee.is_zero() || fee_details.token_2_fee.is_zero() {
                 return TxFees {
@@ -355,6 +316,7 @@ mod DVDTransferManager {
                 * fee_details.token_1_fee
                 * 10_u256.pow(fee_details.fee_base - 2))
                 / 10_u256.pow(fee_details.fee_base);
+
             let tx_fee_2 = (token2.amount
                 * fee_details.token_2_fee
                 * 10_u256.pow(fee_details.fee_base - 2))
@@ -367,10 +329,18 @@ mod DVDTransferManager {
             }
         }
 
-        fn calcualate_parity(
+        fn calculate_parity(
             self: @ContractState, token1: ContractAddress, token2: ContractAddress,
         ) -> felt252 {
-            poseidon_hash_span(array![token1.into(), token2.into()].span())
+            let token1_felt: felt252 = token1.into();
+            let token2_felt: felt252 = token2.into();
+            let token1_u256: u256 = token1_felt.into();
+
+            if token1_u256 > token2_felt.into() {
+                poseidon_hash_span(array![token2_felt, token1_felt].span())
+            } else {
+                poseidon_hash_span(array![token1_felt, token2_felt].span())
+            }
         }
 
         fn calculate_transfer_id(
