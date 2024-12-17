@@ -161,7 +161,7 @@ mod DVDTransferManager {
             let caller = starknet::get_caller_address();
 
             assert(counterpart.is_non_zero(), Errors::ZERO_ADDRESS);
-            assert(token1.is_non_zero() && token2.is_non_zero(), Errors::ZERO_ADDRESS),
+            assert(token1.is_non_zero() && token2.is_non_zero(), Errors::ZERO_ADDRESS);
 
             let token1_delivery = Delivery {
                 counterpart: caller, token: token1, amount: token1_amount,
@@ -204,7 +204,7 @@ mod DVDTransferManager {
             );
 
             let caller = starknet::get_caller_address();
-            assert!(
+            assert(
                 caller == token2.counterpart
                     || self.is_trex_agent(token1.token, caller)
                     || self.is_trex_agent(token2.token, caller),
@@ -252,7 +252,7 @@ mod DVDTransferManager {
                 Errors::TRANSFER_ID_NOT_EXIST,
             );
             let caller = starknet::get_caller_address();
-            assert!(
+            assert(
                 self.ownable.owner() == caller
                     || caller == token1.counterpart
                     || caller == token2.counterpart
