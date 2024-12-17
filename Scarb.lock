@@ -38,6 +38,8 @@ name = "factory"
 version = "0.1.0"
 dependencies = [
  "openzeppelin_access",
+ "openzeppelin_token",
+ "roles",
  "snforge_std",
 ]
 

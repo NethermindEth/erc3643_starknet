@@ -1,79 +1,11 @@
 use factory::itrex_factory::{ClaimDetails, TokenDetails};
 use starknet::ContractAddress;
 
-#[derive(Serde, Drop)]
+#[derive(Serde, Drop, starknet::Store)]
 pub struct Fee {
-    fee: u256,
-    fee_token: ContractAddress,
-    fee_collector: ContractAddress,
-}
-
-#[event]
-#[derive(Drop, starknet::Event)]
-pub enum TREXGatewayEvent {
-    FactorySet: FactorySet,
-    PublicDeploymentStatusSet: PublicDeploymentStatusSet,
-    DeploymentFeeSet: DeploymentFeeSet,
-    DeploymentFeeEnabled: DeploymentFeeEnabled,
-    DeployerAdded: DeployerAdded,
-    DeployerRemoved: DeployerRemoved,
-    FeeDiscountApplied: FeeDiscountApplied,
-    GatewaySuiteDeploymentProcessed: GatewaySuiteDeploymentProcessed,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct FactorySet {
-    #[key]
-    factory: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct PublicDeploymentStatusSet {
-    #[key]
-    public_deployment_status: bool,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct DeploymentFeeSet {
-    #[key]
-    fee: u256,
-    #[key]
-    fee_token: ContractAddress,
-    #[key]
-    fee_collector: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct DeploymentFeeEnabled {
-    #[key]
-    is_enabled: bool,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct DeployerAdded {
-    #[key]
-    deployer: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct DeployerRemoved {
-    #[key]
-    deployer: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct FeeDiscountApplied {
-    #[key]
-    deployer: ContractAddress,
-    discount: u16,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct GatewaySuiteDeploymentProcessed {
-    #[key]
-    requester: ContractAddress,
-    intended_owner: ContractAddress,
-    fee_applied: u256,
+    pub fee: u256,
+    pub fee_token: ContractAddress,
+    pub fee_collector: ContractAddress,
 }
 
 #[starknet::interface]
@@ -89,20 +21,20 @@ pub trait ITREXGateway<TContractState> {
         fee_collector: ContractAddress,
     );
     fn add_deployer(ref self: TContractState, deployer: ContractAddress);
-    fn batch_add_deployer(ref self: TContractState, deployers: Array<ContractAddress>);
+    fn batch_add_deployer(ref self: TContractState, deployers: Span<ContractAddress>);
     fn remove_deployer(ref self: TContractState, deployer: ContractAddress);
-    fn batch_remove_deployer(ref self: TContractState, deployers: Array<ContractAddress>);
+    fn batch_remove_deployer(ref self: TContractState, deployers: Span<ContractAddress>);
     fn apply_fee_discount(ref self: TContractState, deployer: ContractAddress, discount: u16);
     fn batch_apply_fee_discount(
-        ref self: TContractState, deployers: Array<ContractAddress>, discounts: Array<u16>,
+        ref self: TContractState, deployers: Span<ContractAddress>, discounts: Span<u16>,
     );
     fn deploy_TREX_suite(
         ref self: TContractState, token_details: TokenDetails, claim_details: ClaimDetails,
     );
     fn batch_deploy_TREX_suite(
         ref self: TContractState,
-        token_details: Array<TokenDetails>,
-        claim_details: Array<ClaimDetails>,
+        token_details: Span<TokenDetails>,
+        claim_details: Span<ClaimDetails>,
     );
     fn get_public_deployment_status(self: @TContractState) -> bool;
     fn get_factory(self: @TContractState) -> ContractAddress;

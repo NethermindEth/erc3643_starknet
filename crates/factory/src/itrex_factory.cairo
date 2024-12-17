@@ -1,17 +1,24 @@
 use starknet::ContractAddress;
 
-#[derive(Serde, Drop)]
+#[derive(Serde, Drop, Clone)]
 pub struct TokenDetails {
-    owner: ContractAddress,
-    name: ByteArray,
-    symbol: ByteArray,
-    decimals: u8,
-    irs: ContractAddress,
-    onchain_id: ContractAddress,
-    ir_agents: Array<ContractAddress>,
-    token_agents: Array<ContractAddress>,
-    compliance_modules: Array<ContractAddress>,
-    compliance_settings: Array<ContractAddress>,
+    pub owner: ContractAddress,
+    pub name: ByteArray,
+    pub symbol: ByteArray,
+    pub decimals: u8,
+    pub irs: ContractAddress,
+    pub onchain_id: ContractAddress,
+    pub ir_agents: Span<ContractAddress>,
+    pub token_agents: Span<ContractAddress>,
+    pub compliance_modules: Span<ContractAddress>,
+    pub compliance_settings: Span<ContractAddress>,
+}
+
+#[derive(Serde, Drop, Clone)]
+pub struct ClaimDetails {
+    pub claim_topics: Span<u256>,
+    pub issuers: Span<ContractAddress>,
+    pub issuer_claims: Span<Span<u256>>,
 }
 
 #[event]
@@ -21,13 +28,6 @@ pub enum TREXFactoryEvent {
     IdFactorySet: IdFactorySet,
     ImplementationAuthoritySet: ImplementationAuthoritySet,
     TREXSuiteDeployed: TREXSuiteDeployed,
-}
-
-#[derive(Serde, Drop)]
-pub struct ClaimDetails {
-    claim_topics: Array<u256>,
-    issuers: Array<ContractAddress>,
-    issuer_claims: Array<Array<u256>>,
 }
 
 #[derive(Drop, starknet::Event)]
@@ -65,7 +65,7 @@ pub trait ITREXFactory<TContractState> {
     fn set_id_factory(ref self: TContractState, id_factory: ContractAddress);
     fn deploy_TREX_suite(
         ref self: TContractState,
-        salt: ByteArray,
+        salt: Span<felt252>,
         token_details: TokenDetails,
         claim_details: ClaimDetails,
     );
