@@ -55,9 +55,8 @@ pub struct TREXSuiteDeployed {
     tir: ContractAddress,
     ctr: ContractAddress,
     mc: ContractAddress,
-    salt: ByteArray,
+    salt: felt252,
 }
-
 
 #[starknet::interface]
 pub trait ITREXFactory<TContractState> {
@@ -65,7 +64,7 @@ pub trait ITREXFactory<TContractState> {
     fn set_id_factory(ref self: TContractState, id_factory: ContractAddress);
     fn deploy_TREX_suite(
         ref self: TContractState,
-        salt: Span<felt252>,
+        salt: felt252,
         token_details: TokenDetails,
         claim_details: ClaimDetails,
     );

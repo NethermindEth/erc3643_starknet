@@ -1,6 +1,6 @@
 #[starknet::contract]
 mod TREXGateway {
-    use core::{num::traits::Zero, panic_with_felt252};
+    use core::{num::traits::Zero, panic_with_felt252, poseidon::poseidon_hash_span};
     use crate::{
         itrex_factory::{
             ClaimDetails, ITREXFactoryDispatcher, ITREXFactoryDispatcherTrait, TokenDetails,
@@ -169,10 +169,16 @@ mod TREXGateway {
             self.emit(PublicDeploymentStatusSet { public_deployment_status: is_enabled });
         }
 
-        fn transfer_factory_ownership(ref self: ContractState, new_owner: ContractAddress) {
+        fn set_deployment_fee(
+            ref self: ContractState,
+            fee: u256,
+            fee_token: ContractAddress,
+            fee_collector: ContractAddress,
+        ) {
             self.ownable.assert_only_owner();
-            IOwnableDispatcher { contract_address: self.factory.read() }
-                .transfer_ownership(new_owner);
+            assert(fee_token.is_non_zero() && fee_collector.is_non_zero(), Errors::ZERO_ADDRESS);
+            self.deployment_fee.write(Fee { fee, fee_token, fee_collector });
+            self.emit(DeploymentFeeSet { fee, fee_token, fee_collector });
         }
 
         fn enable_deployment_fee(ref self: ContractState, is_enabled: bool) {
@@ -190,17 +196,10 @@ mod TREXGateway {
             self.emit(DeploymentFeeEnabled { is_enabled });
         }
 
-        /// TODO: check if fee needs to be constrained or not within a range.
-        fn set_deployment_fee(
-            ref self: ContractState,
-            fee: u256,
-            fee_token: ContractAddress,
-            fee_collector: ContractAddress,
-        ) {
+        fn transfer_factory_ownership(ref self: ContractState, new_owner: ContractAddress) {
             self.ownable.assert_only_owner();
-            assert(fee_token.is_non_zero() && fee_collector.is_non_zero(), Errors::ZERO_ADDRESS);
-            self.deployment_fee.write(Fee { fee, fee_token, fee_collector });
-            self.emit(DeploymentFeeSet { fee, fee_token, fee_collector });
+            IOwnableDispatcher { contract_address: self.factory.read() }
+                .transfer_ownership(new_owner);
         }
 
         fn add_deployer(ref self: ContractState, deployer: ContractAddress) {
@@ -308,9 +307,7 @@ mod TREXGateway {
             let deployment_fee_enabled = self.deployment_fee_enabled.read();
             if deployment_fee_enabled {
                 let deployment_fee = self.deployment_fee.read();
-                /// fee_discount range check might be unneccesary
-                if deployment_fee.fee.is_non_zero()
-                    && self.fee_discount.entry(caller).read() < 10_000 {
+                if deployment_fee.fee.is_non_zero() {
                     fee_applied = self.calculate_fee(caller);
                     assert(
                         IERC20Dispatcher { contract_address: deployment_fee.fee_token }
@@ -324,10 +321,10 @@ mod TREXGateway {
             let token_owner = token_details.owner;
             token_owner.serialize(ref serialized_data);
             token_details.name.serialize(ref serialized_data);
-            /// TODO: either pass the hash or pure data. Decide on factory.
-            let salt = serialized_data.clone();
+
+            let salt = poseidon_hash_span(serialized_data.span());
             ITREXFactoryDispatcher { contract_address: self.factory.read() }
-                .deploy_TREX_suite(salt.span(), token_details, claim_details);
+                .deploy_TREX_suite(salt, token_details, claim_details);
             self
                 .emit(
                     GatewaySuiteDeploymentProcessed {
@@ -361,9 +358,7 @@ mod TREXGateway {
             let mut fee_applied = 0;
             if deployment_fee_enabled {
                 let deployment_fee = self.deployment_fee.read();
-                /// fee_discount range check might be unneccesary
-                if deployment_fee.fee.is_non_zero()
-                    && self.fee_discount.entry(caller).read() < 10_000 {
+                if deployment_fee.fee.is_non_zero() {
                     fee_applied = self.calculate_fee(caller);
                     let fee_total = fee_applied * token_details.len().into();
                     assert(
@@ -377,18 +372,17 @@ mod TREXGateway {
             let factory_dispatcher = ITREXFactoryDispatcher {
                 contract_address: self.factory.read(),
             };
+
             for i in 0..token_details.len() {
                 let token_detail = token_details.at(i);
 
                 let mut serialized_data: Array<felt252> = array![];
                 token_detail.owner.serialize(ref serialized_data);
                 token_detail.name.serialize(ref serialized_data);
-                /// TODO: either pass the hash or pure data. Decide on factory.
-                let salt = serialized_data.clone();
+
+                let salt = poseidon_hash_span(serialized_data.span());
                 factory_dispatcher
-                    .deploy_TREX_suite(
-                        salt.span(), token_detail.clone(), claim_details.at(i).clone(),
-                    );
+                    .deploy_TREX_suite(salt, token_detail.clone(), claim_details.at(i).clone());
                 self
                     .emit(
                         GatewaySuiteDeploymentProcessed {
@@ -396,6 +390,20 @@ mod TREXGateway {
                         },
                     );
             };
+        }
+
+        fn calculate_fee(self: @ContractState, deployer: ContractAddress) -> u256 {
+            let fee = self.deployment_fee.read().fee;
+            let fee_discount = self.fee_discount.entry(deployer).read().into();
+            fee - ((fee_discount * fee) / 10_000)
+        }
+
+        fn is_deployment_fee_enabled(self: @ContractState) -> bool {
+            self.deployment_fee_enabled.read()
+        }
+
+        fn is_deployer(self: @ContractState, deployer: ContractAddress) -> bool {
+            self.deployers.entry(deployer).read()
         }
 
         fn get_public_deployment_status(self: @ContractState) -> bool {
@@ -408,20 +416,6 @@ mod TREXGateway {
 
         fn get_deployment_fee(self: @ContractState) -> Fee {
             self.deployment_fee.read()
-        }
-
-        fn is_deployment_fee_enabled(self: @ContractState) -> bool {
-            self.deployment_fee_enabled.read()
-        }
-
-        fn is_deployer(self: @ContractState, deployer: ContractAddress) -> bool {
-            self.deployers.entry(deployer).read()
-        }
-
-        fn calculate_fee(self: @ContractState, deployer: ContractAddress) -> u256 {
-            let fee = self.deployment_fee.read().fee;
-            let fee_discount = self.fee_discount.entry(deployer).read().into();
-            fee - ((fee_discount * fee) / 10_000)
         }
     }
 }
