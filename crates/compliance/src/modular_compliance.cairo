@@ -83,6 +83,21 @@ pub mod ModularCompliance {
         pub module: ContractAddress,
     }
 
+    pub mod Errors {
+        pub const TOKEN_ADDRESS_ZERO: felt252 = 'Token zero address';
+        pub const ONLY_OWNER_OR_TOKEN: felt252 = 'Only owner or token can call';
+        pub const MODULE_ADDRESS_ZERO: felt252 = 'Module address zero';
+        pub const MODULE_ALREADY_BOUND: felt252 = 'Module already bound';
+        pub const MODULE_NOT_BOUND: felt252 = 'Module not bound';
+        pub const TOKEN_NOT_BOUND: felt252 = 'This token is not bound';
+        pub const MAX_MODULES_EXCEEDED: felt252 = 'Cannot add more than 25 modules';
+        pub const COMPLIANCE_CANNOT_BIND: felt252 = 'Compliance cannot bind';
+        pub const ONLY_BOUND_MODULE: felt252 = 'Only bound module can call';
+        pub const ZERO_ADDRESS: felt252 = 'Zero address';
+        pub const NO_VALUE_TRANSFER: felt252 = 'No value transfer';
+        pub const ONLY_BOUND_TOKEN: felt252 = 'Only token bound can call';
+    }
+
     #[abi(embed_v0)]
     impl UpgradeableImpl of IUpgradeable<ContractState> {
         /// Upgrades the implementation used by this contract.
@@ -109,39 +124,38 @@ pub mod ModularCompliance {
     #[abi(embed_v0)]
     impl ModularComplianceImpl of IModularCompliance<ContractState> {
         fn bind_token(ref self: ContractState, token: ContractAddress) {
-            assert(token.is_non_zero(), 'Token zero address');
+            assert(token.is_non_zero(), Errors::TOKEN_ADDRESS_ZERO);
             let caller = starknet::get_caller_address();
             assert(
                 self.ownable.owner() == caller
                     || (self.token_bound.read().is_zero() && caller == token),
-                'Only owner or token can call',
+                Errors::ONLY_OWNER_OR_TOKEN,
             );
             self.token_bound.write(token);
             self.emit(TokenBound { token });
         }
 
+        /// NOTE: We dont need to receive token as parameter we can just read it from storage.
         fn unbind_token(ref self: ContractState, token: ContractAddress) {
-            assert(token.is_non_zero(), 'Token zero address');
+            assert(token.is_non_zero(), Errors::TOKEN_ADDRESS_ZERO);
             let caller = starknet::get_caller_address();
-            assert(
-                self.ownable.owner() == caller || caller == token, 'Only owner or token can call',
-            );
-            assert(self.token_bound.read() == token, 'This token is not bound');
+            assert(self.ownable.owner() == caller || caller == token, Errors::ONLY_OWNER_OR_TOKEN);
+            assert(self.token_bound.read() == token, Errors::TOKEN_NOT_BOUND);
             self.token_bound.write(Zero::zero());
             self.emit(TokenUnbound { token });
         }
 
         fn add_module(ref self: ContractState, module: ContractAddress) {
             self.ownable.assert_only_owner();
-            assert(module.is_non_zero(), 'Module address zero');
-            assert(!self.module_bound.entry(module).read(), 'Module already bound');
+            assert(module.is_non_zero(), Errors::MODULE_ADDRESS_ZERO);
+            assert(!self.module_bound.entry(module).read(), Errors::MODULE_ALREADY_BOUND);
             let modules_storage_path = self.modules.deref();
-            assert(modules_storage_path.len() < 25, 'Cannot add more than 25 modules');
+            assert(modules_storage_path.len() < 25, Errors::MAX_MODULES_EXCEEDED);
             let module_dispatcher = IModuleDispatcher { contract_address: module };
             if !module_dispatcher.is_plug_and_play() {
-                assert!(
+                assert(
                     module_dispatcher.can_compliance_bind(starknet::get_contract_address()),
-                    "Compliance is not suitable for binding to the module",
+                    Errors::COMPLIANCE_CANNOT_BIND,
                 );
             }
 
@@ -153,8 +167,8 @@ pub mod ModularCompliance {
 
         fn remove_module(ref self: ContractState, module: ContractAddress) {
             self.ownable.assert_only_owner();
-            assert(module.is_non_zero(), 'Module address zero');
-            assert(self.module_bound.entry(module).read(), 'Module not bound');
+            assert(module.is_non_zero(), Errors::MODULE_ADDRESS_ZERO);
+            assert(self.module_bound.entry(module).read(), Errors::MODULE_NOT_BOUND);
             self.module_bound.entry(module).write(false);
             IModuleDispatcher { contract_address: module }
                 .unbind_compliance(starknet::get_contract_address());
@@ -176,7 +190,7 @@ pub mod ModularCompliance {
             module: ContractAddress,
         ) {
             self.ownable.assert_only_owner();
-            assert(self.module_bound.entry(module).read(), 'Can only call bound module');
+            assert(self.module_bound.entry(module).read(), Errors::ONLY_BOUND_MODULE);
             starknet::syscalls::call_contract_syscall(module, selector, calldata).unwrap();
             self.emit(ModuleInteraction { target: module, selector });
         }
@@ -185,8 +199,8 @@ pub mod ModularCompliance {
             ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
         ) {
             self.assert_only_token();
-            assert(from.is_non_zero() && to.is_non_zero(), 'Zero address');
-            assert(amount.is_non_zero(), 'No value transfer');
+            assert(from.is_non_zero() && to.is_non_zero(), Errors::ZERO_ADDRESS);
+            assert(amount.is_non_zero(), Errors::NO_VALUE_TRANSFER);
 
             let modules_storage_path = self.modules.deref();
             for i in 0..modules_storage_path.len() {
@@ -197,8 +211,8 @@ pub mod ModularCompliance {
 
         fn created(ref self: ContractState, to: ContractAddress, amount: u256) {
             self.assert_only_token();
-            assert(to.is_non_zero(), 'Zero address');
-            assert(amount.is_non_zero(), 'No value transfer');
+            assert(to.is_non_zero(), Errors::ZERO_ADDRESS);
+            assert(amount.is_non_zero(), Errors::NO_VALUE_TRANSFER);
 
             let modules_storage_path = self.modules.deref();
             for i in 0..modules_storage_path.len() {
@@ -209,8 +223,8 @@ pub mod ModularCompliance {
 
         fn destroyed(ref self: ContractState, from: ContractAddress, amount: u256) {
             self.assert_only_token();
-            assert(from.is_non_zero(), 'Zero address');
-            assert(amount.is_non_zero(), 'No value transfer');
+            assert(from.is_non_zero(), Errors::ZERO_ADDRESS);
+            assert(amount.is_non_zero(), Errors::NO_VALUE_TRANSFER);
 
             let modules_storage_path = self.modules.deref();
             for i in 0..modules_storage_path.len() {
@@ -253,9 +267,8 @@ pub mod ModularCompliance {
     #[generate_trait]
     impl InternalImpl of InternalTrait {
         fn assert_only_token(self: @ContractState) {
-            assert!(
-                starknet::get_caller_address() == self.token_bound.read(),
-                "This address is not a token bound to the compliance contract",
+            assert(
+                starknet::get_caller_address() == self.token_bound.read(), Errors::ONLY_BOUND_TOKEN,
             );
         }
     }
