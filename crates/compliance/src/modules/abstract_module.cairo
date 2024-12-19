@@ -32,7 +32,6 @@ pub mod AbstractModuleComponent {
     pub mod Errors {
         pub const COMPLIANCE_ADDRESS_ZERO: felt252 = 'Compliance address zero';
         pub const COMPLIANCE_ALREADY_BOUND: felt252 = 'Compliance already bound';
-        pub const COMPLIANCE_NOT_BOUND: felt252 = 'Compliance not bound';
         pub const ONLY_COMPLIANCE_CAN_CALL: felt252 = 'Only compliance can call';
         pub const ONLY_BOUND_COMPLIANCE_CAN_CALL: felt252 = 'Only bound compliance can call';
     }
@@ -64,8 +63,8 @@ pub mod AbstractModuleComponent {
         fn name(self: @ComponentState<TContractState>) -> ByteArray;
     }
 
-    #[embeddable_as(AbstractModule)]
-    pub impl AbstractModuleImpl<
+    #[embeddable_as(AbstractModuleImpl)]
+    pub impl AbstractModule<
         TContractState,
         +HasComponent<TContractState>,
         +Drop<TContractState>,

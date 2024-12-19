@@ -27,7 +27,7 @@ pub mod TransferRestrictModule {
     component!(path: AbstractModuleComponent, storage: abstract_module, event: AbstractModuleEvent);
 
     #[abi(embed_v0)]
-    impl ModuleImpl = AbstractModuleComponent::AbstractModule<ContractState>;
+    impl ModuleImpl = AbstractModuleComponent::AbstractModuleImpl<ContractState>;
     impl AbstractModuleInternalImpl = AbstractModuleComponent::InternalImpl<ContractState>;
 
     component!(path: UpgradeableComponent, storage: upgrades, event: UpgradeableEvent);
