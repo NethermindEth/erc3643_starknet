@@ -1,26 +1,26 @@
 #[test]
 fn test_should_deploy_the_token_listing_restrictions_contract_and_bind_it_to_the_compliance() {
-    assert!(true, '');
+    assert!(true, "");
 }
 
 #[test]
 fn test_should_return_the_name_of_the_module() {
-    assert!(true, '');
+    assert!(true, "");
 }
 
 #[test]
 fn test_is_plug_and_play_should_return_true() {
-    assert!(true, '');
+    assert!(true, "");
 }
 
 #[test]
 fn test_can_compliance_bind_should_return_true() {
-    assert!(true, '');
+    assert!(true, "");
 }
 
 #[test]
 fn test_should_return_owner() {
-    assert!(true, '');
+    assert!(true, "");
 }
 
 pub mod transfer_ownership {
@@ -32,7 +32,7 @@ pub mod transfer_ownership {
 
     #[test]
     fn test_should_transfer_ownership() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
@@ -45,7 +45,7 @@ pub mod upgrade {
 
     #[test]
     fn test_should_upgrade() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
@@ -70,7 +70,7 @@ pub mod configure_token {
 
     #[test]
     fn test_should_configure_the_token_when_token_is_not_configured_before() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
@@ -89,7 +89,7 @@ pub mod list_token {
 
     #[test]
     fn test_should_list_the_token_when_investor_address_type_is_wallet() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
@@ -100,7 +100,7 @@ pub mod list_token {
 
     #[test]
     fn test_should_list_the_token_when_identity_exists() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
@@ -119,12 +119,12 @@ pub mod batch_list_tokens {
 
     #[test]
     fn test_should_list_tokens_when_investor_address_type_is_wallet() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_list_tokens_when_investor_address_type_is_onchainid() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
@@ -137,12 +137,12 @@ pub mod unlist_token {
 
     #[test]
     fn test_should_unlist_the_token_when_investor_address_type_is_wallet() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_unlist_the_token_when_investor_address_type_is_onchainid() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
@@ -155,78 +155,78 @@ pub mod batch_unlist_tokens {
 
     #[test]
     fn test_should_unlist_tokens_when_investor_address_type_is_wallet() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_unlist_tokens_when_investor_address_type_is_onchainid() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
 pub mod get_token_listing_type {
     #[test]
     fn test_should_return_not_configured_when_token_is_not_configured() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_return_token_listing_type_when_token_is_configured() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
 pub mod get_investor_listing_status {
     #[test]
     fn test_should_return_false_when_token_is_not_listed() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_return_true_when_token_is_listed() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
 pub mod module_check {
     #[test]
     fn test_should_return_true_when_receiver_is_zero_address() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_return_true_when_token_is_not_configured() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_return_false_when_listing_type_is_whitelisting_and_token_not_listed() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_return_true_when_listing_type_is_whitelisting_and_token_listed_for_wallet() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_return_true_when_listing_type_is_whitelisting_and_token_listed_for_oid() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_return_true_when_listing_type_is_blacklisting_and_token_not_listed() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_return_false_when_listing_type_is_blacklisting_and_token_listed_for_wallet() {
-        assert!(true, '');
+        assert!(true, "");
     }
 
     #[test]
     fn test_should_return_false_when_listing_type_is_blacklisting_and_token_listed_for_oid() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
@@ -239,7 +239,7 @@ pub mod module_mint_action {
 
     #[test]
     fn test_should_do_nothing() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
@@ -252,7 +252,7 @@ pub mod module_burn_action {
 
     #[test]
     fn test_should_do_nothing() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
 
@@ -265,6 +265,6 @@ pub mod module_transfer_action {
 
     #[test]
     fn test_should_do_nothing() {
-        assert!(true, '');
+        assert!(true, "");
     }
 }
