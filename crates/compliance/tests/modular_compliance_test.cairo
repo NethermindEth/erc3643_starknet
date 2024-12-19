@@ -26,7 +26,7 @@ fn setup() -> Setup {
     }
 }
 
-fn bind_modules_and_token(setup: @Setup) {
+fn bind_modules_and_token(setup: @Setup) -> (ContractAddress, ContractAddress) {
     let first_module = starknet::contract_address_const::<'FIRST_MODULE'>();
     let second_module = starknet::contract_address_const::<'SECOND_MODULE'>();
     mock_call(first_module, selector!("is_plug_and_play"), false, 1);
@@ -53,6 +53,10 @@ fn bind_modules_and_token(setup: @Setup) {
 
     mock_call(first_module, selector!("module_burn_action"), (), core::num::traits::Bounded::MAX);
     mock_call(second_module, selector!("module_burn_action"), (), core::num::traits::Bounded::MAX);
+
+    mock_call(first_module, selector!("module_check"), true, core::num::traits::Bounded::MAX);
+    mock_call(second_module, selector!("module_check"), true, core::num::traits::Bounded::MAX);
+    (first_module, second_module)
 }
 
 pub mod bind_token {
@@ -291,7 +295,7 @@ pub mod add_module {
     }
 
     #[test]
-    #[should_panic(expected: "Compliance is not suitable for binding to the module")]
+    #[should_panic(expected: 'Compliance cannot bind')]
     fn test_should_panic_when_module_is_not_plug_and_play_and_compliance_is_not_suitable_to_bind() {
         let setup = setup();
         let module_address = starknet::contract_address_const::<'MODULE'>();
@@ -464,7 +468,7 @@ pub mod transferred {
     use super::{bind_modules_and_token, setup};
 
     #[test]
-    #[should_panic(expected: "This address is not a token bound to the compliance contract")]
+    #[should_panic(expected: 'Only token bound can call')]
     fn test_should_panic_when_caller_is_not_bound_token() {
         let setup = setup();
 
@@ -510,7 +514,7 @@ pub mod created {
     use super::{bind_modules_and_token, setup};
 
     #[test]
-    #[should_panic(expected: "This address is not a token bound to the compliance contract")]
+    #[should_panic(expected: 'Only token bound can call')]
     fn test_should_panic_when_caller_is_not_bound_token() {
         let setup = setup();
 
@@ -547,7 +551,7 @@ pub mod destroyed {
     use super::{bind_modules_and_token, setup};
 
     #[test]
-    #[should_panic(expected: "This address is not a token bound to the compliance contract")]
+    #[should_panic(expected: 'Only token bound can call')]
     fn test_should_panic_when_caller_is_not_bound_token() {
         let setup = setup();
 
@@ -601,7 +605,7 @@ pub mod call_module_function {
     }
 
     #[test]
-    #[should_panic(expected: 'Can only call bound module')]
+    #[should_panic(expected: 'Only bound module can call')]
     fn test_should_panic_when_module_is_not_bound() {
         let setup = setup();
 
@@ -611,8 +615,7 @@ pub mod call_module_function {
     #[test]
     fn test_should_call_module_function() {
         let setup = setup();
-        bind_modules_and_token(@setup);
-        let module = starknet::contract_address_const::<'FIRST_MODULE'>();
+        let (module, _) = bind_modules_and_token(@setup);
         let mut spy = spy_events();
 
         let selector = selector!("dummy_selector");
@@ -633,4 +636,38 @@ pub mod call_module_function {
     }
 }
 
-pub mod can_transfer {}
+pub mod can_transfer {
+    use compliance::imodular_compliance::IModularComplianceDispatcherTrait;
+    use snforge_std::mock_call;
+    use super::{bind_modules_and_token, setup};
+
+    #[test]
+    fn test_should_return_true_if_all_modules_return_true() {
+        let setup = setup();
+        bind_modules_and_token(@setup);
+        let can_tranfer = setup
+            .compliance
+            .can_transfer(
+                starknet::contract_address_const::<'ANY_FROM'>(),
+                starknet::contract_address_const::<'ANY_TO'>(),
+                10,
+            );
+        assert(can_tranfer, 'Cannot transfer!');
+    }
+
+    #[test]
+    fn test_should_return_false_if_single_module_return_false() {
+        let setup = setup();
+        let (first_module, _) = bind_modules_and_token(@setup);
+        mock_call(first_module, selector!("module_check"), false, 1);
+
+        let can_tranfer = setup
+            .compliance
+            .can_transfer(
+                starknet::contract_address_const::<'ANY_FROM'>(),
+                starknet::contract_address_const::<'ANY_TO'>(),
+                10,
+            );
+        assert(!can_tranfer, 'Can transfer!');
+    }
+}
