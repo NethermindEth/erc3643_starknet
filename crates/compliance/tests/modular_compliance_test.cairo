@@ -5,14 +5,14 @@ use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, mock_call};
 use starknet::ContractAddress;
 
 #[derive(Drop, Copy)]
-struct Setup {
-    compliance: IModularComplianceDispatcher,
-    alice: ContractAddress,
-    bob: ContractAddress,
-    another_wallet: ContractAddress,
+pub struct Setup {
+    pub compliance: IModularComplianceDispatcher,
+    pub alice: ContractAddress,
+    pub bob: ContractAddress,
+    pub another_wallet: ContractAddress,
 }
 
-fn setup() -> Setup {
+pub fn setup() -> Setup {
     let modular_compliance_contract = declare("ModularCompliance").unwrap().contract_class();
     let (mc_address, _) = modular_compliance_contract
         .deploy(@array![starknet::get_contract_address().into()])

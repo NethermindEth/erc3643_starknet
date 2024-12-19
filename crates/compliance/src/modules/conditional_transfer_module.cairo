@@ -155,7 +155,7 @@ pub mod ConditionalTransferModule {
             if approval_count > 0 {
                 transfers_approved_storage_path.write(approval_count - 1);
                 contract_state
-                    .emit(TransferApproved { from, to, amount: value, token: token_bound });
+                    .emit(ApprovalRemoved { from, to, amount: value, token: token_bound });
             }
         }
 
