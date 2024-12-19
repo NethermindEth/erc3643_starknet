@@ -9,6 +9,7 @@ token =  { path = "../token"}
 roles = { path = "../roles"}
 registry = { path = "../registry"}
 storage = { path = "../storage"}
+mocks = { path = "../mocks"}
 openzeppelin_access.workspace = true
 openzeppelin_upgrades.workspace = true
 openzeppelin_token.workspace = true
@@ -16,6 +17,7 @@ snforge_std.workspace = true
 
 [[target.starknet-contract]]
 sierra = true
+build-external-contracts = ["mocks::*"]
 
 [tool]
 fmt.workspace = true

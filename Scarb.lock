@@ -5,6 +5,7 @@ version = 1
 name = "compliance"
 version = "0.1.0"
 dependencies = [
+ "mocks",
  "openzeppelin_access",
  "openzeppelin_token",
  "openzeppelin_upgrades",
