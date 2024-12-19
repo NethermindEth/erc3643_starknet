@@ -7,6 +7,7 @@ mod modules {
     mod supply_limit_module_test;
     mod time_exchange_limits_module_test;
     mod time_transfer_limits_module_test;
+    pub mod token_listing_restrictions_module_test;
     mod transfer_fees_module_test;
     mod transfer_restrict_module_test;
 }

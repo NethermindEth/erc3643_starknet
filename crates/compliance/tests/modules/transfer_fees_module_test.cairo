@@ -34,7 +34,7 @@ fn test_should_return_owner() {
 pub mod transfer_ownership {
     #[test]
     #[should_panic]
-    fn test_should_revert_when_caller_is_not_the_owner() {
+    fn test_should_panic_when_caller_is_not_the_owner() {
         panic!("");
     }
 
@@ -47,7 +47,7 @@ pub mod transfer_ownership {
 pub mod upgrade {
     #[test]
     #[should_panic]
-    fn test_should_revert_when_caller_is_not_the_owner() {
+    fn test_should_panic_when_caller_is_not_the_owner() {
         panic!("");
     }
 
@@ -60,19 +60,19 @@ pub mod upgrade {
 pub mod set_fee {
     #[test]
     #[should_panic]
-    fn test_should_revert_when_caller_is_not_compliance_contract() {
+    fn test_should_panic_when_caller_is_not_compliance_contract() {
         panic!("");
     }
 
     #[test]
     #[should_panic]
-    fn test_should_revert_when_rate_is_greater_than_the_max() {
+    fn test_should_panic_when_rate_is_greater_than_the_max() {
         panic!("");
     }
 
     #[test]
     #[should_panic]
-    fn test_should_revert_when_collector_address_is_not_verified() {
+    fn test_should_panic_when_collector_address_is_not_verified() {
         panic!("");
     }
 
@@ -92,7 +92,7 @@ pub mod get_fee {
 pub mod module_transfer_action {
     #[test]
     #[should_panic]
-    fn test_should_revert_when_caller_is_not_compliance_contract() {
+    fn test_should_panic_when_caller_is_not_compliance_contract() {
         panic!("");
     }
 
@@ -130,7 +130,7 @@ pub mod module_transfer_action {
 pub mod module_mint_action {
     #[test]
     #[should_panic]
-    fn test_should_revert_when_caller_is_not_compliance_contract() {
+    fn test_should_panic_when_caller_is_not_compliance_contract() {
         panic!("");
     }
 
@@ -143,7 +143,7 @@ pub mod module_mint_action {
 pub mod module_burn_action {
     #[test]
     #[should_panic]
-    fn test_should_revert_when_caller_is_not_compliance_contract() {
+    fn test_should_panic_when_caller_is_not_compliance_contract() {
         panic!("");
     }
 
