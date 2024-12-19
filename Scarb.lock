@@ -45,6 +45,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "mocks"
+version = "0.1.0"
+dependencies = [
+ "compliance",
+ "snforge_std",
+]
+
+[[package]]
 name = "onchain_id"
 version = "0.1.0"
 dependencies = [
