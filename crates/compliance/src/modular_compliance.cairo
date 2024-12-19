@@ -124,9 +124,7 @@ pub mod ModularCompliance {
             assert(token.is_non_zero(), 'Token zero address');
             let caller = starknet::get_caller_address();
             assert(
-                self.ownable.owner() == caller
-                    || (self.token_bound.read().is_zero() && caller == token),
-                'Only owner or token can call',
+                self.ownable.owner() == caller || caller == token, 'Only owner or token can call',
             );
             assert(self.token_bound.read() == token, 'This token is not bound');
             self.token_bound.write(Zero::zero());
@@ -136,7 +134,7 @@ pub mod ModularCompliance {
         fn add_module(ref self: ContractState, module: ContractAddress) {
             self.ownable.assert_only_owner();
             assert(module.is_non_zero(), 'Module address zero');
-            assert(!self.module_bound.entry(module).read(), 'module already bound');
+            assert(!self.module_bound.entry(module).read(), 'Module already bound');
             let modules_storage_path = self.modules.deref();
             assert(modules_storage_path.len() < 25, 'Cannot add more than 25 modules');
             let module_dispatcher = IModuleDispatcher { contract_address: module };
@@ -156,7 +154,7 @@ pub mod ModularCompliance {
         fn remove_module(ref self: ContractState, module: ContractAddress) {
             self.ownable.assert_only_owner();
             assert(module.is_non_zero(), 'Module address zero');
-            assert(self.module_bound.entry(module).read(), 'module not bound');
+            assert(self.module_bound.entry(module).read(), 'Module not bound');
             self.module_bound.entry(module).write(false);
             IModuleDispatcher { contract_address: module }
                 .unbind_compliance(starknet::get_contract_address());
