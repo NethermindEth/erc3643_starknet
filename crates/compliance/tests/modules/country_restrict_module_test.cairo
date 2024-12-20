@@ -176,7 +176,10 @@ pub mod add_country_restriction {
         );
         setup.module.add_country_restriction(42);
         stop_cheat_caller_address(setup.module.contract_address);
-        assert(setup.module.is_country_restricted(setup.mc_setup.compliance.contract_address, 42), 'Country is not restricted');
+        assert(
+            setup.module.is_country_restricted(setup.mc_setup.compliance.contract_address, 42),
+            'Country is not restricted',
+        );
 
         spy
             .assert_emitted(
@@ -240,7 +243,9 @@ pub mod remove_country_restriction {
     fn test_should_panic_when_country_is_not_restricted() {
         let setup = setup();
 
-        start_cheat_caller_address(setup.module.contract_address, setup.mc_setup.compliance.contract_address);
+        start_cheat_caller_address(
+            setup.module.contract_address, setup.mc_setup.compliance.contract_address,
+        );
         setup.module.remove_country_restriction(42);
         stop_cheat_caller_address(setup.module.contract_address);
     }
@@ -249,13 +254,18 @@ pub mod remove_country_restriction {
     fn test_should_remove_the_country_restriction() {
         let setup = setup();
 
-        start_cheat_caller_address(setup.module.contract_address, setup.mc_setup.compliance.contract_address);
+        start_cheat_caller_address(
+            setup.module.contract_address, setup.mc_setup.compliance.contract_address,
+        );
         setup.module.add_country_restriction(42);
         let mut spy = spy_events();
 
         setup.module.remove_country_restriction(42);
         stop_cheat_caller_address(setup.module.contract_address);
-        assert(!setup.module.is_country_restricted(setup.mc_setup.compliance.contract_address, 42), 'Restriction is not removed');
+        assert(
+            !setup.module.is_country_restricted(setup.mc_setup.compliance.contract_address, 42),
+            'Restriction is not removed',
+        );
 
         spy
             .assert_emitted(
@@ -352,7 +362,7 @@ pub mod batch_restrict_countries {
                         setup.module.contract_address,
                         CountryRestrictModule::Event::AddedRestrictedCountry(
                             CountryRestrictModule::AddedRestrictedCountry {
-                                compliance, country:66,
+                                compliance, country: 66,
                             },
                         ),
                     ),
@@ -448,7 +458,7 @@ pub mod batch_unrestrict_countries {
                         setup.module.contract_address,
                         CountryRestrictModule::Event::RemovedRestrictedCountry(
                             CountryRestrictModule::RemovedRestrictedCountry {
-                                compliance, country:66,
+                                compliance, country: 66,
                             },
                         ),
                     ),
