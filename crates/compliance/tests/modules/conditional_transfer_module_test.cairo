@@ -74,7 +74,6 @@ fn test_should_return_owner() {
     assert(ownable_dispatcher.owner() == starknet::get_contract_address(), 'Owner does not match');
 }
 
-
 pub mod transfer_ownership {
     use openzeppelin_access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
     use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
