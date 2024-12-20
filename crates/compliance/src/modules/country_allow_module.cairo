@@ -7,9 +7,6 @@ pub trait ICountryAllowModule<TContractState> {
     fn add_allowed_country(ref self: TContractState, country: u16);
     fn remove_allowed_country(ref self: TContractState, country: u16);
     fn is_country_allowed(self: @TContractState, compliance: ContractAddress, country: u16) -> bool;
-    fn compliance_check_on_country_whitelisting(
-        self: @TContractState, from: ContractAddress, to: ContractAddress, amount: u256,
-    ) -> bool;
 }
 
 #[starknet::contract]
@@ -223,12 +220,6 @@ pub mod CountryAllowModule {
             self: @ContractState, compliance: ContractAddress, country: u16,
         ) -> bool {
             self.allowed_countries.entry(compliance).entry(country).read()
-        }
-
-        fn compliance_check_on_country_whitelisting(
-            self: @ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
-        ) -> bool {
-            true
         }
     }
 
