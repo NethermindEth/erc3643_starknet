@@ -1,7 +1,6 @@
 use compliance::modules::imodule::IModuleDispatcher;
 use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
 
-
 fn setup() -> IModuleDispatcher {
     let mock_abstract_module_contract = declare("MockAbstractModule").unwrap().contract_class();
     let (deployed_address, _) = mock_abstract_module_contract.deploy(@array![]).unwrap();
