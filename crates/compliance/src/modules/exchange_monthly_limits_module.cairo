@@ -338,8 +338,6 @@ pub mod ExchangeMonthlyLimitsModule {
                 .entry((compliance, exchange_id, investor_id))
                 .monthly_count
                 .deref();
-            /// NOTE: since reset_exchange_monthly_cooldown sets monthly count to 0. We can save one
-            /// storage read here if we remove current count.
             let current_count = monthly_count_storage_path.read();
             monthly_count_storage_path.write(current_count + value);
         }
