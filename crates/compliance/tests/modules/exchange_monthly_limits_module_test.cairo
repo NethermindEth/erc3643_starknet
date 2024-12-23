@@ -251,6 +251,9 @@ pub mod add_exchange_id {
         let exchange_id = setup.mc_setup.another_wallet;
         let mut spy = spy_events();
 
+        setup.module.add_exchange_id(setup.mc_setup.another_wallet);
+
+        assert(setup.module.is_exchange_id(setup.mc_setup.another_wallet), 'Exchange id not added');
         spy
             .assert_emitted(
                 @array![
