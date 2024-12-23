@@ -95,8 +95,8 @@ pub mod MaxBalanceModule {
         #[key]
         pub compliance: ContractAddress,
         #[key]
-        id: ContractAddress,
-        balance: u256,
+        pub id: ContractAddress,
+        pub balance: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -302,6 +302,7 @@ pub mod MaxBalanceModule {
 
             self.id_balance.entry(compliance).entry(id).write(balance);
             self.emit(IDBalancePreSet { compliance, id, balance });
+            /// TODO: Consider adding preset completed event
         }
 
         fn batch_preset_module_state(
@@ -334,6 +335,7 @@ pub mod MaxBalanceModule {
             };
 
             self.compliance_preset_status.entry(compliance).write(true);
+            /// NOTE: PresetCompleted added as it seems it should be emited when preset happens.
             self.emit(PresetCompleted { compliance });
         }
 
