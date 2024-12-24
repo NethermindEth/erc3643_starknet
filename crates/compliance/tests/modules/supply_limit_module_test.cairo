@@ -58,7 +58,7 @@ fn test_should_return_the_name_of_the_module() {
 }
 
 #[test]
-fn test_is_plug_and_play_should_return_false() {
+fn test_is_plug_and_play_should_return_true() {
     let setup = setup();
     let module_dispatcher = IModuleDispatcher { contract_address: setup.module.contract_address };
     assert(module_dispatcher.is_plug_and_play(), 'Is not plug and play');

@@ -321,6 +321,8 @@ pub mod TimeExchangeLimitsModule {
                 let limit_storage_path = exchange_limits_storage_path
                     .at(index_limit_storage_path.limit_index.read().into())
                     .deref();
+                /// NOTE: might not need to write limit_time again since to override limit_time
+                /// should be same
                 limit_storage_path.limit_time.write(limit.limit_time);
                 limit_storage_path.limit_value.write(limit.limit_value);
             }
