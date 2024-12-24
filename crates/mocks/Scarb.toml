@@ -6,7 +6,7 @@ edition = "2024_07"
 [dependencies]
 starknet.workspace = true
 compliance = { path = "../compliance"}
-
+openzeppelin_token.workspace = true
 [dev-dependencies]
 snforge_std.workspace = true
 

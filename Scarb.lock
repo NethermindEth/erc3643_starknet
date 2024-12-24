@@ -50,6 +50,7 @@ name = "mocks"
 version = "0.1.0"
 dependencies = [
  "compliance",
+ "openzeppelin_token",
  "snforge_std",
 ]
 

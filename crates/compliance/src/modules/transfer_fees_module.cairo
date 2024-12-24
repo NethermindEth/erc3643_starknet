@@ -8,8 +8,8 @@ pub trait ITransferFeesModule<TContractState> {
 
 #[derive(Drop, Serde, starknet::Store)]
 pub struct Fee {
-    rate: u16, // [0, 10_000]
-    collector: ContractAddress,
+    pub rate: u16, // [0, 10_000]
+    pub collector: ContractAddress,
 }
 
 #[starknet::contract]
