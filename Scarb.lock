@@ -20,7 +20,10 @@ dependencies = [
 name = "dva"
 version = "0.1.0"
 dependencies = [
+ "openzeppelin_token",
+ "registry",
  "roles",
+ "token",
 ]
 
 [[package]]

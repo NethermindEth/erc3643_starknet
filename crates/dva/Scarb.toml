@@ -5,7 +5,10 @@ edition = "2024_07"
 
 [dependencies]
 starknet.workspace = true
-roles = {path="../roles"}
+openzeppelin_token.workspace = true
+roles = { path = "../roles" }
+token = { path = "../token" }
+registry = { path = "../registry" }
 
 [[target.starknet-contract]]
 sierra = true
@@ -14,4 +17,4 @@ sierra = true
 fmt.workspace = true
 
 [lib]
-name= "dva"
+name = "dva"

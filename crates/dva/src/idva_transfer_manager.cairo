@@ -1,7 +1,11 @@
+use core::num::traits::Zero;
 use starknet::ContractAddress;
+use starknet::secp256_trait::Signature;
+use starknet::storage::Vec;
 
-#[derive(Serde, Drop)]
+#[derive(Serde, Default, Drop, PartialEq, starknet::Store)]
 pub enum TransferStatus {
+    #[default]
     PENDING,
     COMPLETED,
     CANCELLED,
@@ -23,6 +27,16 @@ pub struct ApprovalCriteria {
     pub hash: felt252,
 }
 
+/// Storage struct for ApprovalCriteria
+#[starknet::storage_node]
+pub struct ApprovalCriteriaStore {
+    pub include_recipient_approver: bool,
+    pub include_agent_approver: bool,
+    pub sequential_approval: bool,
+    pub additional_approvers: Vec<ContractAddress>,
+    pub hash: felt252,
+}
+
 /// Represents a transfer request with its current state and approval requirements
 #[derive(Serde, Drop)]
 pub struct Transfer {
@@ -35,8 +49,20 @@ pub struct Transfer {
     pub approval_criteria_hash: felt252,
 }
 
+/// Storage struct for Transfer
+#[starknet::storage_node]
+pub struct TransferStore {
+    pub token_address: ContractAddress,
+    pub sender: ContractAddress,
+    pub recipient: ContractAddress,
+    pub amount: u256,
+    pub status: TransferStatus,
+    pub approvers: Vec<Approver>,
+    pub approval_criteria_hash: felt252,
+}
+
 /// Represents an approver for a transfer with their approval status
-#[derive(Serde, Drop)]
+#[derive(Serde, Copy, Drop, starknet::Store)]
 pub struct Approver {
     /// Address of the approver. If any_token_agent is true, it will be zero on initialization
     pub wallet: ContractAddress,
@@ -44,13 +70,6 @@ pub struct Approver {
     pub any_token_agent: bool,
     /// Indicates if this approver has approved the transfer
     pub approved: bool,
-}
-
-#[derive(Serde, Drop)]
-pub struct Signature {
-    v: u8,
-    r: felt252,
-    s: felt252,
 }
 
 pub mod Events {
@@ -128,7 +147,8 @@ pub mod Errors {
     pub const ONLY_TRANSFER_SENDER_CAN_CALL: felt252 = 'Only transfer sender can call';
     pub const TOKEN_IS_NOT_REGISTERED: felt252 = 'Token is not registered';
     pub const RECIPIENT_IS_NOT_VERIFIED: felt252 = 'Recipient is not verified';
-    pub const DVA_MANAGER_IS_NOT_VERIFIED_FOR_THE_TOKEN: felt252 = 'DVA Mngr not verified for token';
+    pub const DVA_MANAGER_IS_NOT_VERIFIED_FOR_THE_TOKEN: felt252 =
+        'DVA Mngr not verified for token';
     pub const INVALID_TRANSFER_ID: felt252 = 'Invalid transfer ID';
     pub const TRANSFER_IS_NOT_IN_PENDING_STATUS: felt252 = 'Transfer not in pending status';
     pub const APPROVALS_MUST_BE_SEQUENTIAL: felt252 = 'Approvals must be sequential';
@@ -154,7 +174,7 @@ pub trait IDVATransferManager<TContractState> {
         include_recipient_approver: bool,
         include_agent_approver: bool,
         sequential_approval: bool,
-        additional_approvers: Array<ContractAddress>,
+        additional_approvers: Span<ContractAddress>,
     );
 
     /// Initiates a new transfer request
@@ -237,4 +257,18 @@ pub trait IDVATransferManager<TContractState> {
         recipient: ContractAddress,
         amount: u256,
     ) -> felt252;
+}
+
+impl ApproverZero of Zero<Approver> {
+    fn zero() -> Approver {
+        Approver { wallet: Zero::zero(), any_token_agent: false, approved: false }
+    }
+    #[inline]
+    fn is_zero(self: @Approver) -> bool {
+        self.wallet.is_zero() && !*self.any_token_agent && !*self.approved
+    }
+    #[inline]
+    fn is_non_zero(self: @Approver) -> bool {
+        !self.is_zero()
+    }
 }
