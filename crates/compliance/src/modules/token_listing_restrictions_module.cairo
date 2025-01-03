@@ -16,7 +16,7 @@ pub enum InvestorAddressType {
 }
 
 #[starknet::interface]
-trait ITokenListingRestrictionsModule<TContractState> {
+pub trait ITokenListingRestrictionsModule<TContractState> {
     fn configure_token(ref self: TContractState, listing_type: ListingType);
     fn list_token(
         ref self: TContractState, token_address: ContractAddress, address_type: InvestorAddressType,
@@ -41,7 +41,7 @@ trait ITokenListingRestrictionsModule<TContractState> {
 }
 
 #[starknet::contract]
-mod TokenListingRestrictionsModule {
+pub mod TokenListingRestrictionsModule {
     use core::{num::traits::Zero, panic_with_felt252};
     use crate::{
         imodular_compliance::{IModularComplianceDispatcher, IModularComplianceDispatcherTrait},
@@ -89,7 +89,7 @@ mod TokenListingRestrictionsModule {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         TokenListingConfigured: TokenListingConfigured,
         TokenListed: TokenListed,
         TokenUnlisted: TokenUnlisted,
@@ -102,26 +102,26 @@ mod TokenListingRestrictionsModule {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct TokenListingConfigured {
-        token_address: ContractAddress,
-        listing_type: ListingType,
+    pub struct TokenListingConfigured {
+        pub token_address: ContractAddress,
+        pub listing_type: ListingType,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct TokenListed {
-        token_address: ContractAddress,
-        investor_address: ContractAddress,
+    pub struct TokenListed {
+        pub token_address: ContractAddress,
+        pub investor_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct TokenUnlisted {
-        token_address: ContractAddress,
-        investor_address: ContractAddress,
+    pub struct TokenUnlisted {
+        pub token_address: ContractAddress,
+        pub investor_address: ContractAddress,
     }
 
     pub mod Errors {
         pub const TOKEN_ALREADY_CONFIGURED: felt252 = 'Token already configured';
-        pub const TOKEN_NOT_CONFIGURED: felt252 = 'Token is not configure';
+        pub const TOKEN_NOT_CONFIGURED: felt252 = 'Token is not configured';
         pub const TOKEN_ALREADY_LISTED: felt252 = 'Token already listed';
         pub const TOKEN_NOT_LISTED: felt252 = 'Token is not listed';
         pub const NO_BOUND_TOKEN: felt252 = 'Compliance not bound to a token';
@@ -234,6 +234,7 @@ mod TokenListingRestrictionsModule {
         ContractState,
     > {
         fn configure_token(ref self: ContractState, listing_type: ListingType) {
+            self.abstract_module.only_compliance_call();
             let token_address = self.get_bound_token_address(starknet::get_caller_address());
 
             if let ListingType::NOT_CONFIGURED = listing_type {
