@@ -1,0 +1,4 @@
+mod claim_topics_registry_test;
+mod identity_registry_storage_test;
+mod identity_registry_test;
+mod trusted_issuers_registry_test;
