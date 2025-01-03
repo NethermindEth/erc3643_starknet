@@ -302,7 +302,7 @@ pub mod IdentityRegistry {
                 let trusted_issuers = self
                     .token_issuers_registry
                     .read()
-                    .get_trusted_issuers_for_claim_topic(claim_topic);
+                    .get_trusted_issuers_for_claim_topic(*claim_topic);
 
                 if trusted_issuers.len().is_zero() {
                     verified = false;
@@ -314,7 +314,7 @@ pub mod IdentityRegistry {
                     claim_ids
                         .append(
                             poseidon_hash_span(
-                                array![(*trusted_issuer).into(), claim_topic].span(),
+                                array![(*trusted_issuer).into(), *claim_topic].span(),
                             ),
                         );
                 };
@@ -331,11 +331,11 @@ pub mod IdentityRegistry {
                         }
                             .get_claim(*claim_ids.at(i));
 
-                        if found_claim_topic == claim_topic {
+                        if found_claim_topic == *claim_topic {
                             let is_valid_claim = ClaimIssuerABIDispatcher {
                                 contract_address: issuer,
                             }
-                                .is_claim_valid(identity, claim_topic, sig, data);
+                                .is_claim_valid(identity, *claim_topic, sig, data);
                             if is_valid_claim {
                                 break true;
                             }

@@ -53,8 +53,8 @@ pub mod ClaimTopicsRegistry {
     }
 
     pub mod Errors {
-        pub const MAX_CLAIM_TOPICS_EXCEEDED: felt252 = 'max 15 claim topics exceeded';
-        pub const CLAIM_TOPIC_ALREADY_EXIST: felt252 = 'claim topic already exist';
+        pub const MAX_CLAIM_TOPICS_EXCEEDED: felt252 = 'Max 15 claim topics exceeded';
+        pub const CLAIM_TOPIC_ALREADY_EXIST: felt252 = 'Claim topic already exist';
     }
 
     #[constructor]
@@ -97,7 +97,7 @@ pub mod ClaimTopicsRegistry {
             claim_topics_storge_path.append().write(claim_topic);
             self.emit(ClaimTopicAdded { claim_topic });
         }
-
+        /// NOTE: If topics does not exists does nothing. Might consider panicking
         fn remove_claim_topic(ref self: ContractState, claim_topic: felt252) {
             self.ownable.assert_only_owner();
 
@@ -111,8 +111,8 @@ pub mod ClaimTopicsRegistry {
             };
         }
 
-        fn get_claim_topics(self: @ContractState) -> Array<felt252> {
-            self.claim_topics.deref().into()
+        fn get_claim_topics(self: @ContractState) -> Span<felt252> {
+            Felt252VecToFelt252Array::into(self.claim_topics.deref()).span()
         }
     }
 }
