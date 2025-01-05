@@ -71,7 +71,7 @@ pub mod AgentRoleComponent {
         fn assert_only_agent(self: @ComponentState<TContractState>) {
             assert(
                 self.AgentRole_agents.entry(starknet::get_caller_address()).read(),
-                'Caller does not have agent role',
+                'Caller is not agent',
             );
         }
 

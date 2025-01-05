@@ -115,7 +115,7 @@ pub mod IdentityRegistryStorage {
         pub const IDENTITY_NOT_STORED: felt252 = 'Identity not stored';
         pub const MAX_IR_EXCEEDED: felt252 = 'Cannot bind more than 300 IR';
         pub const REGISTRY_ALREADY_BOUNDED: felt252 = 'Registry already binded';
-        pub const REGISTRY_NOT_BOUNDED: felt252 = 'Registry already binded';
+        pub const REGISTRY_NOT_BOUNDED: felt252 = 'Registry not bound';
     }
 
     #[constructor]
@@ -165,11 +165,11 @@ pub mod IdentityRegistryStorage {
             self.agent_role.assert_only_agent();
             assert(user_address.is_non_zero(), Errors::ZERO_ADDRESS);
             let identity_storage_path = self.identities.entry(user_address).deref();
-            let old_identity = identity_storage_path.identity_contract.read();
-            assert(old_identity.is_non_zero(), Errors::IDENTITY_NOT_STORED);
+            let identity = identity_storage_path.identity_contract.read();
+            assert(identity.is_non_zero(), Errors::IDENTITY_NOT_STORED);
             identity_storage_path.identity_contract.write(Zero::zero());
             identity_storage_path.investor_country.write(Zero::zero());
-            self.emit(IdentityUnstored { investor_address: user_address, identity: old_identity });
+            self.emit(IdentityUnstored { investor_address: user_address, identity });
         }
 
         fn modify_stored_investor_country(
