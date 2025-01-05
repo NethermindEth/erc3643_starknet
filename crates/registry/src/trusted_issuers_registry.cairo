@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod TrustedIssuersRegistry {
+pub mod TrustedIssuersRegistry {
     use core::num::traits::Zero;
     use crate::interface::itrusted_issuers_registry::ITrustedIssuersRegistry;
     use openzeppelin_access::ownable::OwnableComponent;
@@ -50,21 +50,30 @@ mod TrustedIssuersRegistry {
     #[derive(Drop, starknet::Event)]
     pub struct TrustedIssuerAdded {
         #[key]
-        trusted_issuer: ContractAddress,
-        claim_topics: Span<felt252>,
+        pub trusted_issuer: ContractAddress,
+        pub claim_topics: Span<felt252>,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct TrustedIssuerRemoved {
         #[key]
-        trusted_issuer: ContractAddress,
+        pub trusted_issuer: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct ClaimTopicsUpdated {
         #[key]
-        trusted_issuer: ContractAddress,
-        claim_topics: Span<felt252>,
+        pub trusted_issuer: ContractAddress,
+        pub claim_topics: Span<felt252>,
+    }
+
+    pub mod Errors {
+        pub const ZERO_ADDRESS: felt252 = 'Zero Address: Trusted Issuer';
+        pub const EMPTY_CLAIM_TOPICS: felt252 = 'Claim topics cannot be empty';
+        pub const MAX_CLAIM_TOPICS_EXCEEDED: felt252 = 'Max 15 claim topics';
+        pub const MAX_TRUSTED_ISSUERS_EXCEEDED: felt252 = 'Max 50 trusted issuers';
+        pub const TRUSTED_ISSUER_ALREADY_EXISTS: felt252 = 'Trusted Issuer already exists';
+        pub const TRUSTED_ISSUER_DOES_NOT_EXISTS: felt252 = 'Trusted Issuer not exists';
     }
 
     #[constructor]
@@ -96,19 +105,21 @@ mod TrustedIssuersRegistry {
             ref self: ContractState, trusted_issuer: ContractAddress, claim_topics: Span<felt252>,
         ) {
             self.ownable.assert_only_owner();
-            assert(trusted_issuer.is_non_zero(), 'Zero Address: Trusted Issuer');
+            assert(trusted_issuer.is_non_zero(), Errors::ZERO_ADDRESS);
+            let claim_topics_len = claim_topics.len();
+            assert(claim_topics_len.is_non_zero(), Errors::EMPTY_CLAIM_TOPICS);
+            assert(claim_topics_len <= 15, Errors::MAX_CLAIM_TOPICS_EXCEEDED);
+
             let trusted_issuer_claim_topics_storage_path = self
                 .trusted_issuer_claim_topics
                 .entry(trusted_issuer);
             assert(
                 trusted_issuer_claim_topics_storage_path.len().is_zero(),
-                'Trusted Issuer already exists',
+                Errors::TRUSTED_ISSUER_ALREADY_EXISTS,
             );
-            let claim_topics_len = claim_topics.len();
-            assert(claim_topics_len.is_non_zero(), 'Claim topics cannot be empty');
-            assert(claim_topics_len <= 15, 'Max 15 claim topics');
+
             let trusted_issuers_storage_path = self.trusted_issuers.deref();
-            assert(trusted_issuers_storage_path.len() < 50, 'Max 50 trusted issuers');
+            assert(trusted_issuers_storage_path.len() < 50, Errors::MAX_TRUSTED_ISSUERS_EXCEEDED);
             trusted_issuers_storage_path.append().write(trusted_issuer);
 
             for claim_topic in claim_topics {
@@ -125,9 +136,12 @@ mod TrustedIssuersRegistry {
 
         fn remove_trusted_issuer(ref self: ContractState, trusted_issuer: ContractAddress) {
             self.ownable.assert_only_owner();
-            assert(trusted_issuer.is_non_zero(), 'Zero Address: Trusted Issuer');
+            assert(trusted_issuer.is_non_zero(), Errors::ZERO_ADDRESS);
             let claim_topics_storage_path = self.trusted_issuer_claim_topics.entry(trusted_issuer);
-            assert(claim_topics_storage_path.len().is_non_zero(), 'Trusted Issuer not exists');
+            assert(
+                claim_topics_storage_path.len().is_non_zero(),
+                Errors::TRUSTED_ISSUER_DOES_NOT_EXISTS,
+            );
 
             /// Remove from trusted issuers vec
             let trusted_issuers_storage_path = self.trusted_issuers.deref();
@@ -165,12 +179,15 @@ mod TrustedIssuersRegistry {
             ref self: ContractState, trusted_issuer: ContractAddress, claim_topics: Span<felt252>,
         ) {
             self.ownable.assert_only_owner();
-            assert(trusted_issuer.is_non_zero(), 'Zero Address: Trusted Issuer');
-            let claim_topics_storage_path = self.trusted_issuer_claim_topics.entry(trusted_issuer);
-            assert(claim_topics_storage_path.len().is_non_zero(), 'Trusted Issuer not exists');
+            assert(trusted_issuer.is_non_zero(), Errors::ZERO_ADDRESS);
             let claim_topics_len = claim_topics.len();
-            assert(claim_topics_len.is_non_zero(), 'Claim topics cannot be empty');
-            assert(claim_topics_len <= 15, 'Max 15 claim topics');
+            assert(claim_topics_len.is_non_zero(), Errors::EMPTY_CLAIM_TOPICS);
+            assert(claim_topics_len <= 15, Errors::MAX_CLAIM_TOPICS_EXCEEDED);
+            let claim_topics_storage_path = self.trusted_issuer_claim_topics.entry(trusted_issuer);
+            assert(
+                claim_topics_storage_path.len().is_non_zero(),
+                Errors::TRUSTED_ISSUER_DOES_NOT_EXISTS,
+            );
 
             let claim_topics_storage_path = self.trusted_issuer_claim_topics.entry(trusted_issuer);
             /// Deletes claim topics to
@@ -233,7 +250,12 @@ mod TrustedIssuersRegistry {
         fn get_trusted_issuer_claim_topics(
             self: @ContractState, trusted_issuer: ContractAddress,
         ) -> Span<felt252> {
-            FeltVecInto::into(self.trusted_issuer_claim_topics.entry(trusted_issuer)).span()
+            let claim_topics_storage_path = self.trusted_issuer_claim_topics.entry(trusted_issuer);
+            assert(
+                claim_topics_storage_path.len().is_non_zero(),
+                Errors::TRUSTED_ISSUER_DOES_NOT_EXISTS,
+            );
+            FeltVecInto::into(claim_topics_storage_path).span()
         }
     }
 }

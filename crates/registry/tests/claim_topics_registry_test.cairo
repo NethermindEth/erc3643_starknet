@@ -90,7 +90,7 @@ pub mod remove_claim_topic {
     use super::setup;
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Caller is not the owner')]
     fn test_should_panic_when_sender_is_not_owner() {
         let registry = setup();
 
