@@ -196,9 +196,9 @@ pub mod IdentityRegistry {
 
         fn delete_identity(ref self: ContractState, user_address: ContractAddress) {
             self.agent_role.assert_only_agent();
-            let old_identity = self.identity(user_address);
+            let identity = self.identity(user_address);
             self.token_identity_storage.read().remove_identity_from_storage(user_address);
-            self.emit(IdentityRemoved { investor_address: user_address, identity: old_identity });
+            self.emit(IdentityRemoved { investor_address: user_address, identity });
         }
 
         fn set_identity_registry_storage(

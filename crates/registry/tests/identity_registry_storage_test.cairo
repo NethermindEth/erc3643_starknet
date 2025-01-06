@@ -10,10 +10,10 @@ struct Setup {
 }
 
 fn setup() -> Setup {
-    let claim_topic_registry_contract = declare("IdentityRegistryStorage")
+    let identity_registry_storage_contract = declare("IdentityRegistryStorage")
         .unwrap()
         .contract_class();
-    let (deployed_address, _) = claim_topic_registry_contract
+    let (deployed_address, _) = identity_registry_storage_contract
         .deploy(@array![starknet::get_contract_address().into()])
         .unwrap();
 

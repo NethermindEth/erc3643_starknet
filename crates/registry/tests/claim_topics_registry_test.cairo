@@ -2,8 +2,8 @@ use registry::interface::iclaim_topics_registry::IClaimTopicsRegistryDispatcher;
 use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
 
 fn setup() -> IClaimTopicsRegistryDispatcher {
-    let claim_topic_registry_contract = declare("ClaimTopicsRegistry").unwrap().contract_class();
-    let (deployed_address, _) = claim_topic_registry_contract
+    let claim_topics_registry_contract = declare("ClaimTopicsRegistry").unwrap().contract_class();
+    let (deployed_address, _) = claim_topics_registry_contract
         .deploy(@array![starknet::get_contract_address().into()])
         .unwrap();
     IClaimTopicsRegistryDispatcher { contract_address: deployed_address }
