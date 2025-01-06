@@ -10,12 +10,14 @@ openzeppelin_introspection.workspace = true
 token =  { path = "../token"}
 registry = { path = "../registry"}
 onchain_id = {path = "../onchain_id"}
+mocks = { path = "../mocks"}
 
 [dev-dependencies]
 snforge_std.workspace = true
 
 [[target.starknet-contract]]
 sierra = true
+build-external-contracts = ["mocks::*"]
 
 [tool]
 fmt.workspace = true

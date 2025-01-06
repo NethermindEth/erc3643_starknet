@@ -50,7 +50,9 @@ name = "mocks"
 version = "0.1.0"
 dependencies = [
  "compliance",
+ "openzeppelin_access",
  "openzeppelin_token",
+ "roles",
  "snforge_std",
 ]
 
@@ -127,6 +129,7 @@ dependencies = [
 name = "roles"
 version = "0.1.0"
 dependencies = [
+ "mocks",
  "onchain_id",
  "openzeppelin_access",
  "openzeppelin_introspection",

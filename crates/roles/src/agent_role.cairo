@@ -77,12 +77,18 @@ pub mod AgentRoleComponent {
 
         fn _add_agent(ref self: ComponentState<TContractState>, agent: ContractAddress) {
             assert(agent.is_non_zero(), 'Agent address zero!');
-            self.AgentRole_agents.entry(agent).write(true);
+            let agent_storage_path = self.AgentRole_agents.entry(agent);
+            assert(!agent_storage_path.read(), 'Agent already registered');
+            agent_storage_path.write(true);
+            self.emit(AgentAdded { agent });
         }
 
         fn _remove_agent(ref self: ComponentState<TContractState>, agent: ContractAddress) {
             assert(agent.is_non_zero(), 'Agent address zero!');
-            self.AgentRole_agents.entry(agent).write(false);
+            let agent_storage_path = self.AgentRole_agents.entry(agent);
+            assert(agent_storage_path.read(), 'Agent not registered');
+            agent_storage_path.write(false);
+            self.emit(AgentRemoved { agent });
         }
     }
 }
