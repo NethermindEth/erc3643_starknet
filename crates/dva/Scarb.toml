@@ -9,6 +9,7 @@ openzeppelin_token.workspace = true
 roles = { path = "../roles" }
 token = { path = "../token" }
 registry = { path = "../registry" }
+storage = { path = "../storage" }
 
 [[target.starknet-contract]]
 sierra = true

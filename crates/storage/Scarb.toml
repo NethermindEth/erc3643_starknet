@@ -6,6 +6,7 @@ edition = "2024_07"
 [dependencies]
 starknet.workspace = true
 compliance =  { path = "../compliance"}
+dva = { path = "../dva"}
 
 [dev-dependencies]
 snforge_std.workspace = true

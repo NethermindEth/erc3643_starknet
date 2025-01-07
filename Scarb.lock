@@ -23,6 +23,7 @@ dependencies = [
  "openzeppelin_token",
  "registry",
  "roles",
+ "storage",
  "token",
 ]
 
@@ -167,6 +168,7 @@ name = "storage"
 version = "0.1.0"
 dependencies = [
  "compliance",
+ "dva",
  "snforge_std",
 ]
 

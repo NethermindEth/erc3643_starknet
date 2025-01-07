@@ -6,7 +6,7 @@ pub mod DVATransferManager {
         ApprovalCriteria, ApprovalCriteriaStore, ApprovalCriteriaStoreStorageNode,
     };
     use dva::idva_transfer_manager::{Approver, TransferStatus};
-        use dva::idva_transfer_manager::{Errors, Events::*, IDVATransferManager};
+    use dva::idva_transfer_manager::{Errors, Events::*, IDVATransferManager};
     use dva::idva_transfer_manager::{
         Transfer, TransferStore, TransferStoreStorageNode, TransferStoreStorageNodeMut,
     };
@@ -19,6 +19,9 @@ pub mod DVATransferManager {
     use starknet::storage::{
         Map, MutableVecTrait, StorageNode, StorageNodeMut, StoragePathEntry,
         StoragePointerReadAccess, StoragePointerWriteAccess, VecTrait,
+    };
+    use storage::storage_array::{
+        PathableMutableStorageArrayApproverImpl, PathableStorageArrayApproverImpl,
     };
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
 
@@ -173,14 +176,13 @@ pub mod DVATransferManager {
 
             let transfer_hash = self.generate_transfer_signature_hash(transfer_id);
             for signature in signatures {
-                let signer = recover_public_key::<Secp256k1Point>(transfer_hash.into(),
-                *signature).unwrap();
-
+                let signer = recover_public_key::<Secp256k1Point>(transfer_hash.into(), *signature)
+                    .unwrap();
                 // let all_approved = self.approve_transfer(transfer_id, transfer, signer)
-                // if (all_approved) {
-                //     self.complete_transfer(transfer_id, transfer);
-                //     return;
-                // };
+            // if (all_approved) {
+            //     self.complete_transfer(transfer_id, transfer);
+            //     return;
+            // };
             }
         }
 
@@ -206,7 +208,7 @@ pub mod DVATransferManager {
             let mut rejected = false;
             let approval_criteria = (@self).approval_criteria.entry(transfer.token_address.read());
             for i in 0..transfer.approvers.len() {
-                let approver = transfer.approvers[i].read();
+                let approver = transfer.approvers.at(i).read();
                 if (approver.approved) {
                     continue;
                 }
@@ -254,7 +256,7 @@ pub mod DVATransferManager {
 
             let mut approvers = array![];
             for i in 0..transfer.approvers.len() {
-                approvers.append(transfer.approvers[i].read());
+                approvers.append(transfer.approvers.at(i).read());
             };
             Transfer {
                 token_address: transfer.token_address.read(),
@@ -273,7 +275,7 @@ pub mod DVATransferManager {
             let transfer = self.get_pending_transfer(transfer_id);
             let mut approver = Zero::zero();
             for i in 0..transfer.approvers.len() {
-                approver = transfer.approvers[i].read();
+                approver = transfer.approvers.at(i).read();
                 if (approver.approved) {
                     continue;
                 }
@@ -318,7 +320,7 @@ pub mod DVATransferManager {
             let mut pending_approver_count = 0;
             let approval_criteria = (@self).approval_criteria.entry(transfer.token_address.read());
             for i in 0..transfer.approvers.len() {
-                let mut approver = transfer.approvers[i].read();
+                let mut approver = transfer.approvers.at(i).read();
                 if (approver.approved) {
                     continue;
                 }
@@ -331,7 +333,7 @@ pub mod DVATransferManager {
                 if (self.can_approve(transfer.token_address.read(), approver, caller)) {
                     approved = true;
                     approver.approved = true;
-                    transfer.approvers[i].write(approver);
+                    transfer.approvers.at(i).write(approver);
 
                     if (approver.wallet.is_zero()) {
                         approver.wallet = caller;
@@ -381,9 +383,7 @@ pub mod DVATransferManager {
             }
 
             // delete transfer.approvers;
-            for i in 0..transfer.approvers.len() {
-                transfer.approvers.at(i).write(Zero::zero());
-            };
+            transfer.approvers.clear();
             self.add_approvers_to_transfer(transfer, approval_criteria.storage_node());
             self.emit(TransferApprovalReset { transfer_id, approval_criteria_hash });
 

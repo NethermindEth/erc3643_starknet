@@ -2,6 +2,7 @@ use core::num::traits::Zero;
 use starknet::ContractAddress;
 use starknet::secp256_trait::Signature;
 use starknet::storage::Vec;
+use storage::storage_array::{ApproverVecToApproverArray, StorageArrayApprover};
 
 #[derive(Serde, Default, Drop, PartialEq, starknet::Store)]
 pub enum TransferStatus {
@@ -57,7 +58,7 @@ pub struct TransferStore {
     pub recipient: ContractAddress,
     pub amount: u256,
     pub status: TransferStatus,
-    pub approvers: Vec<Approver>,
+    pub approvers: StorageArrayApprover,
     pub approval_criteria_hash: felt252,
 }
 
