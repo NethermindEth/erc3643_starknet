@@ -5,7 +5,7 @@ pub mod DVATransferManager {
     use dva::idva_transfer_manager::{
         ApprovalCriteria, ApprovalCriteriaStore, ApprovalCriteriaStoreStorageNode,
     };
-    use dva::idva_transfer_manager::{DelegatedApproval, Approver, TransferStatus};
+    use dva::idva_transfer_manager::{Approver, DelegatedApproval, TransferStatus};
     use dva::idva_transfer_manager::{Errors, Events::*, IDVATransferManager};
     use dva::idva_transfer_manager::{
         Transfer, TransferStore, TransferStoreStorageNode, TransferStoreStorageNodeMut,
