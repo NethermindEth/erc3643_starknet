@@ -1,24 +1,30 @@
-//! Ensure address zero checks are needed or not
+//! TODO: Ensure address zero checks are needed or not
+//! NOTE: UpdatedTokenInformation event is emitted one parameter change but it reads all the other,
+//! very in efficient but due to expected rare occurance might be neglegible
+//! Revise error messages
 #[starknet::contract]
 pub mod Token {
     use compliance::imodular_compliance::{
         IModularComplianceDispatcher, IModularComplianceDispatcherTrait,
     };
     use core::num::traits::Zero;
+    use core::poseidon::poseidon_hash_span;
     use crate::itoken::IToken;
+    use onchain_id::iidentity::{IdentityABIDispatcher, IdentityABIDispatcherTrait};
     use openzeppelin_access::ownable::OwnableComponent;
     use openzeppelin_security::pausable::PausableComponent;
     use openzeppelin_token::erc20::{
         ERC20Component, ERC20HooksEmptyImpl, interface::{IERC20, IERC20Metadata},
     };
+    use openzeppelin_upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
     use registry::interface::iidentity_registry::{
         IIdentityRegistryDispatcher, IIdentityRegistryDispatcherTrait,
     };
     use roles::agent_role::AgentRoleComponent;
-    use starknet::ContractAddress;
     use starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
+    use starknet::{ClassHash, ContractAddress};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
@@ -43,6 +49,10 @@ pub mod Token {
     impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
     impl ERC20InternalImpl = ERC20Component::InternalImpl<ContractState>;
 
+    component!(path: UpgradeableComponent, storage: upgrades, event: UpgradeableEvent);
+
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+
     #[storage]
     struct Storage {
         token_decimals: u8,
@@ -60,6 +70,8 @@ pub mod Token {
         pausable: PausableComponent::Storage,
         #[substorage(v0)]
         erc20: ERC20Component::Storage,
+        #[substorage(v0)]
+        upgrades: UpgradeableComponent::Storage,
     }
 
     #[event]
@@ -80,6 +92,8 @@ pub mod Token {
         PausableEvent: PausableComponent::Event,
         #[flat]
         ERC20Event: ERC20Component::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -160,8 +174,26 @@ pub mod Token {
         self.token_decimals.write(decimals);
         self.token_onchain_id.write(onchain_id);
         self.pausable.pause();
-        /// TODO:  set compliance
-    /// TODo:  set identity registry
+        self.set_compliance(compliance);
+        self.set_identity_registry(identity_registry);
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        /// Upgrades the implementation used by this contract.
+        ///
+        /// # Arguments
+        ///
+        /// - `new_class_hash` A `ClassHash` representing the implementation to update to.
+        ///
+        /// # Requirements
+        ///
+        /// - This function can only be called by the owner.
+        /// - The `ClassHash` should already have been declared.
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.upgrades.upgrade(new_class_hash);
+        }
     }
 
     #[abi(embed_v0)]
@@ -227,36 +259,21 @@ pub mod Token {
             ref self: ContractState, user_address: ContractAddress, freeze: bool,
         ) {
             self.agent_role.assert_only_agent();
-            self.frozen.entry(user_address).write(freeze);
-            self
-                .emit(
-                    AddressFrozen {
-                        user_address, is_frozen: freeze, owner: starknet::get_caller_address(),
-                    },
-                );
+            self._set_address_frozen(user_address, freeze);
         }
 
         fn freeze_partial_tokens(
             ref self: ContractState, user_address: ContractAddress, amount: u256,
         ) {
             self.agent_role.assert_only_agent();
-            let balance = self.erc20.balance_of(user_address);
-            let user_frozen_tokens_storage = self.frozen_tokens.entry(user_address);
-            let user_frozen_tokens = user_frozen_tokens_storage.read();
-            assert!(balance >= user_frozen_tokens + amount, "Amount exceeds available balance");
-            user_frozen_tokens_storage.write(user_frozen_tokens + amount);
-            self.emit(TokensFrozen { user_address, amount });
+            self._freeze_partial_tokens(user_address, amount);
         }
-        /// NOTE: might get rid of check and rely on underflow with expect if possible
+
         fn unfreeze_partial_tokens(
             ref self: ContractState, user_address: ContractAddress, amount: u256,
         ) {
             self.agent_role.assert_only_agent();
-            let user_frozen_tokens_storage = self.frozen_tokens.entry(user_address);
-            let user_frozen_tokens = user_frozen_tokens_storage.read();
-            assert!(user_frozen_tokens >= amount, "Amount should be lte to frozen tokens");
-            user_frozen_tokens_storage.write(user_frozen_tokens - amount);
-            self.emit(TokensUnfrozen { user_address, amount });
+            self._unfreeze_partial_tokens(user_address, amount);
         }
 
         fn set_identity_registry(ref self: ContractState, identity_registry: ContractAddress) {
@@ -284,47 +301,17 @@ pub mod Token {
             ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
         ) -> bool {
             self.agent_role.assert_only_agent();
-            let from_balance = self.erc20.balance_of(from);
-            assert(from_balance >= amount, 'Sender balance insufficient');
-            let from_frozen_tokens_storage = self.frozen_tokens.entry(from);
-            let from_frozen_tokens = from_frozen_tokens_storage.read();
-            let free_balance = from_balance - from_frozen_tokens;
-            if amount > free_balance {
-                let tokens_to_unfreeze = amount - free_balance;
-                from_frozen_tokens_storage.write(from_frozen_tokens - tokens_to_unfreeze);
-                self.emit(TokensUnfrozen { user_address: from, amount });
-            }
-            assert(self.token_identity_registry.read().is_verified(to), 'Transfer not possible');
-            self.erc20._transfer(from, to, amount);
-            self.token_compliance.read().transferred(from, to, amount);
-            true
+            self._forced_transfer(from, to, amount)
         }
 
         fn mint(ref self: ContractState, to: ContractAddress, amount: u256) {
             self.agent_role.assert_only_agent();
-            assert(self.token_identity_registry.read().is_verified(to), 'Identity is not verified');
-            let token_compliance = self.token_compliance.read();
-            assert(
-                token_compliance.can_transfer(Zero::zero(), to, amount), 'Compliance not followed',
-            );
-            self.erc20.mint(to, amount);
-            token_compliance.created(to, amount);
+            self._mint(to, amount);
         }
 
         fn burn(ref self: ContractState, user_address: ContractAddress, amount: u256) {
             self.agent_role.assert_only_agent();
-            let user_balance = self.erc20.balance_of(user_address);
-            assert(user_balance >= amount, 'Cannot burn more than balance');
-            let user_frozen_tokens_storage = self.frozen_tokens.entry(user_address);
-            let user_frozen_tokens = user_frozen_tokens_storage.read();
-            let free_balance = user_balance - user_frozen_tokens;
-            if amount > free_balance {
-                let tokens_to_unfreeze = amount - free_balance;
-                user_frozen_tokens_storage.write(user_frozen_tokens - tokens_to_unfreeze);
-                self.emit(TokensUnfrozen { user_address, amount });
-            }
-            self.erc20.burn(user_address, amount);
-            self.token_compliance.read().destroyed(user_address, amount);
+            self._burn(user_address, amount);
         }
 
         fn recovery_address(
@@ -333,45 +320,143 @@ pub mod Token {
             new_wallet: ContractAddress,
             investor_onchain_id: ContractAddress,
         ) -> bool {
+            self.agent_role.assert_only_agent();
+            let balance_of_lost_wallet = self.erc20.balance_of(lost_wallet);
+            assert(balance_of_lost_wallet.is_non_zero(), 'No tokens to recover');
+            let onchain_id = IdentityABIDispatcher { contract_address: investor_onchain_id };
+            let key = poseidon_hash_span(array![new_wallet.into()].span());
+            assert(onchain_id.key_has_purpose(key, 1), 'Recovery not possible');
+            let frozen_tokens_of_lost_wallet = self.frozen_tokens.entry(lost_wallet).read();
+            let token_identity_registry = self.token_identity_registry.read();
+            token_identity_registry
+                .register_identity(
+                    new_wallet,
+                    onchain_id.contract_address,
+                    token_identity_registry.investor_country(lost_wallet),
+                );
+            self.forced_transfer(lost_wallet, new_wallet, balance_of_lost_wallet);
+            if frozen_tokens_of_lost_wallet.is_non_zero() {
+                self.freeze_partial_tokens(new_wallet, frozen_tokens_of_lost_wallet);
+            }
+
+            if self.frozen.entry(lost_wallet).read() {
+                self.set_address_frozen(new_wallet, true);
+            }
+
+            token_identity_registry.delete_identity(lost_wallet);
+            self.emit(RecoverySuccess { lost_wallet, new_wallet, investor_onchain_id });
             true
         }
-        /// TODO:  Create internal function avoid duplicate access control checks
+
         fn batch_transfer(
             ref self: ContractState,
             from_list: Span<ContractAddress>,
             to_list: Span<ContractAddress>,
             amounts: Span<u256>,
-        ) {}
-        /// TODO:  Create internal function avoid duplicate access control checks
+        ) {
+            self.pausable.assert_not_paused();
+            let caller = starknet::get_caller_address();
+            assert(!self.frozen.entry(caller).read(), 'Wallet is frozen');
+
+            let mut total_amount = 0;
+            for amount in amounts {
+                total_amount += *amount;
+            };
+
+            assert(
+                total_amount <= self.erc20.balance_of(caller)
+                    - self.frozen_tokens.entry(caller).read(),
+                'Insufficient available balance',
+            );
+
+            for i in 0..to_list.len() {
+                let recipient = *to_list.at(i);
+                let amount = *amounts.at(i);
+
+                assert(!self.frozen.entry(recipient).read(), 'Wallet is frozen');
+
+                let token_compliance = self.token_compliance.read();
+                assert(
+                    self.token_identity_registry.read().is_verified(recipient)
+                        && token_compliance.can_transfer(caller, recipient, amount),
+                    'Transfer not possible',
+                );
+                self.erc20._transfer(caller, recipient, amount);
+                token_compliance.transferred(caller, recipient, amount);
+            };
+        }
+
         fn batch_forced_transfer(
             ref self: ContractState,
             from_list: Span<ContractAddress>,
             to_list: Span<ContractAddress>,
             amounts: Span<u256>,
-        ) {}
-        /// TODO:  Create internal function avoid duplicate access control checks
+        ) {
+            self.agent_role.assert_only_agent();
+            let to_list_len = to_list.len();
+            assert(
+                from_list.len() == to_list_len && to_list_len == amounts.len(),
+                'Arrays length not parrallel',
+            );
+            for i in 0..to_list_len {
+                self._forced_transfer(*from_list.at(i), *to_list.at(i), *amounts.at(i));
+            };
+        }
+
         fn batch_mint(
             ref self: ContractState, to_list: Span<ContractAddress>, amounts: Span<u256>,
-        ) {}
+        ) {
+            self.agent_role.assert_only_agent();
+            let to_list_len = to_list.len();
+            assert(to_list_len == amounts.len(), 'Arrays length not parrallel');
+            for i in 0..to_list_len {
+                self._mint(*to_list.at(i), *amounts.at(i));
+            };
+        }
 
-        /// TODO:  Create internal function avoid duplicate access control checks
         fn batch_burn(
             ref self: ContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>,
-        ) {}
-        /// TODO:  Create internal function avoid duplicate access control checks
+        ) {
+            self.agent_role.assert_only_agent();
+            let user_addresses_len = user_addresses.len();
+            assert(user_addresses_len == amounts.len(), 'Arrays length not parrallel');
+            for i in 0..user_addresses_len {
+                self._burn(*user_addresses.at(i), *amounts.at(i));
+            };
+        }
+
         fn batch_set_address_frozen(
             ref self: ContractState, user_addresses: Span<ContractAddress>, freeze: Span<bool>,
-        ) {}
+        ) {
+            self.agent_role.assert_only_agent();
+            let user_addresses_len = user_addresses.len();
+            assert(user_addresses_len == freeze.len(), 'Arrays length not parrallel');
+            for i in 0..user_addresses_len {
+                self._set_address_frozen(*user_addresses.at(i), *freeze.at(i));
+            };
+        }
 
-        /// TODO:  Create internal function avoid duplicate access control checks
         fn batch_freeze_partial_tokens(
             ref self: ContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>,
-        ) {}
+        ) {
+            self.agent_role.assert_only_agent();
+            let user_addresses_len = user_addresses.len();
+            assert(user_addresses_len == amounts.len(), 'Arrays length not parrallel');
+            for i in 0..user_addresses_len {
+                self._freeze_partial_tokens(*user_addresses.at(i), *amounts.at(i));
+            };
+        }
 
-        /// TODO:  Create internal function avoid duplicate access control checks
         fn batch_unfreeze_partial_tokens(
             ref self: ContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>,
-        ) {}
+        ) {
+            self.agent_role.assert_only_agent();
+            let user_addresses_len = user_addresses.len();
+            assert(user_addresses_len == amounts.len(), 'Arrays length not parrallel');
+            for i in 0..user_addresses_len {
+                self._unfreeze_partial_tokens(*user_addresses.at(i), *amounts.at(i));
+            };
+        }
 
         fn onchain_id(self: @ContractState) -> ContractAddress {
             self.token_onchain_id.read()
@@ -483,10 +568,84 @@ pub mod Token {
             self.token_decimals.read()
         }
     }
+
+    #[generate_trait]
+    impl InternalImpl of InternalTrait {
+        fn _forced_transfer(
+            ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
+        ) -> bool {
+            let from_balance = self.erc20.balance_of(from);
+            assert(from_balance >= amount, 'Sender balance insufficient');
+            let from_frozen_tokens_storage = self.frozen_tokens.entry(from);
+            let from_frozen_tokens = from_frozen_tokens_storage.read();
+            let free_balance = from_balance - from_frozen_tokens;
+            if amount > free_balance {
+                let tokens_to_unfreeze = amount - free_balance;
+                from_frozen_tokens_storage.write(from_frozen_tokens - tokens_to_unfreeze);
+                self.emit(TokensUnfrozen { user_address: from, amount });
+            }
+            assert(self.token_identity_registry.read().is_verified(to), 'Transfer not possible');
+            self.erc20._transfer(from, to, amount);
+            self.token_compliance.read().transferred(from, to, amount);
+            true
+        }
+
+        fn _freeze_partial_tokens(
+            ref self: ContractState, user_address: ContractAddress, amount: u256,
+        ) {
+            let balance = self.erc20.balance_of(user_address);
+            let user_frozen_tokens_storage = self.frozen_tokens.entry(user_address);
+            let user_frozen_tokens = user_frozen_tokens_storage.read();
+            assert!(balance >= user_frozen_tokens + amount, "Amount exceeds available balance");
+            user_frozen_tokens_storage.write(user_frozen_tokens + amount);
+            self.emit(TokensFrozen { user_address, amount });
+        }
+
+        fn _unfreeze_partial_tokens(
+            ref self: ContractState, user_address: ContractAddress, amount: u256,
+        ) {
+            let user_frozen_tokens_storage = self.frozen_tokens.entry(user_address);
+            let user_frozen_tokens = user_frozen_tokens_storage.read();
+            assert!(user_frozen_tokens >= amount, "Amount should be lte to frozen tokens");
+            user_frozen_tokens_storage.write(user_frozen_tokens - amount);
+            self.emit(TokensUnfrozen { user_address, amount });
+        }
+
+        fn _set_address_frozen(
+            ref self: ContractState, user_address: ContractAddress, freeze: bool,
+        ) {
+            self.frozen.entry(user_address).write(freeze);
+            self
+                .emit(
+                    AddressFrozen {
+                        user_address, is_frozen: freeze, owner: starknet::get_caller_address(),
+                    },
+                );
+        }
+
+        fn _mint(ref self: ContractState, to: ContractAddress, amount: u256) {
+            assert(self.token_identity_registry.read().is_verified(to), 'Identity is not verified');
+            let token_compliance = self.token_compliance.read();
+            assert(
+                token_compliance.can_transfer(Zero::zero(), to, amount), 'Compliance not followed',
+            );
+            self.erc20.mint(to, amount);
+            token_compliance.created(to, amount);
+        }
+
+        fn _burn(ref self: ContractState, user_address: ContractAddress, amount: u256) {
+            let user_balance = self.erc20.balance_of(user_address);
+            assert(user_balance >= amount, 'Cannot burn more than balance');
+            let user_frozen_tokens_storage = self.frozen_tokens.entry(user_address);
+            let user_frozen_tokens = user_frozen_tokens_storage.read();
+            let free_balance = user_balance - user_frozen_tokens;
+            if amount > free_balance {
+                let tokens_to_unfreeze = amount - free_balance;
+                user_frozen_tokens_storage.write(user_frozen_tokens - tokens_to_unfreeze);
+                self.emit(TokensUnfrozen { user_address, amount });
+            }
+            self.erc20.burn(user_address, amount);
+            self.token_compliance.read().destroyed(user_address, amount);
+        }
+    }
 }
-
-//! Fill this trait with functions that make batch operations more efficient by bypassing access
-//! control checks
-#[generate_trait]
-impl InternalImpl of InternalTrait {}
-

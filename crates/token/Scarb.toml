@@ -8,9 +8,11 @@ starknet.workspace = true
 openzeppelin_access.workspace = true
 openzeppelin_token.workspace = true
 openzeppelin_security.workspace = true
+openzeppelin_upgrades.workspace = true
 registry = {path = "../registry"}
 roles = { path = "../roles"}
 compliance = {path ="../compliance" }
+onchain_id = {path ="../onchain_id" }
 
 [dev-dependencies]
 snforge_std.workspace = true

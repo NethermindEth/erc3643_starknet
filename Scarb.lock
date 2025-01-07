@@ -172,9 +172,11 @@ name = "token"
 version = "0.1.0"
 dependencies = [
  "compliance",
+ "onchain_id",
  "openzeppelin_access",
  "openzeppelin_security",
  "openzeppelin_token",
+ "openzeppelin_upgrades",
  "registry",
  "roles",
  "snforge_std",
