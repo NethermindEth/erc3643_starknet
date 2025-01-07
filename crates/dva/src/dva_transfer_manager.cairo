@@ -5,17 +5,17 @@ pub mod DVATransferManager {
     use dva::idva_transfer_manager::{
         ApprovalCriteria, ApprovalCriteriaStore, ApprovalCriteriaStoreStorageNode,
     };
-    use dva::idva_transfer_manager::{Approver, TransferStatus};
+    use dva::idva_transfer_manager::{DelegatedApproval, Approver, TransferStatus};
     use dva::idva_transfer_manager::{Errors, Events::*, IDVATransferManager};
     use dva::idva_transfer_manager::{
         Transfer, TransferStore, TransferStoreStorageNode, TransferStoreStorageNodeMut,
     };
+    use openzeppelin_account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait, ISRC6_ID};
+    use openzeppelin_introspection::interface::{ISRC5Dispatcher, ISRC5DispatcherTrait};
     use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
     use roles::agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait};
     use starknet::ContractAddress;
-    use starknet::secp256_trait::{Signature, recover_public_key};
-    use starknet::secp256k1::Secp256k1Point;
     use starknet::storage::{
         Map, MutableVecTrait, StorageNode, StorageNodeMut, StoragePathEntry,
         StoragePointerReadAccess, StoragePointerWriteAccess, VecTrait,
@@ -165,9 +165,11 @@ pub mod DVATransferManager {
         }
 
         fn delegate_approve_transfer(
-            ref self: ContractState, transfer_id: felt252, signatures: Span<Signature>,
+            ref self: ContractState,
+            transfer_id: felt252,
+            delegated_approvals: Array<DelegatedApproval>,
         ) {
-            assert(signatures.len().is_non_zero(), Errors::SIGNATURES_CAN_NOT_BE_EMPTY);
+            assert(delegated_approvals.len().is_non_zero(), Errors::SIGNATURES_CAN_NOT_BE_EMPTY);
 
             let transfer = self.get_pending_transfer_mut(transfer_id);
             if (self.approval_criteria_changed(transfer_id, transfer)) {
@@ -175,15 +177,31 @@ pub mod DVATransferManager {
             };
 
             let transfer_hash = self.generate_transfer_signature_hash(transfer_id);
-            for signature in signatures {
-                let signer = recover_public_key::<Secp256k1Point>(transfer_hash.into(), *signature)
-                    .unwrap();
-                // let all_approved = self.approve_transfer(transfer_id, transfer, signer)
-            // if (all_approved) {
-            //     self.complete_transfer(transfer_id, transfer);
-            //     return;
-            // };
-            }
+            for delegated_approval in delegated_approvals {
+                // We can't recover the public key from only a signature
+                // Instead, we require to also pass the ContractAdress public key
+                // And delegate the signature verification to the contract for the given public key
+                // and message hash
+                assert(
+                    ISRC5Dispatcher { contract_address: delegated_approval.signer }
+                        .supports_interface(ISRC6_ID),
+                    Errors::SIGNER_DOES_NOT_SUPPORT_SRC6,
+                );
+                assert(
+                    ISRC6Dispatcher { contract_address: delegated_approval.signer }
+                        .is_valid_signature(
+                            transfer_hash, delegated_approval.signature,
+                        ) == starknet::VALIDATED,
+                    Errors::SIGNATURE_IS_INVALID,
+                );
+
+                let all_approved = self
+                    ._approve_transfer(transfer_id, transfer, delegated_approval.signer);
+                if (all_approved) {
+                    self.complete_transfer(transfer_id, transfer);
+                    break;
+                };
+            };
         }
 
         fn cancel_transfer(ref self: ContractState, transfer_id: felt252) {

@@ -1,6 +1,5 @@
 use core::num::traits::Zero;
 use starknet::ContractAddress;
-use starknet::secp256_trait::Signature;
 use starknet::storage::Vec;
 use storage::storage_array::{ApproverVecToApproverArray, StorageArrayApprover};
 
@@ -71,6 +70,16 @@ pub struct Approver {
     pub any_token_agent: bool,
     /// Indicates if this approver has approved the transfer
     pub approved: bool,
+}
+
+/// Represents a delegated approval
+/// signer: The address of the signer, must implement SRC6 Account Contract interface for signature
+/// verification signature: The signature of the signer, verified externally by
+/// signer.is_valid_signature()
+#[derive(Serde, Drop)]
+pub struct DelegatedApproval {
+    pub signer: ContractAddress,
+    pub signature: Array<felt252>,
 }
 
 pub mod Events {
@@ -155,6 +164,8 @@ pub mod Errors {
     pub const APPROVALS_MUST_BE_SEQUENTIAL: felt252 = 'Approvals must be sequential';
     pub const APPROVER_NOT_FOUND: felt252 = 'Approver not found';
     pub const SIGNATURES_CAN_NOT_BE_EMPTY: felt252 = 'Signatures can not be empty';
+    pub const SIGNER_DOES_NOT_SUPPORT_SRC6: felt252 = 'Signer is not Account Contract';
+    pub const SIGNATURE_IS_INVALID: felt252 = 'Signature is invalid';
 }
 
 /// Interface for managing Dual Validation Authority (DVA) transfers
@@ -201,9 +212,11 @@ pub trait IDVATransferManager<TContractState> {
 
     /// Approves a transfer with delegated signatures
     /// * `transfer_id` - The unique ID of the transfer
-    /// * `signatures` - Array of signatures from the approvers
+    /// * `delegated_approvals` - Array of DelegatedApprovals signatures from the approvers
     fn delegate_approve_transfer(
-        ref self: TContractState, transfer_id: felt252, signatures: Span<Signature>,
+        ref self: TContractState,
+        transfer_id: felt252,
+        delegated_approvals: Array<DelegatedApproval>,
     );
 
     /// Cancels a pending transfer

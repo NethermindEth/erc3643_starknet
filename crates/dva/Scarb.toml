@@ -6,6 +6,8 @@ edition = "2024_07"
 [dependencies]
 starknet.workspace = true
 openzeppelin_token.workspace = true
+openzeppelin_account.workspace = true
+openzeppelin_introspection.workspace = true
 roles = { path = "../roles" }
 token = { path = "../token" }
 registry = { path = "../registry" }
