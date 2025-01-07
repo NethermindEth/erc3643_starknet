@@ -2,94 +2,13 @@ use compliance::imodular_compliance::IModularComplianceDispatcher;
 use registry::interface::iidentity_registry::IIdentityRegistryDispatcher;
 use starknet::ContractAddress;
 
-#[event]
-#[derive(Drop, starknet::Event)]
-pub enum Event {
-    UpdatedTokenInformation: UpdatedTokenInformation,
-    IdentityRegistryAdded: IdentityRegistryAdded,
-    ComplianceAdded: ComplianceAdded,
-    RecoverySuccess: RecoverySuccess,
-    AddressFrozen: AddressFrozen,
-    TokensFrozen: TokensFrozen,
-    TokensUnfrozen: TokensUnfrozen,
-    Paused: Paused,
-    Unpaused: Unpaused,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct UpdatedTokenInformation {
-    #[key]
-    new_name: ByteArray,
-    #[key]
-    new_symbol: ByteArray,
-    new_decimals: u8,
-    new_version: ByteArray,
-    #[key]
-    new_onchain_id: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct IdentityRegistryAdded {
-    #[key]
-    identity_registry: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct ComplianceAdded {
-    #[key]
-    compliance: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct RecoverySuccess {
-    #[key]
-    lost_wallet: ContractAddress,
-    #[key]
-    new_wallet: ContractAddress,
-    #[key]
-    investor_onchain_id: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct AddressFrozen {
-    #[key]
-    user_address: ContractAddress,
-    #[key]
-    is_frozen: bool,
-    #[key]
-    owner: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct TokensFrozen {
-    #[key]
-    user_address: ContractAddress,
-    amount: u256,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct TokensUnfrozen {
-    #[key]
-    user_address: ContractAddress,
-    amount: u256,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct Paused {
-    user_address: ContractAddress,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct Unpaused {
-    user_address: ContractAddress,
-}
-
-
 #[starknet::interface]
 pub trait IToken<TContractState> {
+    /// Setters for metadata
     fn set_name(ref self: TContractState, name: ByteArray);
     fn set_symbol(ref self: TContractState, symbol: ByteArray);
     fn set_onchain_id(ref self: TContractState, onchain_id: ContractAddress);
+    /// Pausable expose
     fn pause(ref self: TContractState);
     fn unpause(ref self: TContractState);
     fn set_address_frozen(ref self: TContractState, user_address: ContractAddress, freeze: bool);
@@ -102,6 +21,7 @@ pub trait IToken<TContractState> {
     fn forced_transfer(
         ref self: TContractState, from: ContractAddress, to: ContractAddress, amount: u256,
     ) -> bool;
+    /// ERC20 mintable burnable
     fn mint(ref self: TContractState, to: ContractAddress, amount: u256);
     fn burn(ref self: TContractState, user_address: ContractAddress, amount: u256);
     fn recovery_address(
@@ -135,15 +55,10 @@ pub trait IToken<TContractState> {
     fn batch_unfreeze_partial_tokens(
         ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>,
     );
-    fn decimals(self: @TContractState) -> u8;
-    fn name(self: @TContractState) -> ByteArray;
-    fn symbol(self: @TContractState) -> ByteArray;
     fn onchain_id(self: @TContractState) -> ContractAddress;
     fn version(self: @TContractState) -> ByteArray;
     fn identity_registry(self: @TContractState) -> IIdentityRegistryDispatcher;
     fn compliance(self: @TContractState) -> IModularComplianceDispatcher;
-    fn paused(self: @TContractState) -> bool;
     fn is_frozen(self: @TContractState, user_address: ContractAddress) -> bool;
     fn get_frozen_tokens(self: @TContractState, user_address: ContractAddress) -> u256;
 }
-

@@ -6,7 +6,10 @@ edition = "2024_07"
 [dependencies]
 starknet.workspace = true
 openzeppelin_access.workspace = true
+openzeppelin_token.workspace = true
+openzeppelin_security.workspace = true
 registry = {path = "../registry"}
+roles = { path = "../roles"}
 compliance = {path ="../compliance" }
 
 [dev-dependencies]
