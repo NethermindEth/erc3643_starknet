@@ -206,13 +206,14 @@ pub mod DVATransferManager {
 
         fn cancel_transfer(ref self: ContractState, transfer_id: felt252) {
             let transfer = self.get_pending_transfer_mut(transfer_id);
+            let transfer_sender = transfer.sender.read();
             assert(
-                transfer.sender.read() == starknet::get_caller_address(),
+                transfer_sender == starknet::get_caller_address(),
                 Errors::ONLY_TRANSFER_SENDER_CAN_CALL,
             );
 
             transfer.status.write(TransferStatus::CANCELLED);
-            self.transfer_tokens_to(transfer, transfer.sender.read());
+            self.transfer_tokens_to(transfer, transfer_sender);
             self.emit(TransferCancelled { transfer_id });
         }
 
@@ -225,21 +226,20 @@ pub mod DVATransferManager {
             let caller = starknet::get_caller_address();
             let mut rejected = false;
             let approval_criteria = (@self).approval_criteria.entry(transfer.token_address.read());
+            let token_address = transfer.token_address.read();
+            let sequential_approval = approval_criteria.sequential_approval.read();
             for i in 0..transfer.approvers.len() {
                 let approver = transfer.approvers.at(i).read();
                 if (approver.approved) {
                     continue;
                 }
 
-                if (self.can_approve(transfer.token_address.read(), approver, caller)) {
+                if (self.can_approve(token_address, approver, caller)) {
                     rejected = true;
                     break;
                 }
 
-                assert(
-                    !approval_criteria.sequential_approval.read(),
-                    Errors::APPROVALS_MUST_BE_SEQUENTIAL,
-                );
+                assert(!sequential_approval, Errors::APPROVALS_MUST_BE_SEQUENTIAL);
             };
 
             assert(rejected, Errors::APPROVER_NOT_FOUND);
@@ -253,7 +253,8 @@ pub mod DVATransferManager {
             self: @ContractState, token_address: ContractAddress,
         ) -> ApprovalCriteria {
             let approval_criteria = self.approval_criteria.entry(token_address);
-            assert(approval_criteria.hash.read().is_non_zero(), Errors::TOKEN_IS_NOT_REGISTERED);
+            let hash = approval_criteria.hash.read();
+            assert(hash.is_non_zero(), Errors::TOKEN_IS_NOT_REGISTERED);
 
             let mut additional_approvers = array![];
             for i in 0..approval_criteria.additional_approvers.len() {
@@ -264,20 +265,21 @@ pub mod DVATransferManager {
                 include_agent_approver: approval_criteria.include_agent_approver.read(),
                 sequential_approval: approval_criteria.sequential_approval.read(),
                 additional_approvers,
-                hash: approval_criteria.hash.read(),
+                hash,
             }
         }
 
         fn get_transfer(self: @ContractState, transfer_id: felt252) -> Transfer {
             let transfer = self.transfers.entry(transfer_id);
-            assert(transfer.token_address.read().is_non_zero(), Errors::INVALID_TRANSFER_ID);
+            let token_address = transfer.token_address.read();
+            assert(token_address.is_non_zero(), Errors::INVALID_TRANSFER_ID);
 
             let mut approvers = array![];
             for i in 0..transfer.approvers.len() {
                 approvers.append(transfer.approvers.at(i).read());
             };
             Transfer {
-                token_address: transfer.token_address.read(),
+                token_address,
                 sender: transfer.sender.read(),
                 recipient: transfer.recipient.read(),
                 amount: transfer.amount.read(),
@@ -336,7 +338,8 @@ pub mod DVATransferManager {
         ) -> bool {
             let mut approved = false;
             let mut pending_approver_count = 0;
-            let approval_criteria = (@self).approval_criteria.entry(transfer.token_address.read());
+            let token_address = transfer.token_address.read();
+            let approval_criteria = (@self).approval_criteria.entry(token_address);
             for i in 0..transfer.approvers.len() {
                 let mut approver = transfer.approvers.at(i).read();
                 if (approver.approved) {
@@ -348,7 +351,7 @@ pub mod DVATransferManager {
                     break;
                 }
 
-                if (self.can_approve(transfer.token_address.read(), approver, caller)) {
+                if (self.can_approve(token_address, approver, caller)) {
                     approved = true;
                     approver.approved = true;
                     transfer.approvers.at(i).write(approver);
@@ -378,14 +381,15 @@ pub mod DVATransferManager {
             ref self: ContractState, transfer_id: felt252, transfer: TransferStoreStorageNodeMut,
         ) {
             transfer.status.write(TransferStatus::COMPLETED);
-            self.transfer_tokens_to(transfer, transfer.recipient.read());
+            let recipient = transfer.recipient.read();
+            self.transfer_tokens_to(transfer, recipient);
             self
                 .emit(
                     TransferCompleted {
                         transfer_id,
                         token_address: transfer.token_address.read(),
                         sender: transfer.sender.read(),
-                        recipient: transfer.recipient.read(),
+                        recipient,
                         amount: transfer.amount.read(),
                     },
                 );
