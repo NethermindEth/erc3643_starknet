@@ -502,7 +502,7 @@ pub mod DVATransferManager {
         }
 
         fn generate_transfer_signature_hash(self: @ContractState, transfer_id: felt252) -> felt252 {
-            poseidon_hash_span(array!['Signed message:', transfer_id].span())
+            poseidon_hash_span(array!['StarkNet Message', transfer_id].span())
         }
     }
 }
