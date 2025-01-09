@@ -39,10 +39,14 @@ dependencies = [
 name = "factory"
 version = "0.1.0"
 dependencies = [
+ "compliance",
+ "onchain_id",
  "openzeppelin_access",
  "openzeppelin_token",
+ "registry",
  "roles",
  "snforge_std",
+ "token",
 ]
 
 [[package]]
