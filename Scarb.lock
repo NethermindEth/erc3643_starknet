@@ -40,7 +40,7 @@ name = "factory"
 version = "0.1.0"
 dependencies = [
  "compliance",
- "onchain_id",
+ "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_token",
  "registry",
@@ -61,11 +61,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "onchain_id"
+name = "onchain_id_starknet"
 version = "0.1.0"
+source = "git+https://github.com/NethermindEth/onchain_id_starknet.git?branch=main#fb63bb618a058939eda39f5bb81a5719de13ce0d"
 dependencies = [
  "openzeppelin_access",
- "snforge_std",
+ "openzeppelin_account",
+ "openzeppelin_introspection",
+ "openzeppelin_upgrades",
 ]
 
 [[package]]
@@ -127,7 +130,7 @@ checksum = "sha256:44f32d242af1e43982decc49c563e613a9b67ade552f5c3d5cde504e92f74
 name = "registry"
 version = "0.1.0"
 dependencies = [
- "onchain_id",
+ "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_upgrades",
  "roles",
@@ -140,7 +143,7 @@ name = "roles"
 version = "0.1.0"
 dependencies = [
  "mocks",
- "onchain_id",
+ "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_introspection",
  "registry",
@@ -176,7 +179,7 @@ name = "token"
 version = "0.1.0"
 dependencies = [
  "compliance",
- "onchain_id",
+ "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_security",
  "openzeppelin_token",

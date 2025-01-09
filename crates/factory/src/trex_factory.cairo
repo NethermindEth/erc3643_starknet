@@ -5,7 +5,9 @@ pub mod TREXFactory {
     };
     use core::num::traits::Zero;
     use factory::itrex_factory::{ClaimDetails, ITREXFactory, TokenDetails};
-    use onchain_id::iid_factory::{IIdFactoryDispatcher, IIdFactoryDispatcherTrait};
+    use onchain_id_starknet::factory::iid_factory::{
+        IIdFactoryDispatcher, IIdFactoryDispatcherTrait,
+    };
     use openzeppelin_access::ownable::{
         OwnableComponent, interface::{IOwnableDispatcher, IOwnableDispatcherTrait},
     };

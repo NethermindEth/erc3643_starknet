@@ -10,7 +10,9 @@ pub mod Token {
     use core::num::traits::Zero;
     use core::poseidon::poseidon_hash_span;
     use crate::itoken::IToken;
-    use onchain_id::iidentity::{IdentityABIDispatcher, IdentityABIDispatcherTrait};
+    use onchain_id_starknet::interface::iidentity::{
+        IdentityABIDispatcher, IdentityABIDispatcherTrait,
+    };
     use openzeppelin_access::ownable::OwnableComponent;
     use openzeppelin_security::pausable::PausableComponent;
     use openzeppelin_token::erc20::{

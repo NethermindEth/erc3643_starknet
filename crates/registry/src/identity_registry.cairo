@@ -14,7 +14,7 @@ pub mod IdentityRegistry {
             ITrustedIssuersRegistryDispatcher, ITrustedIssuersRegistryDispatcherTrait,
         },
     };
-    use onchain_id::{
+    use onchain_id_starknet::interface::{
         iclaim_issuer::{ClaimIssuerABIDispatcher, ClaimIssuerABIDispatcherTrait},
         iidentity::{IdentityABIDispatcher, IdentityABIDispatcherTrait},
     };
