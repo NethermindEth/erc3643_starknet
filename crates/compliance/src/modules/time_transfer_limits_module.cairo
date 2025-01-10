@@ -12,14 +12,14 @@ pub trait ITimeTransferLimitsModule<TContractState> {
 
 #[derive(Drop, Copy, Serde, starknet::Store)]
 pub struct TransferCounter {
-    value: u256,
-    timer: u64,
+    pub value: u256,
+    pub timer: u64,
 }
 
 #[derive(Drop, Copy, Serde, starknet::Store)]
 pub struct Limit {
-    limit_time: u64,
-    limit_value: u256,
+    pub limit_time: u64,
+    pub limit_value: u256,
 }
 
 impl LimitZero of core::num::traits::Zero<Limit> {
