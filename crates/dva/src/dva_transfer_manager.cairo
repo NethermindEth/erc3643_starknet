@@ -1,3 +1,30 @@
+use core::hash::{HashStateExTrait, HashStateTrait};
+use core::poseidon::PoseidonTrait;
+use openzeppelin_utils::cryptography::snip12::StructHash;
+
+#[derive(Copy, Drop, Hash)]
+pub struct DelegatedApprovalMessage {
+    transfer_id: felt252,
+}
+
+// Todo: compute off chain and hardcode as constant
+// selector!(
+//   "\"DelegatedApprovalMessage\"(
+//     \"transfer_id\":\"felt"
+// );
+pub const DELEGATED_APPROVAL_MESSAGE_TYPE_HASH: felt252 = selector!(
+    "\"DelegatedApprovalMessage\"(\"transfer_id\":\"felt",
+);
+
+impl StructHashImpl of StructHash<DelegatedApprovalMessage> {
+    fn hash_struct(self: @DelegatedApprovalMessage) -> felt252 {
+        PoseidonTrait::new()
+            .update_with(DELEGATED_APPROVAL_MESSAGE_TYPE_HASH)
+            .update_with(*self)
+            .finalize()
+    }
+}
+
 #[starknet::contract]
 pub mod DVATransferManager {
     use core::num::traits::Zero;
@@ -13,6 +40,7 @@ pub mod DVATransferManager {
     use openzeppelin_account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait, ISRC6_ID};
     use openzeppelin_introspection::interface::{ISRC5Dispatcher, ISRC5DispatcherTrait};
     use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use openzeppelin_utils::cryptography::snip12::{OffchainMessageHash, SNIP12Metadata};
     use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
     use roles::agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait};
     use starknet::ContractAddress;
@@ -23,6 +51,7 @@ pub mod DVATransferManager {
     use storage::storage_array::{
         PathableMutableStorageArrayApproverImpl, PathableStorageArrayApproverImpl,
     };
+    use super::DelegatedApprovalMessage;
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
 
     #[storage]
@@ -176,7 +205,7 @@ pub mod DVATransferManager {
                 return;
             };
 
-            let transfer_hash = self.generate_transfer_signature_hash(transfer_id);
+            let delegated_approval_message = DelegatedApprovalMessage { transfer_id };
             for delegated_approval in delegated_approvals {
                 // We can't recover the public key from only a signature
                 // Instead, we require to also pass the ContractAdress public key
@@ -187,10 +216,12 @@ pub mod DVATransferManager {
                         .supports_interface(ISRC6_ID),
                     Errors::SIGNER_DOES_NOT_SUPPORT_SRC6,
                 );
+
                 assert(
                     ISRC6Dispatcher { contract_address: delegated_approval.signer }
                         .is_valid_signature(
-                            transfer_hash, delegated_approval.signature,
+                            delegated_approval_message.get_message_hash(delegated_approval.signer),
+                            delegated_approval.signature,
                         ) == starknet::VALIDATED,
                     Errors::SIGNATURE_IS_INVALID,
                 );
@@ -500,9 +531,14 @@ pub mod DVATransferManager {
 
             transfer.storage_node_mut()
         }
+    }
 
-        fn generate_transfer_signature_hash(self: @ContractState, transfer_id: felt252) -> felt252 {
-            poseidon_hash_span(array!['StarkNet Message', transfer_id].span())
+    impl SNIP12MetadataImpl of SNIP12Metadata {
+        fn name() -> felt252 {
+            unsafe_new_contract_state().name().at(0).unwrap().into()
+        }
+        fn version() -> felt252 {
+            'v1'
         }
     }
 }
