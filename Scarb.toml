@@ -16,10 +16,12 @@ readme = "README.md"
 assert_macros = "2.9.2"
 starknet = "2.9.2"
 snforge_std = "0.35.1"
+openzeppelin_account = "0.20.0"
 openzeppelin_token =  "0.20.0"
 openzeppelin_access = "0.20.0"
 openzeppelin_introspection = "0.20.0"
 openzeppelin_upgrades = "0.20.0"
+openzeppelin_utils = "0.20.0"
 openzeppelin_security = "0.20.0"
 
 [workspace.tool.fmt]
