@@ -614,39 +614,177 @@ pub mod get_time_transfer_limits {
 pub mod module_transfer_action {
     use compliance::modules::{
         imodule::{IModuleDispatcher, IModuleDispatcherTrait},
-        time_transfer_limits_module::{ITimeTransferLimitsModuleDispatcherTrait, Limit},
+        time_transfer_limits_module::{
+            TimeTransferLimitsModule, ITimeTransferLimitsModuleDispatcherTrait, Limit,
+        },
     };
     use core::num::traits::Zero;
-    use snforge_std::{mock_call, start_cheat_caller_address, stop_cheat_caller_address};
+    use snforge_std::{
+        start_cheat_caller_address, stop_cheat_caller_address, start_cheat_block_timestamp_global,
+        stop_cheat_block_timestamp_global,
+    };
+    use starknet::{storage::{StoragePathEntry, StoragePointerReadAccess}};
     use super::setup;
+
+    // Describe: when calling directly
 
     #[test]
     #[should_panic(expected: 'Only bound compliance can call')]
-    fn test_should_panic_when_caller_is_not_compliance_contract() {
+    fn test_when_not_compliance_should_panic() {
         let setup = setup();
-
         let from = setup.mc_setup.alice;
         let to = setup.mc_setup.bob;
-
         let module_dispatcher = IModuleDispatcher {
             contract_address: setup.module.contract_address,
         };
+        // Context: when caller is not compliance
+        // Action: transfer action
         module_dispatcher.module_transfer_action(from, to, 10);
+        // Check: should panic
+    }
+
+    // Describe: when calling via compliance
+
+    #[test]
+    fn test_when_counters_not_initialized_should_set_counters() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+        let from = setup.mc_setup.alice;
+        let to = setup.mc_setup.bob;
+        let sender_identity = setup
+            .investor_id; // TODO: should we use identityRegistry.identity(from)?
+        let module_dispatcher = IModuleDispatcher {
+            contract_address: setup.module.contract_address,
+        };
+
+        // Context: when counters not initialized and caller is compliance
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup
+            .module
+            .batch_set_time_transfer_limit(
+                array![
+                    Limit { limit_time: 10, limit_value: 120 },
+                    Limit { limit_time: 15, limit_value: 100 },
+                ]
+                    .span(),
+            );
+
+        // Action: transfer action
+        module_dispatcher.module_transfer_action(from, to, 80);
+
+        // Context end
+        stop_cheat_caller_address(setup.module.contract_address);
+
+        // Check: should set counters
+        let block_timestamp = starknet::get_block_info().unbox().block_timestamp;
+        let mut state =
+            TimeTransferLimitsModule::contract_state_for_testing(); // TODO: check if correct with snforge?
+        starknet::testing::set_contract_address( // https://foundry-rs.github.io/starknet-foundry/snforge-advanced-features/storage-cheatcodes.html
+            setup.module.contract_address,
+        );
+        let counter1 = state.users_counter.entry((compliance, sender_identity, 10)).read();
+        assert_eq!(counter1.value, 80);
+        assert_eq!(counter1.timer, block_timestamp + 10);
+        let counter2 = state.users_counter.entry((compliance, sender_identity, 15)).read();
+        assert_eq!(counter2.value, 80);
+        assert_eq!(counter2.timer, block_timestamp + 15);
     }
 
     #[test]
-    fn test_should_create_and_increase_counters_when_counters_are_not_initialized_yet() {
-        assert(true, "")
+    fn test_when_counters_already_initialized_should_increase_counters() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+        let from = setup.mc_setup.alice;
+        let to = setup.mc_setup.bob;
+        let sender_identity = setup
+            .investor_id; // TODO: should we use identityRegistry.identity(from)?
+        let module_dispatcher = IModuleDispatcher {
+            contract_address: setup.module.contract_address,
+        };
+
+        // Context: when counters already initialized and caller is compliance
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup
+            .module
+            .batch_set_time_transfer_limit(
+                array![
+                    Limit { limit_time: 100, limit_value: 120 },
+                    Limit { limit_time: 150, limit_value: 100 },
+                ]
+                    .span(),
+            );
+        module_dispatcher.module_transfer_action(from, to, 20);
+        let block_timestamp = starknet::get_block_info().unbox().block_timestamp;
+        start_cheat_block_timestamp_global(block_timestamp + 10);
+
+        // Action: transfer action
+        module_dispatcher.module_transfer_action(from, to, 30);
+
+        // Check: should increase counters
+        let mut state =
+            TimeTransferLimitsModule::contract_state_for_testing(); // TODO: check if correct with snforge?
+        starknet::testing::set_contract_address( // https://foundry-rs.github.io/starknet-foundry/snforge-advanced-features/storage-cheatcodes.html
+            setup.module.contract_address,
+        );
+        let counter1 = state.users_counter.entry((compliance, sender_identity, 100)).read();
+        assert_eq!(counter1.value, 50);
+        assert_eq!(counter1.timer, block_timestamp + 100);
+        let counter2 = state.users_counter.entry((compliance, sender_identity, 150)).read();
+        assert_eq!(counter2.value, 50);
+        assert_eq!(counter2.timer, block_timestamp + 150);
+
+        // Context end
+        stop_cheat_caller_address(setup.module.contract_address);
+        stop_cheat_block_timestamp_global();
     }
 
     #[test]
-    fn test_should_increase_counters_when_counters_are_already_initialized() {
-        assert!(true, "");
-    }
+    fn test_when_counter_is_finished_should_reset_and_increase_counters() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+        let from = setup.mc_setup.alice;
+        let to = setup.mc_setup.bob;
+        let sender_identity = setup
+            .investor_id; // TODO: should we use identityRegistry.identity(from)?
+        let module_dispatcher = IModuleDispatcher {
+            contract_address: setup.module.contract_address,
+        };
 
-    #[test]
-    fn test_should_reset_finished_counter_and_increase_counters() {
-        assert!(true, "");
+        // Context: when counter is finished and caller is compliance
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup
+            .module
+            .batch_set_time_transfer_limit(
+                array![
+                    Limit { limit_time: 10, limit_value: 120 },
+                    Limit { limit_time: 150, limit_value: 100 },
+                ]
+                    .span(),
+            );
+        module_dispatcher.module_transfer_action(from, to, 20);
+        let block_timestamp = starknet::get_block_info().unbox().block_timestamp;
+        start_cheat_block_timestamp_global(block_timestamp + 30);
+
+        // Action: transfer action on finished counter
+        module_dispatcher.module_transfer_action(from, to, 30);
+
+        // Check: should reset and increase counters
+        let reset_timestamp = starknet::get_block_info().unbox().block_timestamp;
+        let mut state =
+            TimeTransferLimitsModule::contract_state_for_testing(); // TODO: check if correct with snforge?
+        starknet::testing::set_contract_address( // https://foundry-rs.github.io/starknet-foundry/snforge-advanced-features/storage-cheatcodes.html
+            setup.module.contract_address,
+        );
+        let counter1 = state.users_counter.entry((compliance, sender_identity, 10)).read();
+        assert_eq!(counter1.value, 30);
+        assert_eq!(counter1.timer, reset_timestamp + 10);
+        let counter2 = state.users_counter.entry((compliance, sender_identity, 150)).read();
+        assert_eq!(counter2.value, 50);
+        assert_eq!(counter2.timer, reset_timestamp + 150);
+
+        // Context end
+        stop_cheat_caller_address(setup.module.contract_address);
+        stop_cheat_block_timestamp_global();
     }
 }
 
