@@ -486,15 +486,80 @@ pub mod remove_time_transfer_limit {
 }
 
 pub mod batch_remove_time_transfer_limit {
-    #[test]
-    #[should_panic]
-    fn test_should_panic_when_caller_is_not_compliance_contract() {
-        panic!("");
-    }
+    use compliance::modules::time_transfer_limits_module::{
+        ITimeTransferLimitsModuleDispatcherTrait, Limit, TimeTransferLimitsModule,
+    };
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use super::setup;
+
+    // Describe: when calling directly
 
     #[test]
-    fn test_should_remove_the_limits() {
-        assert!(true, "");
+    #[should_panic(expected: 'Only bound compliance can call')]
+    fn test_when_not_compliance_should_panic() {
+        let setup = setup();
+        // Context: when caller is not compliance
+        // Action: batch remove limits
+        setup.module.batch_remove_time_transfer_limit(array![10, 20].span());
+        // Check: should panic
+    }
+
+    // Describe: when calling via compliance
+
+    #[test]
+    fn test_when_compliance_should_remove_limits() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+
+        // Context: when caller is compliance
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup
+            .module
+            .batch_set_time_transfer_limit(
+                array![
+                    Limit { limit_time: 1, limit_value: 100 },
+                    Limit { limit_time: 2, limit_value: 200 },
+                    Limit { limit_time: 3, limit_value: 300 },
+                ]
+                    .span(),
+            );
+        let mut spy = spy_events();
+
+        // Action: remove given limits
+        let limits_to_remove = array![1, 3].span();
+        setup.module.batch_remove_time_transfer_limit(limits_to_remove);
+
+        // Context end
+        stop_cheat_caller_address(setup.module.contract_address);
+
+        // Check: should remove the limits
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.module.contract_address,
+                        TimeTransferLimitsModule::Event::TimeTransferLimitRemoved(
+                            TimeTransferLimitsModule::TimeTransferLimitRemoved {
+                                compliance, limit_time: *limits_to_remove[0],
+                            },
+                        ),
+                    ),
+                    (
+                        setup.module.contract_address,
+                        TimeTransferLimitsModule::Event::TimeTransferLimitRemoved(
+                            TimeTransferLimitsModule::TimeTransferLimitRemoved {
+                                compliance, limit_time: *limits_to_remove[1],
+                            },
+                        ),
+                    ),
+                ],
+            );
+        let limits = setup.module.get_time_transfer_limit(compliance);
+        assert_eq!(limits.len(), 1);
+        assert_eq!(*limits[0].limit_time, 2);
+        assert_eq!(*limits[0].limit_value, 200);
     }
 }
 
