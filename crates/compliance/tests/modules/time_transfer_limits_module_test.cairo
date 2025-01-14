@@ -167,41 +167,101 @@ pub mod set_time_transfer_limit {
     };
     use super::setup;
 
+    // Describe: when calling directly
+
     #[test]
     #[should_panic(expected: 'Only bound compliance can call')]
-    fn test_should_panic_when_caller_is_not_compliance_contract() {
+    fn test_when_not_compliance_should_panic() {
         let setup = setup();
-        let exchange_id = setup.mc_setup.another_wallet;
-
+        // Context: when caller is not compliance
+        // Action: update the limit
         setup.module.set_time_transfer_limit(Limit { limit_time: 1, limit_value: 100 });
+        // Check: should panic
     }
 
-    #[test]
-    fn test_should_update_the_limit_when_limit_already_exists() {
-        assert!(true, "");
-    }
+    // Describe: when calling via compliance
 
     #[test]
-    #[should_panic]
-    fn test_should_panic_when_limits_array_size_exceeded() {
+    fn test_when_limit_exists_should_update_the_limit() {
         let setup = setup();
-        let exchange_id = setup.mc_setup.another_wallet;
         let compliance = setup.mc_setup.compliance.contract_address;
-        let limit_value = 100;
 
+        // Context: when limit exists
         start_cheat_caller_address(setup.module.contract_address, compliance);
-        setup.module.set_time_transfer_limit(Limit { limit_time: 1, limit_value });
-        setup.module.set_time_transfer_limit(Limit { limit_time: 2, limit_value });
-        setup.module.set_time_transfer_limit(Limit { limit_time: 3, limit_value });
-        setup.module.set_time_transfer_limit(Limit { limit_time: 4, limit_value });
-        /// Adding fifth should exceed array limit
-        setup.module.set_time_transfer_limit(Limit { limit_time: 5, limit_value });
+        setup.module.set_time_transfer_limit(Limit { limit_time: 1, limit_value: 100 });
         stop_cheat_caller_address(setup.module.contract_address);
+
+        // Action: update the limit
+        let mut spy = spy_events();
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup.module.set_time_transfer_limit(Limit { limit_time: 1, limit_value: 50 });
+        stop_cheat_caller_address(setup.module.contract_address);
+
+        // Check: should update the limit
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.module.contract_address,
+                        TimeTransferLimitsModule::Event::TimeTransferLimitUpdated(
+                            TimeTransferLimitsModule::TimeTransferLimitUpdated {
+                                compliance, limit_time: 1, limit_value: 50,
+                            },
+                        ),
+                    ),
+                ],
+            );
+        // TODO(+): also check directly limit?
     }
 
     #[test]
-    fn test_should_add_a_new_limit_when_limit_not_exists() {
-        assert!(true, "");
+    #[should_panic(expected: 'LimitsArraySizeExceeded')]
+    fn test_when_4_limits_then_update_limit_should_panic() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+
+        // Context: when 4 limits
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup.module.set_time_transfer_limit(Limit { limit_time: 1, limit_value: 100 });
+        setup.module.set_time_transfer_limit(Limit { limit_time: 7, limit_value: 1000 });
+        setup.module.set_time_transfer_limit(Limit { limit_time: 30, limit_value: 10000 });
+        setup.module.set_time_transfer_limit(Limit { limit_time: 365, limit_value: 100000 });
+        stop_cheat_caller_address(setup.module.contract_address);
+
+        // Action: update the limit
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup.module.set_time_transfer_limit(Limit { limit_time: 3650, limit_value: 1000000 });
+        stop_cheat_caller_address(setup.module.contract_address);
+        // Check: should panic
+    }
+
+    #[test]
+    fn test_when_no_limit_then_update_limit_should_create_a_new_limit() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+
+        // Context: when no limit
+        // Action: update the limit
+        let mut spy = spy_events();
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup.module.set_time_transfer_limit(Limit { limit_time: 1, limit_value: 100 });
+        stop_cheat_caller_address(setup.module.contract_address);
+
+        // Check: should create a new limit
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.module.contract_address,
+                        TimeTransferLimitsModule::Event::TimeTransferLimitUpdated(
+                            TimeTransferLimitsModule::TimeTransferLimitUpdated {
+                                compliance, limit_time: 1, limit_value: 100,
+                            },
+                        ),
+                    ),
+                ],
+            );
+        // TODO(+): also check directly limit?
     }
 }
 

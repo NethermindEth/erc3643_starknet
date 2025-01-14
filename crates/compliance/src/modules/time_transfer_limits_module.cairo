@@ -170,18 +170,6 @@ pub mod TimeTransferLimitsModule {
         self.ownable.initializer(owner);
     }
 
-    pub mod Errors {
-        use starknet::ContractAddress;
-
-        pub fn LimitsArraySizeExceeded(compliance: ContractAddress, array_size: u64) {
-            panic!("Limits array size {} exceeded for compliance {:x}", array_size, compliance);
-        }
-
-        pub fn LimitTimeNotFound(compliance: ContractAddress, limit_time: u64) {
-            panic!("Limit time {} not found for compliance {:x}", limit_time, compliance);
-        }
-    }
-
     impl AbstractFunctionsImpl of AbstractFunctionsTrait<ContractState> {
         fn module_transfer_action(
             ref self: AbstractModuleComponent::ComponentState<ContractState>,
@@ -392,7 +380,7 @@ pub mod TimeTransferLimitsModule {
             };
 
             if (!limit_found) {
-                Errors::LimitTimeNotFound(caller, limit_time);
+                panic!("LimitTimeNotFound");
             }
 
             transfer_limits_storage_path.delete(index);
@@ -410,7 +398,7 @@ pub mod TimeTransferLimitsModule {
                 .try_into()
                 .expect('Limit count exceeds u8');
             if (!limit_is_attributed && limit_count >= 4) {
-                Errors::LimitsArraySizeExceeded(caller, limit_count.into());
+                panic!("LimitsArraySizeExceeded");
             }
             if (!limit_is_attributed // && limit_count < 4
             ) {
