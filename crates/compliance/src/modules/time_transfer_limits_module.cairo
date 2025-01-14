@@ -120,7 +120,7 @@ pub mod TimeTransferLimitsModule {
     struct Storage {
         limit_values: Map<(ContractAddress, u64), IndexLimit>,
         transfer_limits: Map<ContractAddress, StorageArrayLimit>,
-        users_counter: Map<(ContractAddress, ContractAddress, u64), TransferCounter>,
+        pub users_counter: Map<(ContractAddress, ContractAddress, u64), TransferCounter>,
         #[substorage(v0)]
         abstract_module: AbstractModuleComponent::Storage,
         #[substorage(v0)]
