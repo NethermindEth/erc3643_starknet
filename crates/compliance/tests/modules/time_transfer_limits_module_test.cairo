@@ -186,15 +186,15 @@ pub mod set_time_transfer_limit {
         let setup = setup();
         let compliance = setup.mc_setup.compliance.contract_address;
 
-        // Context: when limit exists
+        // Context: when limit exists and caller is compliance
         start_cheat_caller_address(setup.module.contract_address, compliance);
         setup.module.set_time_transfer_limit(Limit { limit_time: 1, limit_value: 100 });
-        stop_cheat_caller_address(setup.module.contract_address);
+        let mut spy = spy_events();
 
         // Action: update the limit
-        let mut spy = spy_events();
-        start_cheat_caller_address(setup.module.contract_address, compliance);
         setup.module.set_time_transfer_limit(Limit { limit_time: 1, limit_value: 50 });
+
+        // Context end
         stop_cheat_caller_address(setup.module.contract_address);
 
         // Check: should update the limit
@@ -220,17 +220,17 @@ pub mod set_time_transfer_limit {
         let setup = setup();
         let compliance = setup.mc_setup.compliance.contract_address;
 
-        // Context: when 4 limits
+        // Context: when 4 limits and caller is compliance
         start_cheat_caller_address(setup.module.contract_address, compliance);
         setup.module.set_time_transfer_limit(Limit { limit_time: 1, limit_value: 100 });
         setup.module.set_time_transfer_limit(Limit { limit_time: 7, limit_value: 1000 });
         setup.module.set_time_transfer_limit(Limit { limit_time: 30, limit_value: 10000 });
         setup.module.set_time_transfer_limit(Limit { limit_time: 365, limit_value: 100000 });
-        stop_cheat_caller_address(setup.module.contract_address);
 
         // Action: update the limit
-        start_cheat_caller_address(setup.module.contract_address, compliance);
         setup.module.set_time_transfer_limit(Limit { limit_time: 3650, limit_value: 1000000 });
+
+        // Context end
         stop_cheat_caller_address(setup.module.contract_address);
         // Check: should panic
     }
@@ -240,11 +240,14 @@ pub mod set_time_transfer_limit {
         let setup = setup();
         let compliance = setup.mc_setup.compliance.contract_address;
 
-        // Context: when no limit
-        // Action: update the limit
-        let mut spy = spy_events();
+        // Context: when no limit and caller is compliance
         start_cheat_caller_address(setup.module.contract_address, compliance);
+        let mut spy = spy_events();
+
+        // Action: update the limit
         setup.module.set_time_transfer_limit(Limit { limit_time: 1, limit_value: 100 });
+
+        // Context end
         stop_cheat_caller_address(setup.module.contract_address);
 
         // Check: should create a new limit
@@ -303,9 +306,9 @@ pub mod batch_set_time_transfer_limit {
 
         // Context: when caller is compliance
         start_cheat_caller_address(setup.module.contract_address, compliance);
+        let mut spy = spy_events();
 
         // Action: batch update limits
-        let mut spy = spy_events();
         setup
             .module
             .batch_set_time_transfer_limit(
@@ -315,6 +318,8 @@ pub mod batch_set_time_transfer_limit {
                 ]
                     .span(),
             );
+
+        // Context end
         stop_cheat_caller_address(setup.module.contract_address);
 
         // Check: should update the limits
@@ -359,7 +364,7 @@ pub mod remove_time_transfer_limit {
     fn test_when_not_compliance_should_panic() {
         let setup = setup();
         // Context: when caller is not compliance
-        // Action: batch update limits
+        // Action: remove limits
         setup.module.remove_time_transfer_limit(10)
         // Check: should panic
     }
