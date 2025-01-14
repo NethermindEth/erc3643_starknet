@@ -266,15 +266,80 @@ pub mod set_time_transfer_limit {
 }
 
 pub mod batch_set_time_transfer_limit {
-    #[test]
-    #[should_panic]
-    fn test_should_panic_when_caller_is_not_compliance_contract() {
-        panic!("");
-    }
+    use compliance::modules::time_transfer_limits_module::{
+        ITimeTransferLimitsModuleDispatcherTrait, Limit, TimeTransferLimitsModule,
+    };
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use super::setup;
+
+    // Describe: when calling directly
 
     #[test]
-    fn test_should_create_the_limits() {
-        assert!(true, "");
+    #[should_panic(expected: 'Only bound compliance can call')]
+    fn test_when_not_compliance_should_panic() {
+        let setup = setup();
+        // Context: when caller is not compliance
+        // Action: batch update limits
+        setup
+            .module
+            .batch_set_time_transfer_limit(
+                array![
+                    Limit { limit_time: 1, limit_value: 100 },
+                    Limit { limit_time: 2, limit_value: 200 },
+                ]
+                    .span(),
+            );
+        // Check: should panic
+    }
+
+    // Describe: when calling via compliance
+
+    #[test]
+    fn test_when_compliance_should_update_limits() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+
+        // Context: when caller is compliance
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+
+        // Action: batch update limits
+        let mut spy = spy_events();
+        setup
+            .module
+            .batch_set_time_transfer_limit(
+                array![
+                    Limit { limit_time: 1, limit_value: 100 },
+                    Limit { limit_time: 2, limit_value: 200 },
+                ]
+                    .span(),
+            );
+        stop_cheat_caller_address(setup.module.contract_address);
+
+        // Check: should update the limits
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.module.contract_address,
+                        TimeTransferLimitsModule::Event::TimeTransferLimitUpdated(
+                            TimeTransferLimitsModule::TimeTransferLimitUpdated {
+                                compliance, limit_time: 1, limit_value: 100,
+                            },
+                        ),
+                    ),
+                    (
+                        setup.module.contract_address,
+                        TimeTransferLimitsModule::Event::TimeTransferLimitUpdated(
+                            TimeTransferLimitsModule::TimeTransferLimitUpdated {
+                                compliance, limit_time: 2, limit_value: 200,
+                            },
+                        ),
+                    ),
+                ],
+            );
+        // TODO(+): also check directly limits?
     }
 }
 
