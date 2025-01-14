@@ -564,14 +564,50 @@ pub mod batch_remove_time_transfer_limit {
 }
 
 pub mod get_time_transfer_limits {
+    use compliance::modules::time_transfer_limits_module::{
+        ITimeTransferLimitsModuleDispatcherTrait, Limit,
+    };
+    use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
+    use super::setup;
+
     #[test]
-    fn test_should_return_empty_array_when_there_is_no_time_transfer_limit() {
-        assert!(true, "");
+    fn test_when_no_limit_should_return_empty_array() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+        // Context: when there is no time transfer limit
+        // Action: get limits
+        let limits = setup.module.get_time_transfer_limit(compliance);
+        // Check: should return empty array
+        assert_eq!(limits.len(), 0);
     }
 
     #[test]
-    fn test_should_return_transfer_limits_when_there_are_time_transfer_limits() {
-        assert!(true, "");
+    fn test_when_limits_set_should_return_limits() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+
+        // Context: when there are time transfer limits
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup
+            .module
+            .batch_set_time_transfer_limit(
+                array![
+                    Limit { limit_time: 10, limit_value: 120 },
+                    Limit { limit_time: 15, limit_value: 100 },
+                ]
+                    .span(),
+            );
+        stop_cheat_caller_address(setup.module.contract_address);
+
+        // Action: get limits
+        let limits = setup.module.get_time_transfer_limit(compliance);
+
+        // Check: should return limits
+        assert_eq!(limits.len(), 2);
+        assert_eq!(*limits[0].limit_time, 10);
+        assert_eq!(*limits[0].limit_value, 120);
+        assert_eq!(*limits[1].limit_time, 15);
+        assert_eq!(*limits[1].limit_value, 100);
     }
 }
 
