@@ -344,26 +344,139 @@ pub mod batch_set_time_transfer_limit {
 }
 
 pub mod remove_time_transfer_limit {
+    use compliance::modules::time_transfer_limits_module::{
+        ITimeTransferLimitsModuleDispatcherTrait, Limit, TimeTransferLimitsModule,
+    };
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use super::setup;
+
+    // Describe: when calling directly
+
     #[test]
-    #[should_panic]
-    fn test_should_panic_when_caller_is_not_compliance_contract() {
-        panic!("");
+    #[should_panic(expected: 'Only bound compliance can call')]
+    fn test_when_not_compliance_should_panic() {
+        let setup = setup();
+        // Context: when caller is not compliance
+        // Action: batch update limits
+        setup.module.remove_time_transfer_limit(10)
+        // Check: should panic
+    }
+
+    // Describe: when calling via compliance
+
+    #[test]
+    #[should_panic(expected: 'LimitTimeNotFound')]
+    fn test_when_limit_time_missing_should_panic() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+
+        // Context: when time limit is missing and caller is compliance
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+
+        // Action: remove the limit
+        setup.module.remove_time_transfer_limit(10);
+
+        // Context end
+        stop_cheat_caller_address(setup.module.contract_address);
+        // Check: should panic
     }
 
     #[test]
-    #[should_panic]
-    fn test_should_panic_when_limit_time_is_missing() {
-        panic!("");
+    fn test_when_limit_time_is_last_element_should_remove_limit() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
+
+        // Context: when time limit is last element and caller is compliance
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup
+            .module
+            .batch_set_time_transfer_limit(
+                array![
+                    Limit { limit_time: 1, limit_value: 100 },
+                    Limit { limit_time: 2, limit_value: 200 },
+                    Limit { limit_time: 3, limit_value: 300 },
+                ]
+                    .span(),
+            );
+        let limit_to_remove = 3;
+        let mut spy = spy_events();
+
+        // Action: remove the last limit
+        setup.module.remove_time_transfer_limit(limit_to_remove);
+
+        // Context end
+        stop_cheat_caller_address(setup.module.contract_address);
+
+        // Check: should remove the limit
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.module.contract_address,
+                        TimeTransferLimitsModule::Event::TimeTransferLimitRemoved(
+                            TimeTransferLimitsModule::TimeTransferLimitRemoved {
+                                compliance, limit_time: limit_to_remove,
+                            },
+                        ),
+                    ),
+                ],
+            );
+        let limits = setup.module.get_time_transfer_limit(compliance);
+        assert_eq!(limits.len(), 2);
+        assert_eq!(*limits[0].limit_time, 1);
+        assert_eq!(*limits[0].limit_value, 100);
+        assert_eq!(*limits[1].limit_time, 2);
+        assert_eq!(*limits[1].limit_value, 200);
     }
 
     #[test]
-    fn test_should_remove_the_limit_when_limit_time_is_last_element() {
-        assert!(true, "");
-    }
+    fn test_when_limit_time_is_not_last_element_should_remove_limit() {
+        let setup = setup();
+        let compliance = setup.mc_setup.compliance.contract_address;
 
-    #[test]
-    fn test_should_remove_the_limit_when_limit_time_is_not_last_element() {
-        assert!(true, "");
+        // Context: when time limit is not last element and caller is compliance
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup
+            .module
+            .batch_set_time_transfer_limit(
+                array![
+                    Limit { limit_time: 1, limit_value: 100 },
+                    Limit { limit_time: 2, limit_value: 200 },
+                    Limit { limit_time: 3, limit_value: 300 },
+                ]
+                    .span(),
+            );
+        let limit_to_remove = 2;
+        let mut spy = spy_events();
+
+        // Action: remove the last limit
+        setup.module.remove_time_transfer_limit(limit_to_remove);
+
+        // Context end
+        stop_cheat_caller_address(setup.module.contract_address);
+
+        // Check: should remove the limit
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.module.contract_address,
+                        TimeTransferLimitsModule::Event::TimeTransferLimitRemoved(
+                            TimeTransferLimitsModule::TimeTransferLimitRemoved {
+                                compliance, limit_time: limit_to_remove,
+                            },
+                        ),
+                    ),
+                ],
+            );
+        let limits = setup.module.get_time_transfer_limit(compliance);
+        assert_eq!(limits.len(), 2);
+        assert_eq!(*limits[0].limit_time, 1);
+        assert_eq!(*limits[0].limit_value, 100);
+        assert_eq!(*limits[1].limit_time, 3);
+        assert_eq!(*limits[1].limit_value, 300);
     }
 }
 
