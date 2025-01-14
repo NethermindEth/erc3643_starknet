@@ -9,7 +9,7 @@ openzeppelin_access.workspace = true
 openzeppelin_introspection.workspace = true
 token =  { path = "../token"}
 registry = { path = "../registry"}
-onchain_id = {path = "../onchain_id"}
+onchain_id_starknet.workspace = true
 mocks = { path = "../mocks"}
 
 [dev-dependencies]

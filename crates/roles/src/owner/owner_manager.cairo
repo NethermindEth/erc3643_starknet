@@ -5,7 +5,9 @@ mod OwnerManager {
         OwnerRoles, agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait},
         owner::iowner_manager::IOwnerManager,
     };
-    use onchain_id::iidentity::{IdentityABIDispatcher, IdentityABIDispatcherTrait};
+    use onchain_id_starknet::interface::iidentity::{
+        IdentityABIDispatcher, IdentityABIDispatcherTrait,
+    };
     use openzeppelin_access::{
         accesscontrol::AccessControlComponent,
         ownable::{OwnableComponent, interface::{IOwnableDispatcher, IOwnableDispatcherTrait}},

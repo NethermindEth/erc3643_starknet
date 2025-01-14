@@ -553,7 +553,7 @@ pub mod set_trusted_issuers_registry {
 }
 
 pub mod is_verified {
-    use onchain_id::signature::Signature;
+    use onchain_id_starknet::storage::structs::Signature;
     use registry::interface::{
         iclaim_topics_registry::IClaimTopicsRegistryDispatcherTrait,
         iidentity_registry::IIdentityRegistryDispatcherTrait,

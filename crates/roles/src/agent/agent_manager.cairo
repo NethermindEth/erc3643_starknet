@@ -3,7 +3,9 @@ mod AgentManager {
     use core::poseidon::poseidon_hash_span;
     use crate::AgentRoles;
     use crate::agent::iagent_manager::IAgentManager;
-    use onchain_id::iidentity::{IdentityABIDispatcher, IdentityABIDispatcherTrait};
+    use onchain_id_starknet::interface::iidentity::{
+        IdentityABIDispatcher, IdentityABIDispatcherTrait,
+    };
     use openzeppelin_access::{accesscontrol::AccessControlComponent, ownable::OwnableComponent};
     use openzeppelin_introspection::src5::SRC5Component;
     use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
