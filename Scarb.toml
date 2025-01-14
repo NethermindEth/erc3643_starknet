@@ -21,7 +21,7 @@ openzeppelin_access = "0.20.0"
 openzeppelin_introspection = "0.20.0"
 openzeppelin_upgrades = "0.20.0"
 openzeppelin_security = "0.20.0"
-onchain_id_starknet = { git = "https://github.com/NethermindEth/onchain_id_starknet.git", branch = "main" }
+onchain_id_starknet = { git = "https://github.com/NethermindEth/onchain_id_starknet.git", rev = "3e16a6f" }
 
 [workspace.tool.fmt]
 sort-module-level-items = true

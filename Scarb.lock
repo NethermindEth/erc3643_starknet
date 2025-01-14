@@ -63,7 +63,7 @@ dependencies = [
 [[package]]
 name = "onchain_id_starknet"
 version = "0.1.0"
-source = "git+https://github.com/NethermindEth/onchain_id_starknet.git?branch=main#fb63bb618a058939eda39f5bb81a5719de13ce0d"
+source = "git+https://github.com/NethermindEth/onchain_id_starknet.git?rev=3e16a6f#3e16a6f55af14754889c878c384efee2f70f4e76"
 dependencies = [
  "openzeppelin_access",
  "openzeppelin_account",
