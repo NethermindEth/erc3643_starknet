@@ -988,27 +988,30 @@ pub mod module_burn_action {
 
     #[test]
     #[should_panic(expected: 'Only bound compliance can call')]
-    fn test_should_panic_when_caller_is_not_compliance() {
+    fn test_when_caller_is_not_compliance_should_panic() {
         let setup = setup();
-
         let module_dispatcher = IModuleDispatcher {
             contract_address: setup.module.contract_address,
         };
+        // Context: when caller is not compliance
+        // Action: burn action
         module_dispatcher.module_burn_action(setup.mc_setup.another_wallet, 10);
+        // Check: should panic
     }
 
     #[test]
-    fn test_should_do_nothing() {
+    fn test_when_caller_is_compliance_should_do_nothing() {
         let setup = setup();
-
         let module_dispatcher = IModuleDispatcher {
             contract_address: setup.module.contract_address,
         };
-
+        // Context: when caller is compliance
         start_cheat_caller_address(
             setup.module.contract_address, setup.mc_setup.compliance.contract_address,
         );
         module_dispatcher.module_burn_action(setup.mc_setup.another_wallet, 10);
+        // Context end
         stop_cheat_caller_address(setup.module.contract_address);
+        // Check: should do nothing
     }
 }
