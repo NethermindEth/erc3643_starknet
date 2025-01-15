@@ -50,6 +50,7 @@ dependencies = [
  "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_token",
+ "openzeppelin_upgrades",
  "registry",
  "roles",
  "snforge_std",
