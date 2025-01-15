@@ -20,6 +20,7 @@ snforge_std.workspace = true
 [[target.starknet-contract]]
 sierra = true
 build-external-contracts = ["onchain_id_starknet::*", "registry::*", "roles::*", "compliance::*", "token::*"]
+allowed-libfuncs-list.name = "all"
 
 [tool]
 fmt.workspace = true
