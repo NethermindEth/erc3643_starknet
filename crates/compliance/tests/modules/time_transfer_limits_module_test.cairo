@@ -794,72 +794,55 @@ pub mod module_check {
         time_transfer_limits_module::{ITimeTransferLimitsModuleDispatcherTrait, Limit},
     };
     use core::num::traits::Zero;
-    use snforge_std::{mock_call, start_cheat_caller_address, stop_cheat_caller_address};
+    use snforge_std::{
+        mock_call, start_cheat_caller_address, stop_cheat_caller_address,
+        start_cheat_block_timestamp_global, stop_cheat_block_timestamp_global,
+    };
     use super::setup;
 
     #[test]
-    fn test_should_return_true_when_from_is_zero_address() {
+    fn test_when_from_is_zero_address_should_return_true() {
         let setup = setup();
-
         let module_dispatcher = IModuleDispatcher {
             contract_address: setup.module.contract_address,
         };
+        let compliance = setup.mc_setup.compliance.contract_address;
+        let to = setup.mc_setup.bob;
+
+        // Context: when from is zero address
+        let from = Zero::zero();
         mock_call(setup.mock_contract, selector!("is_agent"), false, 1);
-        let check_result = module_dispatcher
-            .module_check(
-                Zero::zero(), setup.mc_setup.bob, 100, setup.mc_setup.compliance.contract_address,
-            );
-        assert(check_result, 'Should return true');
+
+        // Action: module check
+        let check_result = module_dispatcher.module_check(from, to, 100, compliance);
+
+        // Check: should return true
+        assert_eq!(check_result, true);
     }
 
     #[test]
-    fn test_should_return_true_when_from_is_token_agent() {
+    fn test_when_from_is_token_agent_should_return_true() {
         let setup = setup();
-
         let module_dispatcher = IModuleDispatcher {
             contract_address: setup.module.contract_address,
         };
+        let compliance = setup.mc_setup.compliance.contract_address;
+        let to = setup.mc_setup.bob;
+
+        // Context: when from is token agent
+        let from = setup.mc_setup.alice;
         mock_call(setup.mock_contract, selector!("is_agent"), true, 1);
-        let check_result = module_dispatcher
-            .module_check(
-                setup.mc_setup.alice,
-                setup.mc_setup.bob,
-                100,
-                setup.mc_setup.compliance.contract_address,
-            );
-        assert(check_result, 'Should return true');
-    }
 
-    #[test]
-    fn test_should_return_false_when_value_exceeds_the_time_limit() {
-        let setup = setup();
-
-        let module_dispatcher = IModuleDispatcher {
-            contract_address: setup.module.contract_address,
-        };
-
-        let compliance = setup.mc_setup.compliance.contract_address;
-        let from = setup.mc_setup.alice;
-        let to = setup.mc_setup.bob;
-
-        // setup.module.add_exchange_id(setup.exchange_id);
-
-        // mock_call(setup.mock_contract, selector!("is_agent"), false, 1);
-        // start_cheat_caller_address(setup.module.contract_address, compliance);
-        // setup
-        //     .module
-        //     .set_exchange_limit(setup.exchange_id, Limit { limit_time: 10_000, limit_value: 90
-        //     });
-        // stop_cheat_caller_address(setup.module.contract_address);
-
+        // Action: module check
         let check_result = module_dispatcher.module_check(from, to, 100, compliance);
-        assert(!check_result, 'Should return false');
+
+        // Check: should return true
+        assert_eq!(check_result, true);
     }
 
     #[test]
-    fn test_should_return_false_when_value_exceeds_the_counter_limit() {
+    fn test_when_value_exceeds_time_limit_should_return_false() {
         let setup = setup();
-
         let module_dispatcher = IModuleDispatcher {
             contract_address: setup.module.contract_address,
         };
@@ -867,26 +850,50 @@ pub mod module_check {
         let from = setup.mc_setup.alice;
         let to = setup.mc_setup.bob;
 
-        // setup.module.add_exchange_id(setup.exchange_id);
+        // Context: when value exceeds time limit
+        mock_call(setup.mock_contract, selector!("is_agent"), false, 1);
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup.module.set_time_transfer_limit(Limit { limit_time: 10, limit_value: 50 });
+        stop_cheat_caller_address(setup.module.contract_address);
+        let value = 100;
 
-        // mock_call(setup.mock_contract, selector!("is_agent"), false, 2);
-        // start_cheat_caller_address(setup.module.contract_address, compliance);
-        // setup
-        //     .module
-        //     .set_exchange_limit(setup.exchange_id, Limit { limit_time: 10_000, limit_value: 150
-        //     });
+        // Action: module check
+        let check_result = module_dispatcher.module_check(from, to, value, compliance);
 
+        // Check: should return false
+        assert_eq!(check_result, false);
+    }
+
+    // Describe: when value does not exceed time limit
+
+    #[test]
+    fn test_when_value_exceeds_counter_limit_should_return_false() {
+        let setup = setup();
+        let module_dispatcher = IModuleDispatcher {
+            contract_address: setup.module.contract_address,
+        };
+        let compliance = setup.mc_setup.compliance.contract_address;
+        let from = setup.mc_setup.alice;
+        let to = setup.mc_setup.bob;
+
+        // Context: when value does not exceeds time limit and exceeds counter limit
+        mock_call(setup.mock_contract, selector!("is_agent"), false, 1);
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup.module.set_time_transfer_limit(Limit { limit_time: 10, limit_value: 120 });
         module_dispatcher.module_transfer_action(from, to, 100);
         stop_cheat_caller_address(setup.module.contract_address);
+        let value = 100;
 
-        let check_result = module_dispatcher.module_check(from, to, 100, compliance);
-        assert(!check_result, 'Should return false');
+        // Action: module check
+        let check_result = module_dispatcher.module_check(from, to, value, compliance);
+
+        // Check: should return false
+        assert_eq!(check_result, false);
     }
 
     #[test]
-    fn test_should_return_true_when_value_does_not_exceed_the_counter_limit() {
+    fn test_when_value_does_not_exceed_counter_limit_should_return_true() {
         let setup = setup();
-
         let module_dispatcher = IModuleDispatcher {
             contract_address: setup.module.contract_address,
         };
@@ -894,25 +901,47 @@ pub mod module_check {
         let from = setup.mc_setup.alice;
         let to = setup.mc_setup.bob;
 
-        // setup.module.add_exchange_id(setup.exchange_id);
-
-        // mock_call(setup.mock_contract, selector!("is_agent"), false, 2);
-        // start_cheat_caller_address(setup.module.contract_address, compliance);
-        // setup
-        //     .module
-        //     .set_exchange_limit(setup.exchange_id, Limit { limit_time: 10_000, limit_value: 150
-        //     });
-
-        module_dispatcher.module_transfer_action(from, to, 100);
+        // Context: when value does not exceeds time limit and counter limit
+        mock_call(setup.mock_contract, selector!("is_agent"), false, 1);
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup.module.set_time_transfer_limit(Limit { limit_time: 10, limit_value: 120 });
         stop_cheat_caller_address(setup.module.contract_address);
+        let value = 100;
 
-        let check_result = module_dispatcher.module_check(from, to, 40, compliance);
-        assert(check_result, 'Should return true');
+        // Action: module check
+        let check_result = module_dispatcher.module_check(from, to, value, compliance);
+
+        // Check: should return true
+        assert_eq!(check_result, true);
     }
 
     #[test]
-    fn test_should_return_true_when_value_exceeds_the_counter_limit_but_counter_is_finished() {
-        assert!(true, "");
+    fn test_when_value_exceeds_counter_limit_but_limit_is_finished_should_return_true() {
+        let setup = setup();
+        let module_dispatcher = IModuleDispatcher {
+            contract_address: setup.module.contract_address,
+        };
+        let compliance = setup.mc_setup.compliance.contract_address;
+        let from = setup.mc_setup.alice;
+        let to = setup.mc_setup.bob;
+
+        // Context: when value exceeds counter limit but the limit is finished
+        mock_call(setup.mock_contract, selector!("is_agent"), false, 1);
+        start_cheat_caller_address(setup.module.contract_address, compliance);
+        setup.module.set_time_transfer_limit(Limit { limit_time: 10, limit_value: 120 });
+        stop_cheat_caller_address(setup.module.contract_address);
+        let value = 100;
+        let timestamp = starknet::get_block_info().unbox().block_timestamp;
+        start_cheat_block_timestamp_global(timestamp + 30);
+
+        // Action: module check
+        let check_result = module_dispatcher.module_check(from, to, value, compliance);
+
+        // Context end
+        stop_cheat_block_timestamp_global();
+
+        // Check: should return true
+        assert_eq!(check_result, true);
     }
 }
 
