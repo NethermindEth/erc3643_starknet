@@ -1,4 +1,4 @@
-use starknet::{ClassHash, ContractAddress};
+use starknet::ContractAddress;
 
 #[derive(Serde, Drop, Clone)]
 pub struct TokenDetails {
@@ -29,14 +29,10 @@ pub struct ClaimDetails {
 
 #[starknet::interface]
 pub trait ITREXFactory<TContractState> {
-    //fn set_implementation_authority(ref self: TContractState, implementation: ContractAddress);
+    fn set_implementation_authority(
+        ref self: TContractState, implementation_authority: ContractAddress,
+    );
     fn set_id_factory(ref self: TContractState, id_factory: ContractAddress);
-    fn set_irs_implementation(ref self: TContractState, implementation: ClassHash);
-    fn set_ir_implementation(ref self: TContractState, implementation: ClassHash);
-    fn set_tir_implementation(ref self: TContractState, implementation: ClassHash);
-    fn set_ctr_implementation(ref self: TContractState, implementation: ClassHash);
-    fn set_mc_implementation(ref self: TContractState, implementation: ClassHash);
-    fn set_token_implementation(ref self: TContractState, implementation: ClassHash);
     fn deploy_TREX_suite(
         ref self: TContractState,
         salt: felt252,
@@ -46,7 +42,7 @@ pub trait ITREXFactory<TContractState> {
     fn recover_contract_ownership(
         ref self: TContractState, contract: ContractAddress, new_owner: ContractAddress,
     );
-    //fn get_implementation_authority(self: @TContractState) -> ContractAddress;
+    fn get_implementation_authority(self: @TContractState) -> ContractAddress;
     fn get_id_factory(self: @TContractState) -> ContractAddress;
     fn get_token(self: @TContractState, salt: felt252) -> ContractAddress;
 }

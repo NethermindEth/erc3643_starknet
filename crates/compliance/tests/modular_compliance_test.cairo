@@ -15,7 +15,12 @@ pub struct Setup {
 pub fn setup() -> Setup {
     let modular_compliance_contract = declare("ModularCompliance").unwrap().contract_class();
     let (mc_address, _) = modular_compliance_contract
-        .deploy(@array![starknet::get_contract_address().into()])
+        .deploy(
+            @array![
+                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
+                starknet::get_contract_address().into(),
+            ],
+        )
         .unwrap();
 
     Setup {

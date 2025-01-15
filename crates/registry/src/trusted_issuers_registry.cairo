@@ -29,6 +29,7 @@ pub mod TrustedIssuersRegistry {
         trusted_issuers: StorageArrayContractAddress,
         trusted_issuer_claim_topics: Map<ContractAddress, StorageArrayFelt252>,
         claim_topics_to_trusted_issuers: Map<felt252, StorageArrayContractAddress>,
+        implementation_authority: ContractAddress,
         #[substorage(v0)]
         upgrades: UpgradeableComponent::Storage,
         #[substorage(v0)]
@@ -74,11 +75,7 @@ pub mod TrustedIssuersRegistry {
         pub const MAX_TRUSTED_ISSUERS_EXCEEDED: felt252 = 'Max 50 trusted issuers';
         pub const TRUSTED_ISSUER_ALREADY_EXISTS: felt252 = 'Trusted Issuer already exists';
         pub const TRUSTED_ISSUER_DOES_NOT_EXISTS: felt252 = 'Trusted Issuer not exists';
-    }
-
-    #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
-        self.ownable.initializer(owner);
+        pub const CALLER_IS_NOT_IMPLEMENTATION_AUTHORITY: felt252 = 'Caller is not IA';
     }
 
     #[abi(embed_v0)]
@@ -91,12 +88,23 @@ pub mod TrustedIssuersRegistry {
         ///
         /// # Requirements
         ///
-        /// - This function can only be called by the owner.
+        /// - This function can only be called by the implementation authority.
         /// - The `ClassHash` should already have been declared.
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
-            self.ownable.assert_only_owner();
+            assert(
+                self.implementation_authority.read() == starknet::get_caller_address(),
+                Errors::CALLER_IS_NOT_IMPLEMENTATION_AUTHORITY,
+            );
             self.upgrades.upgrade(new_class_hash);
         }
+    }
+
+    #[constructor]
+    fn constructor(
+        ref self: ContractState, implementation_authority: ContractAddress, owner: ContractAddress,
+    ) {
+        self.ownable.initializer(owner);
+        self.implementation_authority.write(implementation_authority);
     }
 
     #[abi(embed_v0)]

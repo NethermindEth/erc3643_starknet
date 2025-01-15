@@ -64,6 +64,7 @@ pub mod Token {
         frozen_tokens: Map<ContractAddress, u256>,
         token_identity_registry: IIdentityRegistryDispatcher,
         token_compliance: IModularComplianceDispatcher,
+        implementation_authority: ContractAddress,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
@@ -165,6 +166,7 @@ pub mod Token {
         symbol: ByteArray,
         decimals: u8,
         onchain_id: ContractAddress,
+        implementation_authority: ContractAddress,
         owner: ContractAddress,
     ) {
         assert(owner.is_non_zero(), 'Owner is Zero Address');
@@ -175,6 +177,7 @@ pub mod Token {
         self.erc20.initializer(name, symbol);
         self.token_decimals.write(decimals);
         self.token_onchain_id.write(onchain_id);
+        self.implementation_authority.write(implementation_authority);
         self.pausable.pause();
         self.set_compliance(compliance);
         self.set_identity_registry(identity_registry);
@@ -190,10 +193,13 @@ pub mod Token {
         ///
         /// # Requirements
         ///
-        /// - This function can only be called by the owner.
+        /// - This function can only be called by the implementation authority.
         /// - The `ClassHash` should already have been declared.
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
-            self.ownable.assert_only_owner();
+            assert(
+                self.implementation_authority.read() == starknet::get_caller_address(),
+                'Caller is not IA',
+            );
             self.upgrades.upgrade(new_class_hash);
         }
     }

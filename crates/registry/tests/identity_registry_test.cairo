@@ -24,7 +24,12 @@ fn setup() -> Setup {
         .unwrap()
         .contract_class();
     let (trusted_issuers_registry_address, _) = trusted_issuers_registry_contract
-        .deploy(@array![starknet::get_contract_address().into()])
+        .deploy(
+            @array![
+                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
+                starknet::get_contract_address().into(),
+            ],
+        )
         .unwrap();
     let trusted_issuers_registry = ITrustedIssuersRegistryDispatcher {
         contract_address: trusted_issuers_registry_address,
@@ -34,7 +39,12 @@ fn setup() -> Setup {
         .unwrap()
         .contract_class();
     let (identity_registry_storage_address, _) = identity_registry_storage_contract
-        .deploy(@array![starknet::get_contract_address().into()])
+        .deploy(
+            @array![
+                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
+                starknet::get_contract_address().into(),
+            ],
+        )
         .unwrap();
     let identity_registry_storage = IIdentityRegistryStorageDispatcher {
         contract_address: identity_registry_storage_address,
@@ -42,7 +52,12 @@ fn setup() -> Setup {
     // Deploy claim topics registry
     let claim_topics_registry_contract = declare("ClaimTopicsRegistry").unwrap().contract_class();
     let (claim_topics_registry_address, _) = claim_topics_registry_contract
-        .deploy(@array![starknet::get_contract_address().into()])
+        .deploy(
+            @array![
+                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
+                starknet::get_contract_address().into(),
+            ],
+        )
         .unwrap();
     let claim_topics_registry = IClaimTopicsRegistryDispatcher {
         contract_address: claim_topics_registry_address,
@@ -55,6 +70,7 @@ fn setup() -> Setup {
                 trusted_issuers_registry_address.into(),
                 claim_topics_registry_address.into(),
                 identity_registry_storage_address.into(),
+                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
                 starknet::get_contract_address().into(),
             ],
         )

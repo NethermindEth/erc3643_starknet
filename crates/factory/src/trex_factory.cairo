@@ -4,7 +4,12 @@ pub mod TREXFactory {
         IModularComplianceDispatcher, IModularComplianceDispatcherTrait,
     };
     use core::num::traits::Zero;
-    use factory::itrex_factory::{ClaimDetails, ITREXFactory, TokenDetails};
+    use crate::{
+        iimplementation_authority::{
+            IImplementationAuthorityDispatcher, IImplementationAuthorityDispatcherTrait,
+        },
+        itrex_factory::{ClaimDetails, ITREXFactory, TokenDetails},
+    };
     use onchain_id_starknet::factory::iid_factory::{
         IIdFactoryDispatcher, IIdFactoryDispatcherTrait,
     };
@@ -38,16 +43,10 @@ pub mod TREXFactory {
 
     #[storage]
     struct Storage {
-        //implementation_authority: ContractAddress,
+        implementation_authority: ContractAddress,
         id_factory: ContractAddress,
         /// salt to token
         token_deployed: Map<felt252, ContractAddress>,
-        tir_implementation_class_hash: ClassHash,
-        ctr_implementation_class_hash: ClassHash,
-        irs_implementation_class_hash: ClassHash,
-        ir_implementation_class_hash: ClassHash,
-        mc_implementation_class_hash: ClassHash,
-        token_implementation_class_hash: ClassHash,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
     }
@@ -57,13 +56,7 @@ pub mod TREXFactory {
     pub enum Event {
         Deployed: Deployed,
         IdFactorySet: IdFactorySet,
-        //ImplementationAuthoritySet: ImplementationAuthoritySet,
-        IdentityRegistryImplementationUpdated: IdentityRegistryImplementationUpdated,
-        IdentityRegistryStorageImplementationUpdated: IdentityRegistryStorageImplementationUpdated,
-        TrustedIssuersRegistryImplementationUpdated: TrustedIssuersRegistryImplementationUpdated,
-        ClaimTopicsRegistryImplementationUpdated: ClaimTopicsRegistryImplementationUpdated,
-        ModularComplianceImplementationUpdated: ModularComplianceImplementationUpdated,
-        TokenImplementationUpdated: TokenImplementationUpdated,
+        ImplementationAuthoritySet: ImplementationAuthoritySet,
         TREXSuiteDeployed: TREXSuiteDeployed,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
@@ -82,44 +75,9 @@ pub mod TREXFactory {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct IdentityRegistryImplementationUpdated {
-        pub old_class_hash: ClassHash,
-        pub new_class_hash: ClassHash,
+    pub struct ImplementationAuthoritySet {
+        pub implementation_authority: ContractAddress,
     }
-
-    #[derive(Drop, starknet::Event)]
-    struct IdentityRegistryStorageImplementationUpdated {
-        pub old_class_hash: ClassHash,
-        pub new_class_hash: ClassHash,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct TrustedIssuersRegistryImplementationUpdated {
-        pub old_class_hash: ClassHash,
-        pub new_class_hash: ClassHash,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct ClaimTopicsRegistryImplementationUpdated {
-        pub old_class_hash: ClassHash,
-        pub new_class_hash: ClassHash,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct ModularComplianceImplementationUpdated {
-        pub old_class_hash: ClassHash,
-        pub new_class_hash: ClassHash,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct TokenImplementationUpdated {
-        pub old_class_hash: ClassHash,
-        pub new_class_hash: ClassHash,
-    }
-    //#[derive(Drop, starknet::Event)]
-    //pub struct ImplementationAuthoritySet {
-    //    pub implementation_authority: ContractAddress,
-    //}
 
     #[derive(Drop, starknet::Event)]
     pub struct TREXSuiteDeployed {
@@ -133,14 +91,9 @@ pub mod TREXFactory {
     }
 
     pub mod Errors {
-        pub const TIR_CLASS_HASH_ZERO: felt252 = 'TIR: ClassHash Zero';
-        pub const CTR_CLASS_HASH_ZERO: felt252 = 'CTR: ClassHash Zero';
-        pub const IRS_CLASS_HASH_ZERO: felt252 = 'IRS: ClassHash Zero';
-        pub const IR_CLASS_HASH_ZERO: felt252 = 'IR: ClassHash Zero';
-        pub const MC_CLASS_HASH_ZERO: felt252 = 'MC: ClassHash Zero';
-        pub const TOKEN_CLASS_HASH_ZERO: felt252 = 'Token: ClassHash Zero';
         pub const ID_FACTORY_ZERO_ADDRESS: felt252 = 'id_factory: Zero Address';
         pub const OWNER_ZERO_ADDRESS: felt252 = 'owner: Zero Address';
+        pub const IMPLEMENTATION_AUTHORITY_ZERO_ADDRESS: felt252 = 'IA: Zero Address';
         pub const TOKEN_ALREADY_DEPLOYED: felt252 = 'Token already deployed';
         pub const INVALID_CLAIM_PATTERN: felt252 = 'Invalid claim pattern';
         pub const INVALID_COMPLIANCE_PATTERN: felt252 = 'Invalid compliance pattern';
@@ -148,126 +101,40 @@ pub mod TREXFactory {
         pub const MAX_CLAIM_TOPICS: felt252 = 'Max 5 topics at deployment';
         pub const MAX_COMPLIANCE_MODULES: felt252 = 'Max 30 compliance at deployment';
         pub const MAX_AGENTS: felt252 = 'Max 5 agents at deployment';
+        pub const INVALID_IMPLEMENTATION: felt252 = 'Invalid implementation: Zero';
     }
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, //implementation_authority: ContractAddress,
+        ref self: ContractState,
+        implementation_authority: ContractAddress,
         id_factory: ContractAddress,
-        tir_implementation: ClassHash,
-        ctr_implementation: ClassHash,
-        irs_implementation: ClassHash,
-        ir_implementation: ClassHash,
-        mc_implementation: ClassHash,
-        token_implementation: ClassHash,
         owner: ContractAddress,
     ) {
         assert(id_factory.is_non_zero(), Errors::ID_FACTORY_ZERO_ADDRESS);
         assert(owner.is_non_zero(), Errors::OWNER_ZERO_ADDRESS);
-        assert(tir_implementation.is_non_zero(), Errors::TIR_CLASS_HASH_ZERO);
-        assert(ctr_implementation.is_non_zero(), Errors::CTR_CLASS_HASH_ZERO);
-        assert(irs_implementation.is_non_zero(), Errors::IRS_CLASS_HASH_ZERO);
-        assert(ir_implementation.is_non_zero(), Errors::IR_CLASS_HASH_ZERO);
-        assert(mc_implementation.is_non_zero(), Errors::MC_CLASS_HASH_ZERO);
-        assert(token_implementation.is_non_zero(), Errors::TOKEN_CLASS_HASH_ZERO);
         /// Set id factory
         self.id_factory.write(id_factory);
         self.emit(IdFactorySet { id_factory });
+        self._set_implementation_authority(implementation_authority);
         /// Init ownable
         self.ownable.initializer(owner);
-        /// Set implementations
-        self.tir_implementation_class_hash.write(tir_implementation);
-        self.ctr_implementation_class_hash.write(ctr_implementation);
-        self.irs_implementation_class_hash.write(irs_implementation);
-        self.ir_implementation_class_hash.write(ir_implementation);
-        self.mc_implementation_class_hash.write(mc_implementation);
-        self.token_implementation_class_hash.write(token_implementation);
     }
 
     #[abi(embed_v0)]
     impl TREXFactoryImpl of ITREXFactory<ContractState> {
-        //fn set_implementation_authority(ref self: ContractState, implementation: ContractAddress);
+        fn set_implementation_authority(
+            ref self: ContractState, implementation_authority: ContractAddress,
+        ) {
+            self.ownable.assert_only_owner();
+            self._set_implementation_authority(implementation_authority);
+        }
+
         fn set_id_factory(ref self: ContractState, id_factory: ContractAddress) {
             self.ownable.assert_only_owner();
             assert(id_factory.is_non_zero(), Errors::ID_FACTORY_ZERO_ADDRESS);
             self.id_factory.write(id_factory);
             self.emit(IdFactorySet { id_factory });
-        }
-
-        fn set_irs_implementation(ref self: ContractState, implementation: ClassHash) {
-            self.ownable.assert_only_owner();
-            assert(implementation.is_non_zero(), Errors::IRS_CLASS_HASH_ZERO);
-            let old_class_hash = self.irs_implementation_class_hash.read();
-            self.irs_implementation_class_hash.write(implementation);
-            self
-                .emit(
-                    IdentityRegistryStorageImplementationUpdated {
-                        old_class_hash, new_class_hash: implementation,
-                    },
-                );
-        }
-
-        fn set_ir_implementation(ref self: ContractState, implementation: ClassHash) {
-            self.ownable.assert_only_owner();
-            assert(implementation.is_non_zero(), Errors::IR_CLASS_HASH_ZERO);
-            let old_class_hash = self.ir_implementation_class_hash.read();
-            self.ir_implementation_class_hash.write(implementation);
-            self
-                .emit(
-                    IdentityRegistryImplementationUpdated {
-                        old_class_hash, new_class_hash: implementation,
-                    },
-                );
-        }
-
-        fn set_tir_implementation(ref self: ContractState, implementation: ClassHash) {
-            self.ownable.assert_only_owner();
-            assert(implementation.is_non_zero(), Errors::TIR_CLASS_HASH_ZERO);
-            let old_class_hash = self.tir_implementation_class_hash.read();
-            self.tir_implementation_class_hash.write(implementation);
-            self
-                .emit(
-                    TrustedIssuersRegistryImplementationUpdated {
-                        old_class_hash, new_class_hash: implementation,
-                    },
-                );
-        }
-
-        fn set_ctr_implementation(ref self: ContractState, implementation: ClassHash) {
-            self.ownable.assert_only_owner();
-            assert(implementation.is_non_zero(), Errors::CTR_CLASS_HASH_ZERO);
-            let old_class_hash = self.ctr_implementation_class_hash.read();
-            self.ctr_implementation_class_hash.write(implementation);
-            self
-                .emit(
-                    ClaimTopicsRegistryImplementationUpdated {
-                        old_class_hash, new_class_hash: implementation,
-                    },
-                );
-        }
-
-        fn set_mc_implementation(ref self: ContractState, implementation: ClassHash) {
-            self.ownable.assert_only_owner();
-            assert(implementation.is_non_zero(), Errors::MC_CLASS_HASH_ZERO);
-            let old_class_hash = self.mc_implementation_class_hash.read();
-            self.mc_implementation_class_hash.write(implementation);
-            self
-                .emit(
-                    ModularComplianceImplementationUpdated {
-                        old_class_hash, new_class_hash: implementation,
-                    },
-                );
-        }
-
-        fn set_token_implementation(ref self: ContractState, implementation: ClassHash) {
-            self.ownable.assert_only_owner();
-            assert(implementation.is_non_zero(), Errors::TOKEN_CLASS_HASH_ZERO);
-            let old_class_hash = self.token_implementation_class_hash.read();
-            self.token_implementation_class_hash.write(implementation);
-            self
-                .emit(
-                    TokenImplementationUpdated { old_class_hash, new_class_hash: implementation },
-                );
         }
 
         fn deploy_TREX_suite(
@@ -294,22 +161,39 @@ pub mod TREXFactory {
                 token_details.compliance_modules.len() >= token_details.compliance_settings.len(),
                 Errors::INVALID_COMPLIANCE_PATTERN,
             );
-            let tir = ITrustedIssuersRegistryDispatcher { contract_address: self.deploy_TIR(salt) };
-            let ctr = IClaimTopicsRegistryDispatcher { contract_address: self.deploy_CTR(salt) };
-            let mc = IModularComplianceDispatcher { contract_address: self.deploy_MC(salt) };
+            let implementations = IImplementationAuthorityDispatcher {
+                contract_address: self.implementation_authority.read(),
+            }
+                .get_current_implementations();
+            let tir = ITrustedIssuersRegistryDispatcher {
+                contract_address: self.deploy_TIR(implementations.tir_implementation, salt),
+            };
+            let ctr = IClaimTopicsRegistryDispatcher {
+                contract_address: self.deploy_CTR(implementations.ctr_implementation, salt),
+            };
+            let mc = IModularComplianceDispatcher {
+                contract_address: self.deploy_MC(implementations.mc_implementation, salt),
+            };
             let irs = if token_details.irs.is_zero() {
-                IIdentityRegistryStorageDispatcher { contract_address: self.deploy_IRS(salt) }
+                IIdentityRegistryStorageDispatcher {
+                    contract_address: self.deploy_IRS(implementations.irs_implementation, salt),
+                }
             } else {
                 IIdentityRegistryStorageDispatcher { contract_address: token_details.irs }
             };
             let ir = IIdentityRegistryDispatcher {
                 contract_address: self
                     .deploy_IR(
-                        salt, tir.contract_address, ctr.contract_address, irs.contract_address,
+                        implementations.ir_implementation,
+                        salt,
+                        tir.contract_address,
+                        ctr.contract_address,
+                        irs.contract_address,
                     ),
             };
             let token_address = self
                 .deploy_token(
+                    implementations.token_implementation,
                     salt,
                     ir.contract_address,
                     mc.contract_address,
@@ -399,7 +283,10 @@ pub mod TREXFactory {
 
             IOwnableDispatcher { contract_address: contract }.transfer_ownership(new_owner);
         }
-        //fn get_implementation_authority(self: @ContractState) -> ContractAddress;
+
+        fn get_implementation_authority(self: @ContractState) -> ContractAddress {
+            self.implementation_authority.read()
+        }
 
         fn get_id_factory(self: @ContractState) -> ContractAddress {
             self.id_factory.read()
@@ -426,44 +313,53 @@ pub mod TREXFactory {
             deployed_address
         }
 
-        fn deploy_TIR(ref self: ContractState, salt: felt252) -> ContractAddress {
+        fn deploy_TIR(
+            ref self: ContractState, implementation_class_hash: ClassHash, salt: felt252,
+        ) -> ContractAddress {
             self
                 .deploy(
                     salt,
-                    self.tir_implementation_class_hash.read(),
+                    implementation_class_hash,
                     [starknet::get_contract_address().into()].span(),
                 )
         }
 
-        fn deploy_CTR(ref self: ContractState, salt: felt252) -> ContractAddress {
+        fn deploy_CTR(
+            ref self: ContractState, implementation_class_hash: ClassHash, salt: felt252,
+        ) -> ContractAddress {
             self
                 .deploy(
                     salt,
-                    self.ctr_implementation_class_hash.read(),
+                    implementation_class_hash,
                     [starknet::get_contract_address().into()].span(),
                 )
         }
 
-        fn deploy_MC(ref self: ContractState, salt: felt252) -> ContractAddress {
+        fn deploy_MC(
+            ref self: ContractState, implementation_class_hash: ClassHash, salt: felt252,
+        ) -> ContractAddress {
             self
                 .deploy(
                     salt,
-                    self.mc_implementation_class_hash.read(),
+                    implementation_class_hash,
                     [starknet::get_contract_address().into()].span(),
                 )
         }
 
-        fn deploy_IRS(ref self: ContractState, salt: felt252) -> ContractAddress {
+        fn deploy_IRS(
+            ref self: ContractState, implementation_class_hash: ClassHash, salt: felt252,
+        ) -> ContractAddress {
             self
                 .deploy(
                     salt,
-                    self.irs_implementation_class_hash.read(),
+                    implementation_class_hash,
                     [starknet::get_contract_address().into()].span(),
                 )
         }
 
         fn deploy_IR(
             ref self: ContractState,
+            implementation_class_hash: ClassHash,
             salt: felt252,
             trusted_issuers_registry: ContractAddress,
             claim_topics_registry: ContractAddress,
@@ -472,7 +368,7 @@ pub mod TREXFactory {
             self
                 .deploy(
                     salt,
-                    self.ir_implementation_class_hash.read(),
+                    implementation_class_hash,
                     [
                         trusted_issuers_registry.into(), claim_topics_registry.into(),
                         identity_storage.into(), starknet::get_contract_address().into(),
@@ -480,8 +376,10 @@ pub mod TREXFactory {
                         .span(),
                 )
         }
+
         fn deploy_token(
             ref self: ContractState,
+            implementation_class_hash: ClassHash,
             salt: felt252,
             identity_registry: ContractAddress,
             compliance: ContractAddress,
@@ -497,7 +395,31 @@ pub mod TREXFactory {
             symbol.serialize(ref ctor_calldata);
             decimals.serialize(ref ctor_calldata);
             onchain_id.serialize(ref ctor_calldata);
-            self.deploy(salt, self.ir_implementation_class_hash.read(), ctor_calldata.span())
+            self.deploy(salt, implementation_class_hash, ctor_calldata.span())
+        }
+
+        fn _set_implementation_authority(
+            ref self: ContractState, implementation_authority: ContractAddress,
+        ) {
+            assert(
+                implementation_authority.is_non_zero(),
+                Errors::IMPLEMENTATION_AUTHORITY_ZERO_ADDRESS,
+            );
+            let implementations = IImplementationAuthorityDispatcher {
+                contract_address: self.implementation_authority.read(),
+            }
+                .get_current_implementations();
+            assert(
+                implementations.ctr_implementation.is_non_zero()
+                    && implementations.ir_implementation.is_non_zero()
+                    && implementations.irs_implementation.is_non_zero()
+                    && implementations.tir_implementation.is_non_zero()
+                    && implementations.mc_implementation.is_non_zero()
+                    && implementations.token_implementation.is_non_zero(),
+                Errors::INVALID_IMPLEMENTATION,
+            );
+            self.implementation_authority.write(implementation_authority);
+            self.emit(ImplementationAuthoritySet { implementation_authority });
         }
     }
 }
