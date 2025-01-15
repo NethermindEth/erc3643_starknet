@@ -20,7 +20,7 @@ pub impl VersionStorePacking of StorePacking<Version, u32> {
     fn unpack(value: u32) -> Version {
         let major = value & MASK_8;
         let minor = (value / SHIFT_8) & MASK_8;
-        let patch = (value / SHIFT_16) & MASK_8;
+        let patch = value / SHIFT_16;
 
         Version {
             major: major.try_into().unwrap(),
