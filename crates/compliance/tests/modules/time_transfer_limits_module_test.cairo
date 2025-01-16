@@ -607,8 +607,8 @@ pub mod module_transfer_action {
         },
     };
     use snforge_std::{
-        start_cheat_caller_address, stop_cheat_caller_address, start_cheat_block_timestamp_global,
-        stop_cheat_block_timestamp_global, load, map_entry_address,
+        load, map_entry_address, start_cheat_block_timestamp_global, start_cheat_caller_address,
+        stop_cheat_block_timestamp_global, stop_cheat_caller_address,
     };
     use super::setup;
 
@@ -839,8 +839,8 @@ pub mod module_check {
     };
     use core::num::traits::Zero;
     use snforge_std::{
-        mock_call, start_cheat_caller_address, stop_cheat_caller_address,
-        start_cheat_block_timestamp_global, stop_cheat_block_timestamp_global,
+        mock_call, start_cheat_block_timestamp_global, start_cheat_caller_address,
+        stop_cheat_block_timestamp_global, stop_cheat_caller_address,
     };
     use super::setup;
 
