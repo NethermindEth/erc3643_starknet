@@ -60,7 +60,7 @@ pub struct FullSuiteSetup {
     pub claim_topics_registry: IClaimTopicsRegistryDispatcher,
     pub identity_registry: IIdentityRegistryDispatcher,
     pub identity_registry_storage: IIdentityRegistryStorageDispatcher,
-    pub modular_compliance: IModularComplianceDispatcher
+    pub modular_compliance: IModularComplianceDispatcher,
 }
 
 #[derive(Drop, Copy)]
@@ -254,7 +254,7 @@ fn setup_full_suite() -> FullSuiteSetup {
         claim_topics_registry,
         identity_registry,
         identity_registry_storage,
-        modular_compliance: compliance
+        modular_compliance: compliance,
     }
 }
 
