@@ -103,6 +103,7 @@ pub mod init {
                     Zero::zero(),
                     starknet::contract_address_const::<'CLAIM_TOPICS_REGISTRY'>().into(),
                     starknet::contract_address_const::<'IDENTITY_STORAGE'>().into(),
+                    starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
                     starknet::get_contract_address().into(),
                 ],
             )
@@ -119,6 +120,7 @@ pub mod init {
                     starknet::contract_address_const::<'TRUSTED_ISSUERS_REGISTRY'>().into(),
                     Zero::zero(),
                     starknet::contract_address_const::<'IDENTITY_STORAGE'>().into(),
+                    starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
                     starknet::get_contract_address().into(),
                 ],
             )
@@ -135,6 +137,7 @@ pub mod init {
                     starknet::contract_address_const::<'TRUSTED_ISSUERS_REGISTRY'>().into(),
                     starknet::contract_address_const::<'CLAIM_TOPICS_REGISTRY'>().into(),
                     Zero::zero(),
+                    starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
                     starknet::get_contract_address().into(),
                 ],
             )
@@ -151,6 +154,7 @@ pub mod init {
                     starknet::contract_address_const::<'TRUSTED_ISSUERS_REGISTRY'>().into(),
                     starknet::contract_address_const::<'CLAIM_TOPICS_REGISTRY'>().into(),
                     starknet::contract_address_const::<'IDENTITY_STORAGE'>().into(),
+                    starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
                     Zero::zero(),
                 ],
             )
