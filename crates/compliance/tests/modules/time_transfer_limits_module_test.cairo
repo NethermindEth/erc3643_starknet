@@ -16,8 +16,7 @@ struct Setup {
     mc_setup: MCSetup,
     module: ITimeTransferLimitsModuleDispatcher,
     mock_contract: ContractAddress,
-    exchange_id: ContractAddress,
-    investor_id: ContractAddress,
+    alice_id: ContractAddress,
 }
 
 pub fn setup() -> Setup {
@@ -37,19 +36,16 @@ pub fn setup() -> Setup {
     mc_setup.compliance.bind_token(mock_contract);
     mc_setup.compliance.add_module(compliance_module_address);
 
-    let investor_id = starknet::contract_address_const::<'ALICE_IDENTITY'>();
-    let exchange_id = starknet::contract_address_const::<'BOB_IDENTITY'>();
+    let alice_id = starknet::contract_address_const::<'ALICE_IDENTITY'>();
 
     let mock_dispatcher = IMockContractDispatcher { contract_address: mock_contract };
-    mock_dispatcher.set_identity(mc_setup.alice, investor_id);
-    mock_dispatcher.set_identity(mc_setup.bob, exchange_id);
+    mock_dispatcher.set_identity(mc_setup.alice, alice_id);
 
     Setup {
         mc_setup,
         module: ITimeTransferLimitsModuleDispatcher { contract_address: compliance_module_address },
         mock_contract,
-        exchange_id,
-        investor_id,
+        alice_id,
     }
 }
 
@@ -607,14 +603,13 @@ pub mod module_transfer_action {
     use compliance::modules::{
         imodule::{IModuleDispatcher, IModuleDispatcherTrait},
         time_transfer_limits_module::{
-            TimeTransferLimitsModule, ITimeTransferLimitsModuleDispatcherTrait, Limit,
+            ITimeTransferLimitsModuleDispatcherTrait, Limit, TransferCounter,
         },
     };
     use snforge_std::{
         start_cheat_caller_address, stop_cheat_caller_address, start_cheat_block_timestamp_global,
-        stop_cheat_block_timestamp_global,
+        stop_cheat_block_timestamp_global, load, map_entry_address,
     };
-    use starknet::{storage::{StoragePathEntry, StoragePointerReadAccess}};
     use super::setup;
 
     // Describe: when calling directly
@@ -642,8 +637,7 @@ pub mod module_transfer_action {
         let compliance = setup.mc_setup.compliance.contract_address;
         let from = setup.mc_setup.alice;
         let to = setup.mc_setup.bob;
-        let sender_identity = setup
-            .investor_id; // TODO: should we use identityRegistry.identity(from)?
+        let sender_identity = setup.alice_id;
         let module_dispatcher = IModuleDispatcher {
             contract_address: setup.module.contract_address,
         };
@@ -667,16 +661,31 @@ pub mod module_transfer_action {
         stop_cheat_caller_address(setup.module.contract_address);
 
         // Check: should set counters
-        let block_timestamp = starknet::get_block_info().unbox().block_timestamp;
-        let mut state =
-            TimeTransferLimitsModule::contract_state_for_testing(); // TODO: check if correct with snforge?
-        starknet::testing::set_contract_address( // https://foundry-rs.github.io/starknet-foundry/snforge-advanced-features/storage-cheatcodes.html
+        let block_timestamp = starknet::get_block_timestamp();
+
+        let mut loaded = load(
             setup.module.contract_address,
-        );
-        let counter1 = state.users_counter.entry((compliance, sender_identity, 10)).read();
+            map_entry_address(
+                selector!("users_counter"),
+                array![compliance.into(), sender_identity.into(), 10_u64.into()].span(),
+            ),
+            3,
+        )
+            .span();
+        let counter1: TransferCounter = Serde::deserialize(ref loaded).unwrap();
         assert_eq!(counter1.value, 80);
         assert_eq!(counter1.timer, block_timestamp + 10);
-        let counter2 = state.users_counter.entry((compliance, sender_identity, 15)).read();
+
+        let mut loaded = load(
+            setup.module.contract_address,
+            map_entry_address(
+                selector!("users_counter"),
+                array![compliance.into(), sender_identity.into(), 15_u64.into()].span(),
+            ),
+            3,
+        )
+            .span();
+        let counter2: TransferCounter = Serde::deserialize(ref loaded).unwrap();
         assert_eq!(counter2.value, 80);
         assert_eq!(counter2.timer, block_timestamp + 15);
     }
@@ -687,8 +696,7 @@ pub mod module_transfer_action {
         let compliance = setup.mc_setup.compliance.contract_address;
         let from = setup.mc_setup.alice;
         let to = setup.mc_setup.bob;
-        let sender_identity = setup
-            .investor_id; // TODO: should we use identityRegistry.identity(from)?
+        let sender_identity = setup.alice_id;
         let module_dispatcher = IModuleDispatcher {
             contract_address: setup.module.contract_address,
         };
@@ -705,22 +713,36 @@ pub mod module_transfer_action {
                     .span(),
             );
         module_dispatcher.module_transfer_action(from, to, 20);
-        let block_timestamp = starknet::get_block_info().unbox().block_timestamp;
+        let block_timestamp = starknet::get_block_timestamp();
         start_cheat_block_timestamp_global(block_timestamp + 10);
 
         // Action: transfer action
         module_dispatcher.module_transfer_action(from, to, 30);
 
         // Check: should increase counters
-        let mut state =
-            TimeTransferLimitsModule::contract_state_for_testing(); // TODO: check if correct with snforge?
-        starknet::testing::set_contract_address( // https://foundry-rs.github.io/starknet-foundry/snforge-advanced-features/storage-cheatcodes.html
+        let mut loaded = load(
             setup.module.contract_address,
-        );
-        let counter1 = state.users_counter.entry((compliance, sender_identity, 100)).read();
+            map_entry_address(
+                selector!("users_counter"),
+                array![compliance.into(), sender_identity.into(), 100_u64.into()].span(),
+            ),
+            3,
+        )
+            .span();
+        let counter1: TransferCounter = Serde::deserialize(ref loaded).unwrap();
         assert_eq!(counter1.value, 50);
         assert_eq!(counter1.timer, block_timestamp + 100);
-        let counter2 = state.users_counter.entry((compliance, sender_identity, 150)).read();
+
+        let mut loaded = load(
+            setup.module.contract_address,
+            map_entry_address(
+                selector!("users_counter"),
+                array![compliance.into(), sender_identity.into(), 150_u64.into()].span(),
+            ),
+            3,
+        )
+            .span();
+        let counter2: TransferCounter = Serde::deserialize(ref loaded).unwrap();
         assert_eq!(counter2.value, 50);
         assert_eq!(counter2.timer, block_timestamp + 150);
 
@@ -735,8 +757,7 @@ pub mod module_transfer_action {
         let compliance = setup.mc_setup.compliance.contract_address;
         let from = setup.mc_setup.alice;
         let to = setup.mc_setup.bob;
-        let sender_identity = setup
-            .investor_id; // TODO: should we use identityRegistry.identity(from)?
+        let sender_identity = setup.alice_id;
         let module_dispatcher = IModuleDispatcher {
             contract_address: setup.module.contract_address,
         };
@@ -753,25 +774,40 @@ pub mod module_transfer_action {
                     .span(),
             );
         module_dispatcher.module_transfer_action(from, to, 20);
-        let block_timestamp = starknet::get_block_info().unbox().block_timestamp;
+        let block_timestamp = starknet::get_block_timestamp();
         start_cheat_block_timestamp_global(block_timestamp + 30);
 
         // Action: transfer action on finished counter
         module_dispatcher.module_transfer_action(from, to, 30);
 
         // Check: should reset and increase counters
-        let reset_timestamp = starknet::get_block_info().unbox().block_timestamp;
-        let mut state =
-            TimeTransferLimitsModule::contract_state_for_testing(); // TODO: check if correct with snforge?
-        starknet::testing::set_contract_address( // https://foundry-rs.github.io/starknet-foundry/snforge-advanced-features/storage-cheatcodes.html
+        let reset_timestamp = starknet::get_block_timestamp();
+
+        let mut loaded = load(
             setup.module.contract_address,
-        );
-        let counter1 = state.users_counter.entry((compliance, sender_identity, 10)).read();
+            map_entry_address(
+                selector!("users_counter"),
+                array![compliance.into(), sender_identity.into(), 10_u64.into()].span(),
+            ),
+            3,
+        )
+            .span();
+        let counter1: TransferCounter = Serde::deserialize(ref loaded).unwrap();
         assert_eq!(counter1.value, 30);
         assert_eq!(counter1.timer, reset_timestamp + 10);
-        let counter2 = state.users_counter.entry((compliance, sender_identity, 150)).read();
+
+        let mut loaded = load(
+            setup.module.contract_address,
+            map_entry_address(
+                selector!("users_counter"),
+                array![compliance.into(), sender_identity.into(), 150_u64.into()].span(),
+            ),
+            3,
+        )
+            .span();
+        let counter2: TransferCounter = Serde::deserialize(ref loaded).unwrap();
         assert_eq!(counter2.value, 50);
-        assert_eq!(counter2.timer, reset_timestamp + 150);
+        assert_eq!(counter2.timer, block_timestamp + 150);
 
         // Context end
         stop_cheat_caller_address(setup.module.contract_address);
@@ -939,7 +975,7 @@ pub mod module_check {
         setup.module.set_time_transfer_limit(Limit { limit_time: 10, limit_value: 120 });
         stop_cheat_caller_address(setup.module.contract_address);
         let value = 100;
-        let timestamp = starknet::get_block_info().unbox().block_timestamp;
+        let timestamp = starknet::get_block_timestamp();
         start_cheat_block_timestamp_global(timestamp + 30);
 
         // Action: module check
