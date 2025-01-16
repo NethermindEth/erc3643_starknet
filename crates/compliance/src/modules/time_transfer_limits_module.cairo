@@ -103,9 +103,9 @@ pub mod TimeTransferLimitsModule {
     use storage::storage_array::{
         LimitVecToLimitArray, MutableStorageArrayTrait, StorageArrayLimit, StorageArrayTrait,
     };
+    use super::Errors;
     use super::{IndexLimit, Limit, TransferCounter};
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
-    use super::Errors;
 
     component!(path: AbstractModuleComponent, storage: abstract_module, event: AbstractModuleEvent);
 
