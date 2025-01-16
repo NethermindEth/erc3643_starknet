@@ -5,15 +5,18 @@ edition = "2024_07"
 
 [dependencies]
 starknet.workspace = true
-token =  { path = "../token"}
-roles = { path = "../roles"}
-registry = { path = "../registry"}
-storage = { path = "../storage"}
-mocks = { path = "../mocks"}
+token = { path = "../token" }
+roles = { path = "../roles" }
+registry = { path = "../registry" }
+storage = { path = "../storage" }
+mocks = { path = "../mocks" }
 openzeppelin_access.workspace = true
 openzeppelin_upgrades.workspace = true
 openzeppelin_token.workspace = true
+
+[dev-dependencies]
 snforge_std.workspace = true
+assert_macros.workspace = true
 
 [[target.starknet-contract]]
 sierra = true
@@ -23,4 +26,4 @@ build-external-contracts = ["mocks::*"]
 fmt.workspace = true
 
 [lib]
-name= "compliance"
+name = "compliance"

@@ -23,7 +23,7 @@ struct Setup {
 pub fn setup() -> Setup {
     let mc_setup = mc_setup();
 
-    let compliance_module_contract = declare("TimeTransfersLimitsModule").unwrap().contract_class();
+    let compliance_module_contract = declare("TimeTransferLimitsModule").unwrap().contract_class();
     let (compliance_module_address, _) = compliance_module_contract
         .deploy(@array![starknet::get_contract_address().into()])
         .unwrap();
@@ -63,7 +63,7 @@ fn test_should_deploy_time_transfer_limits_contract_and_bind_it_to_the_complianc
 fn test_should_return_name() {
     let setup = setup();
     let module_dispatcher = IModuleDispatcher { contract_address: setup.module.contract_address };
-    assert_eq!(module_dispatcher.name(), "TimeTranserLimitsModule");
+    assert_eq!(module_dispatcher.name(), "TimeTransferLimitsModule");
 }
 
 #[test]

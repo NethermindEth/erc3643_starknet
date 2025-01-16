@@ -18,8 +18,8 @@ pub struct TransferCounter {
 
 #[derive(Drop, Copy, Serde, starknet::Store)]
 pub struct Limit {
-    pub limit_time: u64,
     pub limit_value: u256,
+    pub limit_time: u64,
 }
 
 impl LimitZero of core::num::traits::Zero<Limit> {
@@ -254,7 +254,8 @@ pub mod TimeTransferLimitsModule {
         }
 
         fn name(self: @AbstractModuleComponent::ComponentState<ContractState>) -> ByteArray {
-            "TimeTransfersLimitsModule"
+            // TODO: Transfers or Transfer
+            "TimeTransferLimitsModule"
         }
     }
 
