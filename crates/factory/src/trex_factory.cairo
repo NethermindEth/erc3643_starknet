@@ -161,22 +161,37 @@ pub mod TREXFactory {
                 token_details.compliance_modules.len() >= token_details.compliance_settings.len(),
                 Errors::INVALID_COMPLIANCE_PATTERN,
             );
+            let implementation_authority_address = self.implementation_authority.read();
             let implementations = IImplementationAuthorityDispatcher {
-                contract_address: self.implementation_authority.read(),
+                contract_address: implementation_authority_address,
             }
                 .get_current_implementations();
             let tir = ITrustedIssuersRegistryDispatcher {
-                contract_address: self.deploy_TIR(implementations.tir_implementation, salt),
+                contract_address: self
+                    .deploy_TIR(
+                        implementations.tir_implementation, salt, implementation_authority_address,
+                    ),
             };
             let ctr = IClaimTopicsRegistryDispatcher {
-                contract_address: self.deploy_CTR(implementations.ctr_implementation, salt),
+                contract_address: self
+                    .deploy_CTR(
+                        implementations.ctr_implementation, salt, implementation_authority_address,
+                    ),
             };
             let mc = IModularComplianceDispatcher {
-                contract_address: self.deploy_MC(implementations.mc_implementation, salt),
+                contract_address: self
+                    .deploy_MC(
+                        implementations.mc_implementation, salt, implementation_authority_address,
+                    ),
             };
             let irs = if token_details.irs.is_zero() {
                 IIdentityRegistryStorageDispatcher {
-                    contract_address: self.deploy_IRS(implementations.irs_implementation, salt),
+                    contract_address: self
+                        .deploy_IRS(
+                            implementations.irs_implementation,
+                            salt,
+                            implementation_authority_address,
+                        ),
                 }
             } else {
                 IIdentityRegistryStorageDispatcher { contract_address: token_details.irs }
@@ -189,6 +204,7 @@ pub mod TREXFactory {
                         tir.contract_address,
                         ctr.contract_address,
                         irs.contract_address,
+                        implementation_authority_address,
                     ),
             };
             let token_address = self
@@ -201,6 +217,7 @@ pub mod TREXFactory {
                     token_details.symbol,
                     token_details.decimals,
                     token_details.onchain_id,
+                    implementation_authority_address,
                 );
             salt_to_token_storage.write(token_address);
 
@@ -314,46 +331,62 @@ pub mod TREXFactory {
         }
 
         fn deploy_TIR(
-            ref self: ContractState, implementation_class_hash: ClassHash, salt: felt252,
+            ref self: ContractState,
+            implementation_class_hash: ClassHash,
+            salt: felt252,
+            implementation_authority: ContractAddress,
         ) -> ContractAddress {
             self
                 .deploy(
                     salt,
                     implementation_class_hash,
-                    [starknet::get_contract_address().into()].span(),
+                    [implementation_authority.into(), starknet::get_contract_address().into()]
+                        .span(),
                 )
         }
 
         fn deploy_CTR(
-            ref self: ContractState, implementation_class_hash: ClassHash, salt: felt252,
+            ref self: ContractState,
+            implementation_class_hash: ClassHash,
+            salt: felt252,
+            implementation_authority: ContractAddress,
         ) -> ContractAddress {
             self
                 .deploy(
                     salt,
                     implementation_class_hash,
-                    [starknet::get_contract_address().into()].span(),
+                    [implementation_authority.into(), starknet::get_contract_address().into()]
+                        .span(),
                 )
         }
 
         fn deploy_MC(
-            ref self: ContractState, implementation_class_hash: ClassHash, salt: felt252,
+            ref self: ContractState,
+            implementation_class_hash: ClassHash,
+            salt: felt252,
+            implementation_authority: ContractAddress,
         ) -> ContractAddress {
             self
                 .deploy(
                     salt,
                     implementation_class_hash,
-                    [starknet::get_contract_address().into()].span(),
+                    [implementation_authority.into(), starknet::get_contract_address().into()]
+                        .span(),
                 )
         }
 
         fn deploy_IRS(
-            ref self: ContractState, implementation_class_hash: ClassHash, salt: felt252,
+            ref self: ContractState,
+            implementation_class_hash: ClassHash,
+            salt: felt252,
+            implementation_authority: ContractAddress,
         ) -> ContractAddress {
             self
                 .deploy(
                     salt,
                     implementation_class_hash,
-                    [starknet::get_contract_address().into()].span(),
+                    [implementation_authority.into(), starknet::get_contract_address().into()]
+                        .span(),
                 )
         }
 
@@ -364,6 +397,7 @@ pub mod TREXFactory {
             trusted_issuers_registry: ContractAddress,
             claim_topics_registry: ContractAddress,
             identity_storage: ContractAddress,
+            implementation_authority: ContractAddress,
         ) -> ContractAddress {
             self
                 .deploy(
@@ -371,7 +405,8 @@ pub mod TREXFactory {
                     implementation_class_hash,
                     [
                         trusted_issuers_registry.into(), claim_topics_registry.into(),
-                        identity_storage.into(), starknet::get_contract_address().into(),
+                        identity_storage.into(), implementation_authority.into(),
+                        starknet::get_contract_address().into(),
                     ]
                         .span(),
                 )
@@ -387,6 +422,7 @@ pub mod TREXFactory {
             symbol: ByteArray,
             decimals: u8,
             onchain_id: ContractAddress,
+            implementation_authority: ContractAddress,
         ) -> ContractAddress {
             let mut ctor_calldata: Array<felt252> = array![
                 identity_registry.into(), compliance.into(),
@@ -395,6 +431,8 @@ pub mod TREXFactory {
             symbol.serialize(ref ctor_calldata);
             decimals.serialize(ref ctor_calldata);
             onchain_id.serialize(ref ctor_calldata);
+            implementation_authority.serialize(ref ctor_calldata);
+            starknet::get_contract_address().serialize(ref ctor_calldata);
             self.deploy(salt, implementation_class_hash, ctor_calldata.span())
         }
 
@@ -406,9 +444,10 @@ pub mod TREXFactory {
                 Errors::IMPLEMENTATION_AUTHORITY_ZERO_ADDRESS,
             );
             let implementations = IImplementationAuthorityDispatcher {
-                contract_address: self.implementation_authority.read(),
+                contract_address: implementation_authority,
             }
                 .get_current_implementations();
+
             assert(
                 implementations.ctr_implementation.is_non_zero()
                     && implementations.ir_implementation.is_non_zero()

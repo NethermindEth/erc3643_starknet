@@ -30,7 +30,7 @@ pub impl VersionStorePacking of StorePacking<Version, u32> {
     }
 }
 
-#[derive(Drop, Copy, Serde, starknet::Store)]
+#[derive(Drop, Copy, Serde)]
 pub struct TREXImplementations {
     pub token_implementation: ClassHash,
     pub ctr_implementation: ClassHash,
