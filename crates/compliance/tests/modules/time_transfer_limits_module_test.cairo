@@ -207,7 +207,7 @@ pub mod set_time_transfer_limit {
     }
 
     #[test]
-    #[should_panic(expected: 'LimitsArraySizeExceeded')]
+    #[should_panic(expected: 'Limits array size exceeded')]
     fn test_when_4_limits_then_update_limit_should_panic() {
         let setup = setup();
         let compliance = setup.mc_setup.compliance.contract_address;
@@ -364,7 +364,7 @@ pub mod remove_time_transfer_limit {
     // Describe: when calling via compliance
 
     #[test]
-    #[should_panic(expected: 'LimitTimeNotFound')]
+    #[should_panic(expected: 'Limit time not found')]
     fn test_when_limit_time_missing_should_panic() {
         let setup = setup();
         let compliance = setup.mc_setup.compliance.contract_address;
