@@ -76,6 +76,12 @@ impl LimitIndexZero of Zero<IndexLimit> {
     }
 }
 
+pub mod Errors {
+    pub const LIMIT_TIME_NOT_FOUND: felt252 = 'Limit time not found';
+    pub const IDENTITY_NOT_FOUND: felt252 = 'Identity not found';
+    pub const LIMITS_ARRAY_SIZE_EXCEEDED: felt252 = 'Limits array size exceeded';
+}
+
 #[starknet::contract]
 pub mod TimeTransferLimitsModule {
     use AbstractModuleComponent::InternalTrait as AbstractModuleInternalTrait;
@@ -99,6 +105,7 @@ pub mod TimeTransferLimitsModule {
     };
     use super::{IndexLimit, Limit, TransferCounter};
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
+    use super::Errors;
 
     component!(path: AbstractModuleComponent, storage: abstract_module, event: AbstractModuleEvent);
 
@@ -120,7 +127,7 @@ pub mod TimeTransferLimitsModule {
     struct Storage {
         limit_values: Map<(ContractAddress, u64), IndexLimit>,
         transfer_limits: Map<ContractAddress, StorageArrayLimit>,
-        pub users_counter: Map<(ContractAddress, ContractAddress, u64), TransferCounter>,
+        users_counter: Map<(ContractAddress, ContractAddress, u64), TransferCounter>,
         #[substorage(v0)]
         abstract_module: AbstractModuleComponent::Storage,
         #[substorage(v0)]
@@ -354,7 +361,7 @@ pub mod TimeTransferLimitsModule {
                     .get_token_bound(),
             };
             let identity = token_dispatcher.identity_registry().identity(user_address);
-            assert(identity.is_non_zero(), 'Identity not found');
+            assert(identity.is_non_zero(), Errors::IDENTITY_NOT_FOUND);
             identity
         }
 
@@ -380,9 +387,7 @@ pub mod TimeTransferLimitsModule {
                 }
             };
 
-            if (!limit_found) {
-                panic!("LimitTimeNotFound");
-            }
+            assert(limit_found, Errors::LIMIT_TIME_NOT_FOUND);
 
             transfer_limits_storage_path.delete(index);
             self.limit_values.entry((caller, limit_time)).write(Zero::zero());
@@ -398,9 +403,7 @@ pub mod TimeTransferLimitsModule {
                 .len()
                 .try_into()
                 .expect('Limit count exceeds u8');
-            if (!limit_is_attributed && limit_count >= 4) {
-                panic!("LimitsArraySizeExceeded");
-            }
+            assert(limit_is_attributed || limit_count < 4, Errors::LIMITS_ARRAY_SIZE_EXCEEDED);
             if (!limit_is_attributed // && limit_count < 4
             ) {
                 transfer_limits_storage_path.append().write(limit);
