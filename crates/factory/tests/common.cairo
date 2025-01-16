@@ -1,8 +1,7 @@
-use compliance::{
-    imodular_compliance::{IModularComplianceDispatcher, IModularComplianceDispatcherTrait},
-};
+use compliance::imodular_compliance::IModularComplianceDispatcher;
 use core::num::traits::Zero;
 use core::poseidon::poseidon_hash_span;
+#[allow(unused_imports)]
 use factory::{
     iimplementation_authority::{
         IImplementationAuthorityDispatcher, IImplementationAuthorityDispatcherTrait,
@@ -26,19 +25,15 @@ use openzeppelin_access::accesscontrol::interface::{
     IAccessControlDispatcher, IAccessControlDispatcherTrait,
 };
 use registry::interface::{
-    iclaim_topics_registry::{IClaimTopicsRegistryDispatcher, IClaimTopicsRegistryDispatcherTrait},
+    iclaim_topics_registry::IClaimTopicsRegistryDispatcher,
     iidentity_registry::{IIdentityRegistryDispatcher, IIdentityRegistryDispatcherTrait},
-    iidentity_registry_storage::{
-        IIdentityRegistryStorageDispatcher, IIdentityRegistryStorageDispatcherTrait,
-    },
-    itrusted_issuers_registry::{
-        ITrustedIssuersRegistryDispatcher, ITrustedIssuersRegistryDispatcherTrait,
-    },
+    iidentity_registry_storage::IIdentityRegistryStorageDispatcher,
+    itrusted_issuers_registry::ITrustedIssuersRegistryDispatcher,
 };
 use roles::{
-    AgentRoles, agent::iagent_manager::{IAgentManagerDispatcher, IAgentManagerDispatcherTrait},
+    AgentRoles, agent::iagent_manager::IAgentManagerDispatcher,
     agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait},
-    owner::iowner_manager::{IOwnerManagerDispatcher, IOwnerManagerDispatcherTrait},
+    owner::iowner_manager::IOwnerManagerDispatcher,
 };
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, mock_call,
@@ -61,6 +56,11 @@ pub struct FullSuiteSetup {
     pub owner_manager: IOwnerManagerDispatcher,
     pub token: ITokenDispatcher,
     pub token_identity: IdentityABIDispatcher,
+    pub trusted_issuers_registry: ITrustedIssuersRegistryDispatcher,
+    pub claim_topics_registry: IClaimTopicsRegistryDispatcher,
+    pub identity_registry: IIdentityRegistryDispatcher,
+    pub identity_registry_storage: IIdentityRegistryStorageDispatcher,
+    pub modular_compliance: IModularComplianceDispatcher
 }
 
 #[derive(Drop, Copy)]
@@ -197,7 +197,7 @@ fn setup_full_suite() -> FullSuiteSetup {
     let compliance = token.compliance();
     let token_identity_adddress = token.onchain_id();
     let identity_registry_storage = identity_registry.identity_storage();
-    let trusted_issuer_registry = identity_registry.issuers_registry();
+    let trusted_issuers_registry = identity_registry.issuers_registry();
     let claim_topics_registry = identity_registry.topics_registry();
 
     let (agent_manager_address, _) = agent_manager_contract
@@ -250,6 +250,11 @@ fn setup_full_suite() -> FullSuiteSetup {
         owner_manager,
         token: ITokenDispatcher { contract_address: token_address },
         token_identity: IdentityABIDispatcher { contract_address: token_identity_adddress },
+        trusted_issuers_registry,
+        claim_topics_registry,
+        identity_registry,
+        identity_registry_storage,
+        modular_compliance: compliance
     }
 }
 
