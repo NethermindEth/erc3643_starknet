@@ -54,43 +54,23 @@ pub fn setup() -> Setup {
 }
 
 #[test]
-fn test_should_deploy_the_time_transfer_limits_contract_and_bind_it_to_the_compliance() {
+fn test_should_deploy_time_transfer_limits_contract_and_bind_it_to_the_compliance() {
     let setup = setup();
-    assert(
-        setup.mc_setup.compliance.is_module_bound(setup.module.contract_address),
-        'Compliance module not bound',
-    );
+    assert!(setup.mc_setup.compliance.is_module_bound(setup.module.contract_address));
 }
 
 #[test]
-fn test_should_return_the_name_of_the_module() {
+fn test_should_return_name() {
     let setup = setup();
     let module_dispatcher = IModuleDispatcher { contract_address: setup.module.contract_address };
-    assert(module_dispatcher.name() == "TimeTranserLimitsModule", 'Names does not match!');
+    assert_eq!(module_dispatcher.name(), "TimeTranserLimitsModule");
 }
 
 #[test]
 fn test_should_return_owner() {
     let setup = setup();
     let ownable_dispatcher = IOwnableDispatcher { contract_address: setup.module.contract_address };
-    assert(ownable_dispatcher.owner() == starknet::get_contract_address(), 'Owner does not match');
-}
-
-#[test]
-fn test_is_plug_and_play_should_return_true() {
-    let setup = setup();
-    let module_dispatcher = IModuleDispatcher { contract_address: setup.module.contract_address };
-    assert(module_dispatcher.is_plug_and_play(), 'Is not plug and play');
-}
-
-#[test]
-fn test_can_compliance_bind_should_return_true() {
-    let setup = setup();
-    let module_dispatcher = IModuleDispatcher { contract_address: setup.module.contract_address };
-    assert(
-        module_dispatcher.can_compliance_bind(setup.mc_setup.compliance.contract_address),
-        'Compliance cannot bind',
-    );
+    assert_eq!(ownable_dispatcher.owner(), starknet::get_contract_address());
 }
 
 pub mod transfer_ownership {
@@ -100,26 +80,31 @@ pub mod transfer_ownership {
 
     #[test]
     #[should_panic(expected: 'Caller is not the owner')]
-    fn test_should_panic_when_caller_is_not_the_owner() {
+    fn test_when_caller_is_not_owner_should_panic() {
         let setup = setup();
-
         let ownable_dispatcher = IOwnableDispatcher {
             contract_address: setup.module.contract_address,
         };
+        // Context: when caller is not the owner
         start_cheat_caller_address(ownable_dispatcher.contract_address, setup.mc_setup.alice);
+        // Action: transfer ownership
         ownable_dispatcher.transfer_ownership(setup.mc_setup.bob);
+        // Context end
         stop_cheat_caller_address(ownable_dispatcher.contract_address);
+        // Check: should panic
     }
 
     #[test]
-    fn test_should_transfer_ownership() {
+    fn test_when_caller_is_owner_should_transfer() {
         let setup = setup();
-
         let ownable_dispatcher = IOwnableDispatcher {
             contract_address: setup.module.contract_address,
         };
+        // Context: when caller is the owner
+        // Action: transfer ownership
         ownable_dispatcher.transfer_ownership(setup.mc_setup.bob);
-        assert(ownable_dispatcher.owner() == setup.mc_setup.bob, 'Ownership didnt transferred');
+        // Check: should transfer ownership
+        assert_eq!(ownable_dispatcher.owner(), setup.mc_setup.bob);
     }
 }
 
@@ -130,27 +115,34 @@ pub mod upgrade_to {
 
     #[test]
     #[should_panic(expected: 'Caller is not the owner')]
-    fn test_should_panic_when_not_called_by_owner() {
+    fn test_when_caller_is_not_owner_should_panic() {
         let setup = setup();
         let upgradeable_dispatcher = IUpgradeableDispatcher {
             contract_address: setup.module.contract_address,
         };
         let new_class_hash = get_class_hash(setup.mock_contract);
 
+        // Context: when caller is not the owner
         start_cheat_caller_address(upgradeable_dispatcher.contract_address, setup.mc_setup.alice);
+        // Action: upgrade
         upgradeable_dispatcher.upgrade(new_class_hash);
+        // Context end
         stop_cheat_caller_address(upgradeable_dispatcher.contract_address);
+        // Check: should panic
     }
 
     #[test]
-    fn test_should_upgrade() {
+    fn test_when_caller_is_owner_should_upgrade() {
         let setup = setup();
         let upgradeable_dispatcher = IUpgradeableDispatcher {
             contract_address: setup.module.contract_address,
         };
         let new_class_hash = get_class_hash(setup.mock_contract);
 
+        // Context: when caller is the owner
+        // Action: upgrade
         upgradeable_dispatcher.upgrade(new_class_hash);
+        // Check: should upgrade
         assert(
             get_class_hash(upgradeable_dispatcher.contract_address) == new_class_hash,
             'Contract not upgraded',
@@ -618,7 +610,6 @@ pub mod module_transfer_action {
             TimeTransferLimitsModule, ITimeTransferLimitsModuleDispatcherTrait, Limit,
         },
     };
-    use core::num::traits::Zero;
     use snforge_std::{
         start_cheat_caller_address, stop_cheat_caller_address, start_cheat_block_timestamp_global,
         stop_cheat_block_timestamp_global,
@@ -786,6 +777,23 @@ pub mod module_transfer_action {
         stop_cheat_caller_address(setup.module.contract_address);
         stop_cheat_block_timestamp_global();
     }
+}
+
+#[test]
+fn test_is_plug_and_play_should_return_true() {
+    let setup = setup();
+    let module_dispatcher = IModuleDispatcher { contract_address: setup.module.contract_address };
+    assert(module_dispatcher.is_plug_and_play(), 'Is not plug and play');
+}
+
+#[test]
+fn test_can_compliance_bind_should_return_true() {
+    let setup = setup();
+    let module_dispatcher = IModuleDispatcher { contract_address: setup.module.contract_address };
+    assert(
+        module_dispatcher.can_compliance_bind(setup.mc_setup.compliance.contract_address),
+        'Compliance cannot bind',
+    );
 }
 
 pub mod module_check {
