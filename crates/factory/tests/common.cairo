@@ -103,7 +103,7 @@ pub struct TestClaim {
     pub uri: ByteArray,
 }
 
-fn setup_full_suite() -> FullSuiteSetup {
+pub fn setup_full_suite() -> FullSuiteSetup {
     let accounts = setup_accounts();
     /// Declare Claim Topics Registry
     let claim_topics_registry_contract = declare("ClaimTopicsRegistry").unwrap().contract_class();
