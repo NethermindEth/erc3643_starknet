@@ -6,7 +6,12 @@ fn setup() -> ITrustedIssuersRegistryDispatcher {
         .unwrap()
         .contract_class();
     let (deployed_address, _) = trusted_issuers_registry_contract
-        .deploy(@array![starknet::get_contract_address().into()])
+        .deploy(
+            @array![
+                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
+                starknet::get_contract_address().into(),
+            ],
+        )
         .unwrap();
     ITrustedIssuersRegistryDispatcher { contract_address: deployed_address }
 }

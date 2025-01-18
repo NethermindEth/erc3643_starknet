@@ -14,7 +14,12 @@ fn setup() -> Setup {
         .unwrap()
         .contract_class();
     let (deployed_address, _) = identity_registry_storage_contract
-        .deploy(@array![starknet::get_contract_address().into()])
+        .deploy(
+            @array![
+                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
+                starknet::get_contract_address().into(),
+            ],
+        )
         .unwrap();
 
     Setup {

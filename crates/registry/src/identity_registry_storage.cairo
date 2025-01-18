@@ -34,6 +34,7 @@ pub mod IdentityRegistryStorage {
     struct Storage {
         identities: Map<ContractAddress, Identity>,
         identity_registries: StorageArrayContractAddress,
+        implementation_authority: ContractAddress,
         #[substorage(v0)]
         upgrades: UpgradeableComponent::Storage,
         #[substorage(v0)]
@@ -116,11 +117,7 @@ pub mod IdentityRegistryStorage {
         pub const MAX_IR_EXCEEDED: felt252 = 'Cannot bind more than 300 IR';
         pub const REGISTRY_ALREADY_BOUNDED: felt252 = 'Registry already binded';
         pub const REGISTRY_NOT_BOUNDED: felt252 = 'Registry not bound';
-    }
-
-    #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
-        self.ownable.initializer(owner);
+        pub const CALLER_IS_NOT_IMPLEMENTATION_AUTHORITY: felt252 = 'Caller is not IA';
     }
 
     #[abi(embed_v0)]
@@ -133,12 +130,23 @@ pub mod IdentityRegistryStorage {
         ///
         /// # Requirements
         ///
-        /// - This function can only be called by the owner.
+        /// - This function can only be called by the implementation authority.
         /// - The `ClassHash` should already have been declared.
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
-            self.ownable.assert_only_owner();
+            assert(
+                self.implementation_authority.read() == starknet::get_caller_address(),
+                Errors::CALLER_IS_NOT_IMPLEMENTATION_AUTHORITY,
+            );
             self.upgrades.upgrade(new_class_hash);
         }
+    }
+
+    #[constructor]
+    fn constructor(
+        ref self: ContractState, implementation_authority: ContractAddress, owner: ContractAddress,
+    ) {
+        self.ownable.initializer(owner);
+        self.implementation_authority.write(implementation_authority);
     }
 
     #[abi(embed_v0)]

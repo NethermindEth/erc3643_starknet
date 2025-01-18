@@ -7,6 +7,7 @@ edition = "2024_07"
 starknet.workspace = true
 openzeppelin_access.workspace = true
 openzeppelin_token.workspace = true
+openzeppelin_upgrades.workspace = true
 roles = { path = "../roles"}
 compliance = { path = "../compliance"}
 registry = { path = "../registry"}
@@ -19,6 +20,7 @@ snforge_std.workspace = true
 [[target.starknet-contract]]
 sierra = true
 build-external-contracts = ["onchain_id_starknet::*", "registry::*", "roles::*", "compliance::*", "token::*"]
+allowed-libfuncs-list.name = "all"
 
 [tool]
 fmt.workspace = true

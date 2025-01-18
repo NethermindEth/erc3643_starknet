@@ -46,6 +46,7 @@ pub mod IdentityRegistry {
         token_topics_registry: IClaimTopicsRegistryDispatcher,
         token_issuers_registry: ITrustedIssuersRegistryDispatcher,
         token_identity_storage: IIdentityRegistryStorageDispatcher,
+        implementation_authority: ContractAddress,
         #[substorage(v0)]
         upgrades: UpgradeableComponent::Storage,
         #[substorage(v0)]
@@ -128,6 +129,7 @@ pub mod IdentityRegistry {
         pub const IDENTITY_STORAGE_ADDRESS_ZERO: felt252 = 'Zero Address: IRS';
         pub const OWNER_ADDRESS_ZERO: felt252 = 'Zero Address: Owner';
         pub const ARRAY_LEN_MISMATCH: felt252 = 'Arrays lenghts not equal';
+        pub const CALLER_IS_NOT_IMPLEMENTATION_AUTHORITY: felt252 = 'Caller is not IA';
     }
 
     #[constructor]
@@ -136,6 +138,7 @@ pub mod IdentityRegistry {
         trusted_issuers_registry: ContractAddress,
         claim_topics_registry: ContractAddress,
         identity_storage: ContractAddress,
+        implementation_authority: ContractAddress,
         owner: ContractAddress,
     ) {
         assert(
@@ -156,6 +159,7 @@ pub mod IdentityRegistry {
             .token_identity_storage
             .write(IIdentityRegistryStorageDispatcher { contract_address: identity_storage });
         self.ownable.initializer(owner);
+        self.implementation_authority.write(implementation_authority);
         self.emit(ClaimTopicsRegistrySet { claim_topics_registry });
         self.emit(TrustedIssuersRegistrySet { trusted_issuers_registry });
         self.emit(IdentityStorageSet { identity_storage });
@@ -171,13 +175,17 @@ pub mod IdentityRegistry {
         ///
         /// # Requirements
         ///
-        /// - This function can only be called by the owner.
+        /// - This function can only be called by the implementation authority.
         /// - The `ClassHash` should already have been declared.
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
-            self.ownable.assert_only_owner();
+            assert(
+                self.implementation_authority.read() == starknet::get_caller_address(),
+                Errors::CALLER_IS_NOT_IMPLEMENTATION_AUTHORITY,
+            );
             self.upgrades.upgrade(new_class_hash);
         }
     }
+
     #[abi(embed_v0)]
     impl IdentityRegistryImpl of IIdentityRegistry<ContractState> {
         fn register_identity(
