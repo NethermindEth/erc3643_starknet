@@ -130,6 +130,7 @@ pub mod IdentityRegistry {
         pub const OWNER_ADDRESS_ZERO: felt252 = 'Zero Address: Owner';
         pub const ARRAY_LEN_MISMATCH: felt252 = 'Arrays lenghts not equal';
         pub const CALLER_IS_NOT_IMPLEMENTATION_AUTHORITY: felt252 = 'Caller is not IA';
+        pub const IMPLEMENTATION_AUTHORITY_ADDRESS_ZERO: felt252 = 'Zero Address: IA';
     }
 
     #[constructor]
@@ -146,6 +147,9 @@ pub mod IdentityRegistry {
         );
         assert(claim_topics_registry.is_non_zero(), Errors::CLAIM_TOPICS_REGISTRY_ADDRESS_ZERO);
         assert(identity_storage.is_non_zero(), Errors::IDENTITY_STORAGE_ADDRESS_ZERO);
+        assert(
+            implementation_authority.is_non_zero(), Errors::IMPLEMENTATION_AUTHORITY_ADDRESS_ZERO,
+        );
         assert(owner.is_non_zero(), Errors::OWNER_ADDRESS_ZERO);
         self
             .token_topics_registry
