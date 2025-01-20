@@ -302,7 +302,6 @@ fn setup_onchain_id(accounts: @TestAccounts) -> OnchainIdentitySetup {
     let claim_issuer_pub_key_hash = poseidon_hash_span(
         array![*accounts.claim_issuer.key_pair.public_key].span(),
     );
-    claim_issuer_dispatcher.add_key(claim_issuer_pub_key_hash, 1, 1);
     claim_issuer_dispatcher.add_key(claim_issuer_pub_key_hash, 3, 1);
     stop_cheat_caller_address(claim_issuer_address);
     /// Deploy OID for Alice
@@ -318,7 +317,7 @@ fn setup_onchain_id(accounts: @TestAccounts) -> OnchainIdentitySetup {
     );
     // Register Alice pub key as management key
     alice_identity
-        .add_key(poseidon_hash_span(array![*accounts.alice.key_pair.public_key].span()), 1, 1);
+        .add_key(poseidon_hash_span(array![*accounts.alice.key_pair.public_key].span()), 2, 1);
     // register claim_issuer key as claim key
     alice_identity
         .add_key(
