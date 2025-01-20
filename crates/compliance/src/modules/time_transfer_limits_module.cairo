@@ -261,7 +261,6 @@ pub mod TimeTransferLimitsModule {
         }
 
         fn name(self: @AbstractModuleComponent::ComponentState<ContractState>) -> ByteArray {
-            // TODO: Transfers or Transfer
             "TimeTransferLimitsModule"
         }
     }

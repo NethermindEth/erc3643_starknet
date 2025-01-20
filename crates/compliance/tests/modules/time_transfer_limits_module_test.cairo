@@ -199,7 +199,10 @@ pub mod set_time_transfer_limit {
                     ),
                 ],
             );
-        // TODO(+): also check directly limit?
+        let limits = setup.module.get_time_transfer_limit(compliance);
+        assert_eq!(limits.len(), 1);
+        assert_eq!(*limits[0].limit_time, 1);
+        assert_eq!(*limits[0].limit_value, 50);
     }
 
     #[test]
@@ -252,7 +255,10 @@ pub mod set_time_transfer_limit {
                     ),
                 ],
             );
-        // TODO(+): also check directly limit?
+        let limits = setup.module.get_time_transfer_limit(compliance);
+        assert_eq!(limits.len(), 1);
+        assert_eq!(*limits[0].limit_time, 1);
+        assert_eq!(*limits[0].limit_value, 100);
     }
 }
 
@@ -332,7 +338,12 @@ pub mod batch_set_time_transfer_limit {
                     ),
                 ],
             );
-        // TODO(+): also check directly limits?
+        let limits = setup.module.get_time_transfer_limit(compliance);
+        assert_eq!(limits.len(), 2);
+        assert_eq!(*limits[0].limit_time, 1);
+        assert_eq!(*limits[0].limit_value, 100);
+        assert_eq!(*limits[1].limit_time, 2);
+        assert_eq!(*limits[1].limit_value, 200);
     }
 }
 
