@@ -12,14 +12,14 @@ pub trait ITimeTransferLimitsModule<TContractState> {
 
 #[derive(Drop, Copy, Serde, starknet::Store)]
 pub struct TransferCounter {
-    value: u256,
-    timer: u64,
+    pub value: u256,
+    pub timer: u64,
 }
 
 #[derive(Drop, Copy, Serde, starknet::Store)]
 pub struct Limit {
-    limit_time: u64,
-    limit_value: u256,
+    pub limit_value: u256,
+    pub limit_time: u64,
 }
 
 impl LimitZero of core::num::traits::Zero<Limit> {
@@ -76,6 +76,12 @@ impl LimitIndexZero of Zero<IndexLimit> {
     }
 }
 
+pub mod Errors {
+    pub const LIMIT_TIME_NOT_FOUND: felt252 = 'Limit time not found';
+    pub const IDENTITY_NOT_FOUND: felt252 = 'Identity not found';
+    pub const LIMITS_ARRAY_SIZE_EXCEEDED: felt252 = 'Limits array size exceeded';
+}
+
 #[starknet::contract]
 pub mod TimeTransferLimitsModule {
     use AbstractModuleComponent::InternalTrait as AbstractModuleInternalTrait;
@@ -97,6 +103,7 @@ pub mod TimeTransferLimitsModule {
     use storage::storage_array::{
         LimitVecToLimitArray, MutableStorageArrayTrait, StorageArrayLimit, StorageArrayTrait,
     };
+    use super::Errors;
     use super::{IndexLimit, Limit, TransferCounter};
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
 
@@ -168,18 +175,6 @@ pub mod TimeTransferLimitsModule {
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress) {
         self.ownable.initializer(owner);
-    }
-
-    pub mod Errors {
-        use starknet::ContractAddress;
-
-        pub fn LimitsArraySizeExceeded(compliance: ContractAddress, array_size: u64) {
-            panic!("Limits array size {} exceeded for compliance {:x}", array_size, compliance);
-        }
-
-        pub fn LimitTimeNotFound(compliance: ContractAddress, limit_time: u64) {
-            panic!("Limit time {} not found for compliance {:x}", limit_time, compliance);
-        }
     }
 
     impl AbstractFunctionsImpl of AbstractFunctionsTrait<ContractState> {
@@ -266,7 +261,7 @@ pub mod TimeTransferLimitsModule {
         }
 
         fn name(self: @AbstractModuleComponent::ComponentState<ContractState>) -> ByteArray {
-            "TimeTransfersLimitsModule"
+            "TimeTransferLimitsModule"
         }
     }
 
@@ -365,7 +360,7 @@ pub mod TimeTransferLimitsModule {
                     .get_token_bound(),
             };
             let identity = token_dispatcher.identity_registry().identity(user_address);
-            assert(identity.is_non_zero(), 'Identity not found');
+            assert(identity.is_non_zero(), Errors::IDENTITY_NOT_FOUND);
             identity
         }
 
@@ -391,9 +386,7 @@ pub mod TimeTransferLimitsModule {
                 }
             };
 
-            if (!limit_found) {
-                Errors::LimitTimeNotFound(caller, limit_time);
-            }
+            assert(limit_found, Errors::LIMIT_TIME_NOT_FOUND);
 
             transfer_limits_storage_path.delete(index);
             self.limit_values.entry((caller, limit_time)).write(Zero::zero());
@@ -409,9 +402,7 @@ pub mod TimeTransferLimitsModule {
                 .len()
                 .try_into()
                 .expect('Limit count exceeds u8');
-            if (!limit_is_attributed && limit_count >= 4) {
-                Errors::LimitsArraySizeExceeded(caller, limit_count.into());
-            }
+            assert(limit_is_attributed || limit_count < 4, Errors::LIMITS_ARRAY_SIZE_EXCEEDED);
             if (!limit_is_attributed // && limit_count < 4
             ) {
                 transfer_limits_storage_path.append().write(limit);
