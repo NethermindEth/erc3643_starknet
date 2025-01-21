@@ -444,8 +444,12 @@ pub mod recover_contract_ownership {
     use core::num::traits::Zero;
     use crate::common::setup_full_suite;
     use factory::itrex_factory::{ClaimDetails, ITREXFactoryDispatcherTrait, TokenDetails};
-    use openzeppelin_access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
-    use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
+    use openzeppelin_access::ownable::{
+        OwnableComponent, interface::{IOwnableDispatcher, IOwnableDispatcherTrait},
+    };
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
 
     #[test]
     #[should_panic(expected: 'Caller is not the owner')]
@@ -489,11 +493,26 @@ pub mod recover_contract_ownership {
         let token_address = setup.trex_factory.get_token('salt');
         let alice_address = setup.accounts.alice.account.contract_address;
 
+        let mut spy = spy_events();
         setup.trex_factory.recover_contract_ownership(token_address, alice_address);
 
         assert(
             IOwnableDispatcher { contract_address: token_address }.owner() == alice_address,
             'Ownership didnt transferred',
         );
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        token_address,
+                        OwnableComponent::Event::OwnershipTransferred(
+                            OwnableComponent::OwnershipTransferred {
+                                previous_owner: setup.trex_factory.contract_address,
+                                new_owner: alice_address,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
