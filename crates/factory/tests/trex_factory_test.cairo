@@ -114,7 +114,7 @@ pub mod deploy_trex_suite {
         };
 
         let claim_details = ClaimDetails {
-            claim_topics: ['CLAIM_TOPIC'].span(),
+            claim_topics: [].span(),
             issuers: [
                 Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(), Zero::zero(),
             ]
