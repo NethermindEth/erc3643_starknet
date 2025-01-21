@@ -107,8 +107,8 @@ pub mod deploy_trex_suite {
             decimals: 8,
             irs: Zero::zero(),
             onchain_id: Zero::zero(),
-            ir_agents: [setup.accounts.token_agent.account.contract_address].span(),
-            token_agents: [setup.accounts.token_agent.account.contract_address].span(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
             compliance_modules: [].span(),
             compliance_settings: [].span(),
         };
