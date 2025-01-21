@@ -474,16 +474,16 @@ pub mod recover_contract_ownership {
             decimals: 8,
             irs: Zero::zero(),
             onchain_id: Zero::zero(),
-            ir_agents: [setup.accounts.alice.account.contract_address].span(),
-            token_agents: [setup.accounts.bob.account.contract_address].span(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
             compliance_modules: [].span(),
             compliance_settings: [].span(),
         };
 
         let claim_details = ClaimDetails {
-            claim_topics: ['DEMO_TOPIC'].span(),
-            issuers: [setup.onchain_id.claim_issuer.contract_address].span(),
-            issuer_claims: [['DEMO_TOPIC'].span()].span(),
+            claim_topics: [].span(),
+            issuers: [].span(),
+            issuer_claims: [].span(),
         };
 
         setup.trex_factory.deploy_TREX_suite('salt', token_details, claim_details);
