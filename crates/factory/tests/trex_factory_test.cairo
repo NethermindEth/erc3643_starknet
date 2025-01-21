@@ -1,9 +1,8 @@
 pub mod deploy_trex_suite {
     use core::num::traits::Zero;
-    use crate::common::setup_full_suite;
     use factory::{
         itrex_factory::{ClaimDetails, ComplianceSetting, ITREXFactoryDispatcherTrait, TokenDetails},
-        trex_factory::TREXFactory,
+        tests_common::setup_full_suite, trex_factory::TREXFactory,
     };
     use onchain_id_starknet::factory::id_factory::IdFactory;
     use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
@@ -334,8 +333,10 @@ pub mod deploy_trex_suite {
 
 pub mod set_id_factory {
     use core::num::traits::Zero;
-    use crate::common::setup_full_suite;
-    use factory::{itrex_factory::ITREXFactoryDispatcherTrait, trex_factory::TREXFactory};
+    use factory::{
+        itrex_factory::ITREXFactoryDispatcherTrait, tests_common::setup_full_suite,
+        trex_factory::TREXFactory,
+    };
     use snforge_std::{
         EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
     };
@@ -384,8 +385,10 @@ pub mod set_id_factory {
 
 pub mod set_implementation_authority {
     use core::num::traits::Zero;
-    use crate::common::setup_full_suite;
-    use factory::{itrex_factory::ITREXFactoryDispatcherTrait, trex_factory::TREXFactory};
+    use factory::{
+        itrex_factory::ITREXFactoryDispatcherTrait, tests_common::setup_full_suite,
+        trex_factory::TREXFactory,
+    };
     use snforge_std::{
         EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
     };
@@ -442,8 +445,10 @@ pub mod set_implementation_authority {
 
 pub mod recover_contract_ownership {
     use core::num::traits::Zero;
-    use crate::common::setup_full_suite;
-    use factory::itrex_factory::{ClaimDetails, ITREXFactoryDispatcherTrait, TokenDetails};
+    use factory::{
+        itrex_factory::{ClaimDetails, ITREXFactoryDispatcherTrait, TokenDetails},
+        tests_common::setup_full_suite,
+    };
     use openzeppelin_access::ownable::{
         OwnableComponent, interface::{IOwnableDispatcher, IOwnableDispatcherTrait},
     };

@@ -488,8 +488,3 @@ pub fn setup_accounts() -> TestAccounts {
         token_admin: generate_account(),
     }
 }
-
-#[test]
-fn test_setup() {
-    setup_full_suite();
-}
