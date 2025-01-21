@@ -481,9 +481,7 @@ pub mod recover_contract_ownership {
         };
 
         let claim_details = ClaimDetails {
-            claim_topics: [].span(),
-            issuers: [].span(),
-            issuer_claims: [].span(),
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
         };
 
         setup.trex_factory.deploy_TREX_suite('salt', token_details, claim_details);
