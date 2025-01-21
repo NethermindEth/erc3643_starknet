@@ -80,15 +80,15 @@ pub mod deploy_trex_suite {
             decimals: 8,
             irs: Zero::zero(),
             onchain_id: Zero::zero(),
-            ir_agents: [setup.accounts.token_agent.account.contract_address].span(),
-            token_agents: [setup.accounts.token_agent.account.contract_address].span(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
             compliance_modules: [].span(),
             compliance_settings: [].span(),
         };
 
         let claim_details = ClaimDetails {
             claim_topics: ['CLAIM_TOPIC'].span(),
-            issuers: [setup.onchain_id.claim_issuer.contract_address].span(),
+            issuers: [Zero::zero()].span(),
             issuer_claims: [].span(),
         };
 
