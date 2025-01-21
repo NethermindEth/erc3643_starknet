@@ -13,8 +13,6 @@ compliance = { path = "../compliance"}
 registry = { path = "../registry"}
 onchain_id_starknet.workspace = true
 token = { path = "../token"}
-
-[dev-dependencies]
 snforge_std.workspace = true
 
 [[target.starknet-contract]]
