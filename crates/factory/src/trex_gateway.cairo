@@ -309,11 +309,13 @@ pub mod TREXGateway {
                 let deployment_fee = self.deployment_fee.read();
                 if deployment_fee.fee.is_non_zero() {
                     fee_applied = self.calculate_fee(caller);
-                    assert(
-                        IERC20Dispatcher { contract_address: deployment_fee.fee_token }
-                            .transfer_from(caller, deployment_fee.fee_collector, fee_applied),
-                        'ERC20: Transfer from failed',
-                    );
+                    if fee_applied.is_non_zero() {
+                        assert(
+                            IERC20Dispatcher { contract_address: deployment_fee.fee_token }
+                                .transfer_from(caller, deployment_fee.fee_collector, fee_applied),
+                            'ERC20: Transfer from failed',
+                        );
+                    }
                 }
             }
 
@@ -361,11 +363,13 @@ pub mod TREXGateway {
                 if deployment_fee.fee.is_non_zero() {
                     fee_applied = self.calculate_fee(caller);
                     let fee_total = fee_applied * token_details.len().into();
-                    assert(
-                        IERC20Dispatcher { contract_address: deployment_fee.fee_token }
-                            .transfer_from(caller, deployment_fee.fee_collector, fee_total),
-                        'ERC20: Transfer from failed',
-                    );
+                    if fee_total.is_non_zero() {
+                        assert(
+                            IERC20Dispatcher { contract_address: deployment_fee.fee_token }
+                                .transfer_from(caller, deployment_fee.fee_collector, fee_total),
+                            'ERC20: Transfer from failed',
+                        );
+                    }
                 }
             }
 
