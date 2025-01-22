@@ -64,7 +64,8 @@ pub mod deploy_trex_suite {
             issuers: [setup.onchain_id.claim_issuer.contract_address].span(),
             issuer_claims: [['CLAIM_TOPIC'].span()].span(),
         };
-
+        // Using `MY_SALT` second time should panic. It has been used first time in
+        // `setup_full_suite`.
         setup.trex_factory.deploy_TREX_suite('MY_SALT', token_details, claim_details);
     }
 
