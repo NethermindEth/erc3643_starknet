@@ -469,7 +469,7 @@ pub mod batch_add_deployer {
     #[test]
     #[should_panic(expected: 'Batch max length exceeded')]
     fn test_should_panic_when_called_by_owner_when_batch_size_exceeds_max() {
-        let (setup, gateway) = setup_gateway(false);
+        let (_, gateway) = setup_gateway(false);
 
         let mut deployers = array![];
         for i in 100..601_u128 {
@@ -715,7 +715,7 @@ pub mod batch_remove_deployer {
     #[test]
     #[should_panic(expected: 'Batch max length exceeded')]
     fn test_should_panic_when_when_called_by_owner_when_batch_size_exceeds_max() {
-        let (setup, gateway) = setup_gateway(false);
+        let (_, gateway) = setup_gateway(false);
 
         let mut deployers = array![];
         for i in 100..601_u128 {
@@ -1026,101 +1026,1475 @@ pub mod batch_apply_fee_discount {
 }
 
 pub mod deploy_trex_suite {
+    use core::{num::traits::Zero, poseidon::poseidon_hash_span};
+    use factory::{
+        itrex_factory::{ClaimDetails, ITREXFactoryDispatcherTrait, TokenDetails},
+        itrex_gateway::ITREXGatewayDispatcherTrait, trex_factory::TREXFactory,
+        trex_gateway::TREXGateway,
+    };
+    use mocks::mock_erc20::{IMintableDispatcher, IMintableDispatcherTrait};
+    use openzeppelin_token::erc20::{
+        ERC20Component, interface::{IERC20Dispatcher, IERC20DispatcherTrait},
+    };
+    use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
+    use snforge_std::{
+        ContractClassTrait, DeclareResultTrait, EventSpyAssertionsTrait, declare, spy_events,
+        start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use super::setup_gateway;
+    use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
+
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Public deployment not allowed')]
     fn test_should_panic_when_caller_not_deployer_when_public_deployments_disabled() {
-        panic!("");
+        let (_, gateway) = setup_gateway(false);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+
+        let token_details = TokenDetails {
+            owner: not_deployer,
+            name: "Token Name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: Zero::zero(),
+            onchain_id: Zero::zero(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
+            compliance_modules: [].span(),
+            compliance_settings: [].span(),
+        };
+
+        let claim_details = ClaimDetails {
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+        };
+
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.deploy_TREX_suite(token_details, claim_details);
+        stop_cheat_caller_address(gateway.contract_address);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Public cannot deploy on behalf')]
     fn test_should_panic_when_caller_not_deployer_when_public_deployments_are_enabled_when_try_to_deploy_on_behalf() {
-        panic!("");
+        let (setup, gateway) = setup_gateway(true);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+
+        let token_details = TokenDetails {
+            owner: setup.accounts.bob.account.contract_address,
+            name: "Token Name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: Zero::zero(),
+            onchain_id: Zero::zero(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
+            compliance_modules: [].span(),
+            compliance_settings: [].span(),
+        };
+
+        let claim_details = ClaimDetails {
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+        };
+
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.deploy_TREX_suite(token_details, claim_details);
+        stop_cheat_caller_address(gateway.contract_address);
     }
 
     #[test]
     fn test_should_deploy_a_token_for_free_when_public_deployments_are_enabled_when_deployment_fees_are_not_activated() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(true);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+
+        let token_details = TokenDetails {
+            owner: not_deployer,
+            name: "Token Name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: Zero::zero(),
+            onchain_id: Zero::zero(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
+            compliance_modules: [].span(),
+            compliance_settings: [].span(),
+        };
+
+        let claim_details = ClaimDetails {
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.deploy_TREX_suite(token_details.clone(), claim_details);
+        stop_cheat_caller_address(gateway.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        gateway.contract_address,
+                        TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                            TREXGateway::GatewaySuiteDeploymentProcessed {
+                                requester: not_deployer,
+                                intended_owner: not_deployer,
+                                fee_applied: 0,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        let mut salt_preimage: Array<felt252> = array![not_deployer.into()];
+        token_details.clone().name.serialize(ref salt_preimage);
+        let salt = poseidon_hash_span(salt_preimage.span());
+
+        let token_address = setup.trex_factory.get_token(salt);
+        let token = ITokenDispatcher { contract_address: token_address };
+        let identity_registry = token.identity_registry();
+        let compliance = token.compliance();
+        let identity_registry_storage = identity_registry.identity_storage();
+        let trusted_issuers_registry = identity_registry.issuers_registry();
+        let claim_topics_registry = identity_registry.topics_registry();
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.trex_factory.contract_address,
+                        TREXFactory::Event::TREXSuiteDeployed(
+                            TREXFactory::TREXSuiteDeployed {
+                                token: token_address,
+                                ir: identity_registry.contract_address,
+                                irs: identity_registry_storage.contract_address,
+                                tir: trusted_issuers_registry.contract_address,
+                                ctr: claim_topics_registry.contract_address,
+                                mc: compliance.contract_address,
+                                salt,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 
     #[test]
     fn test_should_deploy_a_token_for_full_fee_when_public_deployments_are_enabled_when_deployment_fees_are_activated_when_caller_has_no_discount() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(true);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+        let fee_collector = starknet::contract_address_const::<'FEE_TOKEN'>();
+        let (fee_token_address, _) = declare("MockERC20")
+            .unwrap()
+            .contract_class()
+            .deploy(@array![starknet::get_contract_address().into()])
+            .unwrap();
+        let fee_token = IERC20Dispatcher { contract_address: fee_token_address };
+        IMintableDispatcher { contract_address: fee_token_address }.mint(not_deployer, 100_000);
+        gateway.set_deployment_fee(20_000, fee_token_address, fee_collector);
+        gateway.enable_deployment_fee(true);
+        start_cheat_caller_address(fee_token_address, not_deployer);
+        fee_token.approve(gateway.contract_address, 20_000);
+        stop_cheat_caller_address(fee_token_address);
+
+        let token_details = TokenDetails {
+            owner: not_deployer,
+            name: "Token Name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: Zero::zero(),
+            onchain_id: Zero::zero(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
+            compliance_modules: [].span(),
+            compliance_settings: [].span(),
+        };
+
+        let claim_details = ClaimDetails {
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.deploy_TREX_suite(token_details.clone(), claim_details);
+        stop_cheat_caller_address(gateway.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        gateway.contract_address,
+                        TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                            TREXGateway::GatewaySuiteDeploymentProcessed {
+                                requester: not_deployer,
+                                intended_owner: not_deployer,
+                                fee_applied: 20_000,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        let mut salt_preimage: Array<felt252> = array![not_deployer.into()];
+        token_details.clone().name.serialize(ref salt_preimage);
+        let salt = poseidon_hash_span(salt_preimage.span());
+
+        let token_address = setup.trex_factory.get_token(salt);
+        let token = ITokenDispatcher { contract_address: token_address };
+        let identity_registry = token.identity_registry();
+        let compliance = token.compliance();
+        let identity_registry_storage = identity_registry.identity_storage();
+        let trusted_issuers_registry = identity_registry.issuers_registry();
+        let claim_topics_registry = identity_registry.topics_registry();
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.trex_factory.contract_address,
+                        TREXFactory::Event::TREXSuiteDeployed(
+                            TREXFactory::TREXSuiteDeployed {
+                                token: token_address,
+                                ir: identity_registry.contract_address,
+                                irs: identity_registry_storage.contract_address,
+                                tir: trusted_issuers_registry.contract_address,
+                                ctr: claim_topics_registry.contract_address,
+                                mc: compliance.contract_address,
+                                salt,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        /// Check token transfer
+        assert(fee_token.balance_of(fee_collector) == 20_000, 'Fee not transferred');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        fee_token.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer {
+                                from: not_deployer, to: fee_collector, value: 20_000,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 
     #[test]
     fn test_should_deploy_a_token_for_half_fee_when_public_deployments_are_enabled_when_deployment_fees_are_activated_when_caller_has_50_percent_discount() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(true);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+        let fee_collector = starknet::contract_address_const::<'FEE_TOKEN'>();
+        let (fee_token_address, _) = declare("MockERC20")
+            .unwrap()
+            .contract_class()
+            .deploy(@array![starknet::get_contract_address().into()])
+            .unwrap();
+        let fee_token = IERC20Dispatcher { contract_address: fee_token_address };
+        IMintableDispatcher { contract_address: fee_token_address }.mint(not_deployer, 100_000);
+        gateway.set_deployment_fee(20_000, fee_token_address, fee_collector);
+        gateway.enable_deployment_fee(true);
+        gateway.apply_fee_discount(not_deployer, 5_000);
+        start_cheat_caller_address(fee_token_address, not_deployer);
+        fee_token.approve(gateway.contract_address, 20_000);
+        stop_cheat_caller_address(fee_token_address);
+
+        let token_details = TokenDetails {
+            owner: not_deployer,
+            name: "Token Name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: Zero::zero(),
+            onchain_id: Zero::zero(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
+            compliance_modules: [].span(),
+            compliance_settings: [].span(),
+        };
+
+        let claim_details = ClaimDetails {
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.deploy_TREX_suite(token_details.clone(), claim_details);
+        stop_cheat_caller_address(gateway.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        gateway.contract_address,
+                        TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                            TREXGateway::GatewaySuiteDeploymentProcessed {
+                                requester: not_deployer,
+                                intended_owner: not_deployer,
+                                fee_applied: 10_000,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        let mut salt_preimage: Array<felt252> = array![not_deployer.into()];
+        token_details.clone().name.serialize(ref salt_preimage);
+        let salt = poseidon_hash_span(salt_preimage.span());
+
+        let token_address = setup.trex_factory.get_token(salt);
+        let token = ITokenDispatcher { contract_address: token_address };
+        let identity_registry = token.identity_registry();
+        let compliance = token.compliance();
+        let identity_registry_storage = identity_registry.identity_storage();
+        let trusted_issuers_registry = identity_registry.issuers_registry();
+        let claim_topics_registry = identity_registry.topics_registry();
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.trex_factory.contract_address,
+                        TREXFactory::Event::TREXSuiteDeployed(
+                            TREXFactory::TREXSuiteDeployed {
+                                token: token_address,
+                                ir: identity_registry.contract_address,
+                                irs: identity_registry_storage.contract_address,
+                                tir: trusted_issuers_registry.contract_address,
+                                ctr: claim_topics_registry.contract_address,
+                                mc: compliance.contract_address,
+                                salt,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        /// Check token transfer
+        assert(fee_token.balance_of(fee_collector) == 10_000, 'Fee not transferred');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        fee_token.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer {
+                                from: not_deployer, to: fee_collector, value: 10_000,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 
     #[test]
     fn test_should_deploy_when_called_by_deployer_when_public_deployments_disabled() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(false);
+        let another_deployer = starknet::contract_address_const::<'ANOTHER_DEPLOYER'>();
+        gateway.add_deployer(another_deployer);
+
+        let token_details = TokenDetails {
+            owner: another_deployer,
+            name: "Token Name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: Zero::zero(),
+            onchain_id: Zero::zero(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
+            compliance_modules: [].span(),
+            compliance_settings: [].span(),
+        };
+
+        let claim_details = ClaimDetails {
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, another_deployer);
+        gateway.deploy_TREX_suite(token_details.clone(), claim_details);
+        stop_cheat_caller_address(gateway.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        gateway.contract_address,
+                        TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                            TREXGateway::GatewaySuiteDeploymentProcessed {
+                                requester: another_deployer,
+                                intended_owner: another_deployer,
+                                fee_applied: 0,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        let mut salt_preimage: Array<felt252> = array![another_deployer.into()];
+        token_details.clone().name.serialize(ref salt_preimage);
+        let salt = poseidon_hash_span(salt_preimage.span());
+
+        let token_address = setup.trex_factory.get_token(salt);
+        let token = ITokenDispatcher { contract_address: token_address };
+        let identity_registry = token.identity_registry();
+        let compliance = token.compliance();
+        let identity_registry_storage = identity_registry.identity_storage();
+        let trusted_issuers_registry = identity_registry.issuers_registry();
+        let claim_topics_registry = identity_registry.topics_registry();
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.trex_factory.contract_address,
+                        TREXFactory::Event::TREXSuiteDeployed(
+                            TREXFactory::TREXSuiteDeployed {
+                                token: token_address,
+                                ir: identity_registry.contract_address,
+                                irs: identity_registry_storage.contract_address,
+                                tir: trusted_issuers_registry.contract_address,
+                                ctr: claim_topics_registry.contract_address,
+                                mc: compliance.contract_address,
+                                salt,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 
     #[test]
     fn test_should_deploy_when_called_by_deployer_when_try_to_deploy_on_behalf() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(false);
+        let another_deployer = starknet::contract_address_const::<'ANOTHER_DEPLOYER'>();
+        gateway.add_deployer(another_deployer);
+
+        let token_owner = setup.accounts.bob.account.contract_address;
+        let token_details = TokenDetails {
+            owner: token_owner,
+            name: "Token Name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: Zero::zero(),
+            onchain_id: Zero::zero(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
+            compliance_modules: [].span(),
+            compliance_settings: [].span(),
+        };
+
+        let claim_details = ClaimDetails {
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, another_deployer);
+        gateway.deploy_TREX_suite(token_details.clone(), claim_details);
+        stop_cheat_caller_address(gateway.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        gateway.contract_address,
+                        TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                            TREXGateway::GatewaySuiteDeploymentProcessed {
+                                requester: another_deployer,
+                                intended_owner: token_owner,
+                                fee_applied: 0,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        let mut salt_preimage: Array<felt252> = array![token_owner.into()];
+        token_details.clone().name.serialize(ref salt_preimage);
+        let salt = poseidon_hash_span(salt_preimage.span());
+
+        let token_address = setup.trex_factory.get_token(salt);
+        let token = ITokenDispatcher { contract_address: token_address };
+        let identity_registry = token.identity_registry();
+        let compliance = token.compliance();
+        let identity_registry_storage = identity_registry.identity_storage();
+        let trusted_issuers_registry = identity_registry.issuers_registry();
+        let claim_topics_registry = identity_registry.topics_registry();
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.trex_factory.contract_address,
+                        TREXFactory::Event::TREXSuiteDeployed(
+                            TREXFactory::TREXSuiteDeployed {
+                                token: token_address,
+                                ir: identity_registry.contract_address,
+                                irs: identity_registry_storage.contract_address,
+                                tir: trusted_issuers_registry.contract_address,
+                                ctr: claim_topics_registry.contract_address,
+                                mc: compliance.contract_address,
+                                salt,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 
     #[test]
     fn test_should_deploy_a_token_for_full_fee_when_called_by_deployer_when_deployment_fees_are_activated_when_caller_has_no_discount() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(false);
+        let another_deployer = starknet::contract_address_const::<'ANOTHER_DEPLOYER'>();
+        gateway.add_deployer(another_deployer);
+        let fee_collector = starknet::contract_address_const::<'FEE_TOKEN'>();
+        let (fee_token_address, _) = declare("MockERC20")
+            .unwrap()
+            .contract_class()
+            .deploy(@array![starknet::get_contract_address().into()])
+            .unwrap();
+        let fee_token = IERC20Dispatcher { contract_address: fee_token_address };
+        IMintableDispatcher { contract_address: fee_token_address }.mint(another_deployer, 100_000);
+        gateway.set_deployment_fee(20_000, fee_token_address, fee_collector);
+        gateway.enable_deployment_fee(true);
+        start_cheat_caller_address(fee_token_address, another_deployer);
+        fee_token.approve(gateway.contract_address, 20_000);
+        stop_cheat_caller_address(fee_token_address);
+
+        let token_details = TokenDetails {
+            owner: another_deployer,
+            name: "Token Name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: Zero::zero(),
+            onchain_id: Zero::zero(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
+            compliance_modules: [].span(),
+            compliance_settings: [].span(),
+        };
+
+        let claim_details = ClaimDetails {
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, another_deployer);
+        gateway.deploy_TREX_suite(token_details.clone(), claim_details);
+        stop_cheat_caller_address(gateway.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        gateway.contract_address,
+                        TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                            TREXGateway::GatewaySuiteDeploymentProcessed {
+                                requester: another_deployer,
+                                intended_owner: another_deployer,
+                                fee_applied: 20_000,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        let mut salt_preimage: Array<felt252> = array![another_deployer.into()];
+        token_details.clone().name.serialize(ref salt_preimage);
+        let salt = poseidon_hash_span(salt_preimage.span());
+
+        let token_address = setup.trex_factory.get_token(salt);
+        let token = ITokenDispatcher { contract_address: token_address };
+        let identity_registry = token.identity_registry();
+        let compliance = token.compliance();
+        let identity_registry_storage = identity_registry.identity_storage();
+        let trusted_issuers_registry = identity_registry.issuers_registry();
+        let claim_topics_registry = identity_registry.topics_registry();
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.trex_factory.contract_address,
+                        TREXFactory::Event::TREXSuiteDeployed(
+                            TREXFactory::TREXSuiteDeployed {
+                                token: token_address,
+                                ir: identity_registry.contract_address,
+                                irs: identity_registry_storage.contract_address,
+                                tir: trusted_issuers_registry.contract_address,
+                                ctr: claim_topics_registry.contract_address,
+                                mc: compliance.contract_address,
+                                salt,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        /// Check token transfer
+        assert(fee_token.balance_of(fee_collector) == 20_000, 'Fee not transferred');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        fee_token.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer {
+                                from: another_deployer, to: fee_collector, value: 20_000,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 
     #[test]
     fn test_should_deploy_a_token_for_half_fee_when_called_by_deployer_when_deployment_fees_are_activated_when_caller_has_50_percent_discount() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(false);
+        let another_deployer = starknet::contract_address_const::<'ANOTHER_DEPLOYER'>();
+        gateway.add_deployer(another_deployer);
+        let fee_collector = starknet::contract_address_const::<'FEE_TOKEN'>();
+        let (fee_token_address, _) = declare("MockERC20")
+            .unwrap()
+            .contract_class()
+            .deploy(@array![starknet::get_contract_address().into()])
+            .unwrap();
+        let fee_token = IERC20Dispatcher { contract_address: fee_token_address };
+        IMintableDispatcher { contract_address: fee_token_address }.mint(another_deployer, 100_000);
+        gateway.set_deployment_fee(20_000, fee_token_address, fee_collector);
+        gateway.enable_deployment_fee(true);
+        gateway.apply_fee_discount(another_deployer, 5_000);
+        start_cheat_caller_address(fee_token_address, another_deployer);
+        fee_token.approve(gateway.contract_address, 20_000);
+        stop_cheat_caller_address(fee_token_address);
+
+        let token_details = TokenDetails {
+            owner: another_deployer,
+            name: "Token Name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: Zero::zero(),
+            onchain_id: Zero::zero(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
+            compliance_modules: [].span(),
+            compliance_settings: [].span(),
+        };
+
+        let claim_details = ClaimDetails {
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, another_deployer);
+        gateway.deploy_TREX_suite(token_details.clone(), claim_details);
+        stop_cheat_caller_address(gateway.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        gateway.contract_address,
+                        TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                            TREXGateway::GatewaySuiteDeploymentProcessed {
+                                requester: another_deployer,
+                                intended_owner: another_deployer,
+                                fee_applied: 10_000,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        let mut salt_preimage: Array<felt252> = array![another_deployer.into()];
+        token_details.clone().name.serialize(ref salt_preimage);
+        let salt = poseidon_hash_span(salt_preimage.span());
+
+        let token_address = setup.trex_factory.get_token(salt);
+        let token = ITokenDispatcher { contract_address: token_address };
+        let identity_registry = token.identity_registry();
+        let compliance = token.compliance();
+        let identity_registry_storage = identity_registry.identity_storage();
+        let trusted_issuers_registry = identity_registry.issuers_registry();
+        let claim_topics_registry = identity_registry.topics_registry();
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.trex_factory.contract_address,
+                        TREXFactory::Event::TREXSuiteDeployed(
+                            TREXFactory::TREXSuiteDeployed {
+                                token: token_address,
+                                ir: identity_registry.contract_address,
+                                irs: identity_registry_storage.contract_address,
+                                tir: trusted_issuers_registry.contract_address,
+                                ctr: claim_topics_registry.contract_address,
+                                mc: compliance.contract_address,
+                                salt,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        /// Check token transfer
+        assert(fee_token.balance_of(fee_collector) == 10_000, 'Fee not transferred');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        fee_token.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer {
+                                from: another_deployer, to: fee_collector, value: 10_000,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 
     #[test]
     fn test_should_deploy_a_token_for_free_when_called_by_deployer_when_deployment_fees_are_activated_when_caller_has_100_percent_discount() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(false);
+        let another_deployer = starknet::contract_address_const::<'ANOTHER_DEPLOYER'>();
+        gateway.add_deployer(another_deployer);
+        let fee_collector = starknet::contract_address_const::<'FEE_TOKEN'>();
+        let (fee_token_address, _) = declare("MockERC20")
+            .unwrap()
+            .contract_class()
+            .deploy(@array![starknet::get_contract_address().into()])
+            .unwrap();
+        let fee_token = IERC20Dispatcher { contract_address: fee_token_address };
+        IMintableDispatcher { contract_address: fee_token_address }.mint(another_deployer, 100_000);
+        gateway.set_deployment_fee(20_000, fee_token_address, fee_collector);
+        gateway.enable_deployment_fee(true);
+        gateway.apply_fee_discount(another_deployer, 10_000);
+        start_cheat_caller_address(fee_token_address, another_deployer);
+        fee_token.approve(gateway.contract_address, 20_000);
+        stop_cheat_caller_address(fee_token_address);
+
+        let token_details = TokenDetails {
+            owner: another_deployer,
+            name: "Token Name",
+            symbol: "SYM",
+            decimals: 8,
+            irs: Zero::zero(),
+            onchain_id: Zero::zero(),
+            ir_agents: [].span(),
+            token_agents: [].span(),
+            compliance_modules: [].span(),
+            compliance_settings: [].span(),
+        };
+
+        let claim_details = ClaimDetails {
+            claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, another_deployer);
+        gateway.deploy_TREX_suite(token_details.clone(), claim_details);
+        stop_cheat_caller_address(gateway.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        gateway.contract_address,
+                        TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                            TREXGateway::GatewaySuiteDeploymentProcessed {
+                                requester: another_deployer,
+                                intended_owner: another_deployer,
+                                fee_applied: 0,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        let mut salt_preimage: Array<felt252> = array![another_deployer.into()];
+        token_details.clone().name.serialize(ref salt_preimage);
+        let salt = poseidon_hash_span(salt_preimage.span());
+
+        let token_address = setup.trex_factory.get_token(salt);
+        let token = ITokenDispatcher { contract_address: token_address };
+        let identity_registry = token.identity_registry();
+        let compliance = token.compliance();
+        let identity_registry_storage = identity_registry.identity_storage();
+        let trusted_issuers_registry = identity_registry.issuers_registry();
+        let claim_topics_registry = identity_registry.topics_registry();
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.trex_factory.contract_address,
+                        TREXFactory::Event::TREXSuiteDeployed(
+                            TREXFactory::TREXSuiteDeployed {
+                                token: token_address,
+                                ir: identity_registry.contract_address,
+                                irs: identity_registry_storage.contract_address,
+                                tir: trusted_issuers_registry.contract_address,
+                                ctr: claim_topics_registry.contract_address,
+                                mc: compliance.contract_address,
+                                salt,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        /// Check token transfer
+        assert(fee_token.balance_of(fee_collector) == 0, 'Balance mismatch');
+        spy
+            .assert_not_emitted(
+                @array![
+                    (
+                        fee_token.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer {
+                                from: another_deployer, to: fee_collector, value: 0,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
 
 pub mod batch_deploy_trex_suite {
+    use core::{num::traits::Zero, poseidon::poseidon_hash_span};
+    use factory::{
+        itrex_factory::{ClaimDetails, ITREXFactoryDispatcherTrait, TokenDetails},
+        itrex_gateway::ITREXGatewayDispatcherTrait, trex_factory::TREXFactory,
+        trex_gateway::TREXGateway,
+    };
+    use mocks::mock_erc20::{IMintableDispatcher, IMintableDispatcherTrait};
+    use openzeppelin_token::erc20::{
+        ERC20Component, interface::{IERC20Dispatcher, IERC20DispatcherTrait},
+    };
+    use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
+    use snforge_std::{
+        ContractClassTrait, DeclareResultTrait, EventSpyAssertionsTrait, declare, spy_events,
+        start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use super::setup_gateway;
+    use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
+
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Public deployment not allowed')]
     fn test_should_panic_for_batch_deployment_when_called_by_not_deployer_when_public_deployments_disabled() {
-        panic!("");
+        let (_, gateway) = setup_gateway(false);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+
+        let mut token_details_array = array![];
+        let mut claim_details_array = array![];
+
+        for i in 0..5_u8 {
+            let token_details = TokenDetails {
+                owner: not_deployer,
+                name: format!("Token Name {i}"),
+                symbol: format!("SYM{i}"),
+                decimals: 8,
+                irs: Zero::zero(),
+                onchain_id: Zero::zero(),
+                ir_agents: [].span(),
+                token_agents: [].span(),
+                compliance_modules: [].span(),
+                compliance_settings: [].span(),
+            };
+
+            let claim_details = ClaimDetails {
+                claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+            };
+            token_details_array.append(token_details);
+            claim_details_array.append(claim_details);
+        };
+
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.batch_deploy_TREX_suite(token_details_array.span(), claim_details_array.span());
+        stop_cheat_caller_address(gateway.contract_address);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Public cannot deploy on behalf')]
     fn test_should_panic_the_whole_batch_when_called_by_not_deployer_when_public_deployments_are_enabled_when_try_to_deploy_on_behalf_in_a_batch() {
-        panic!("");
+        let (setup, gateway) = setup_gateway(true);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+
+        let mut token_details_array = array![];
+        let mut claim_details_array = array![];
+
+        for i in 0..4_u8 {
+            let token_details = TokenDetails {
+                owner: not_deployer,
+                name: format!("Token Name {i}"),
+                symbol: format!("SYM{i}"),
+                decimals: 8,
+                irs: Zero::zero(),
+                onchain_id: Zero::zero(),
+                ir_agents: [].span(),
+                token_agents: [].span(),
+                compliance_modules: [].span(),
+                compliance_settings: [].span(),
+            };
+
+            let claim_details = ClaimDetails {
+                claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+            };
+            token_details_array.append(token_details);
+            claim_details_array.append(claim_details);
+        };
+
+        token_details_array
+            .append(
+                TokenDetails {
+                    owner: setup.accounts.bob.account.contract_address,
+                    name: "Token Name Behalf",
+                    symbol: "SYM42",
+                    decimals: 8,
+                    irs: Zero::zero(),
+                    onchain_id: Zero::zero(),
+                    ir_agents: [].span(),
+                    token_agents: [].span(),
+                    compliance_modules: [].span(),
+                    compliance_settings: [].span(),
+                },
+            );
+
+        claim_details_array
+            .append(
+                ClaimDetails {
+                    claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+                },
+            );
+
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.batch_deploy_TREX_suite(token_details_array.span(), claim_details_array.span());
+        stop_cheat_caller_address(gateway.contract_address);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Batch max length exceeded')]
     fn test_should_panic_the_batch_when_called_by_not_deployer_when_public_deployments_are_enabled_when_try_to_deploy_a_batch_of_more_than_5_tokens() {
-        panic!("");
+        let (_, gateway) = setup_gateway(true);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+
+        let mut token_details_array = array![];
+        let mut claim_details_array = array![];
+
+        for i in 0..6_u8 {
+            let token_details = TokenDetails {
+                owner: not_deployer,
+                name: format!("Token Name {i}"),
+                symbol: format!("SYM{i}"),
+                decimals: 8,
+                irs: Zero::zero(),
+                onchain_id: Zero::zero(),
+                ir_agents: [].span(),
+                token_agents: [].span(),
+                compliance_modules: [].span(),
+                compliance_settings: [].span(),
+            };
+
+            let claim_details = ClaimDetails {
+                claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+            };
+            token_details_array.append(token_details);
+            claim_details_array.append(claim_details);
+        };
+
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.batch_deploy_TREX_suite(token_details_array.span(), claim_details_array.span());
+        stop_cheat_caller_address(gateway.contract_address);
     }
 
     #[test]
     fn test_should_deploy_tokens_for_free_in_a_batch_when_called_by_not_deployer_when_deployment_fees_are_not_activated() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(true);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+
+        let mut token_details_array = array![];
+        let mut claim_details_array = array![];
+
+        for i in 0..5_u8 {
+            let token_details = TokenDetails {
+                owner: not_deployer,
+                name: format!("Token Name {i}"),
+                symbol: format!("SYM{i}"),
+                decimals: 8,
+                irs: Zero::zero(),
+                onchain_id: Zero::zero(),
+                ir_agents: [].span(),
+                token_agents: [].span(),
+                compliance_modules: [].span(),
+                compliance_settings: [].span(),
+            };
+
+            let claim_details = ClaimDetails {
+                claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+            };
+            token_details_array.append(token_details);
+            claim_details_array.append(claim_details);
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.batch_deploy_TREX_suite(token_details_array.span(), claim_details_array.span());
+        stop_cheat_caller_address(gateway.contract_address);
+
+        for i in 0..token_details_array.len() {
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            gateway.contract_address,
+                            TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                                TREXGateway::GatewaySuiteDeploymentProcessed {
+                                    requester: not_deployer,
+                                    intended_owner: not_deployer,
+                                    fee_applied: 0,
+                                },
+                            ),
+                        ),
+                    ],
+                );
+
+            let mut salt_preimage: Array<felt252> = array![not_deployer.into()];
+            token_details_array.at(i).clone().name.serialize(ref salt_preimage);
+            let salt = poseidon_hash_span(salt_preimage.span());
+
+            let token_address = setup.trex_factory.get_token(salt);
+            let token = ITokenDispatcher { contract_address: token_address };
+            let identity_registry = token.identity_registry();
+            let compliance = token.compliance();
+            let identity_registry_storage = identity_registry.identity_storage();
+            let trusted_issuers_registry = identity_registry.issuers_registry();
+            let claim_topics_registry = identity_registry.topics_registry();
+
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            setup.trex_factory.contract_address,
+                            TREXFactory::Event::TREXSuiteDeployed(
+                                TREXFactory::TREXSuiteDeployed {
+                                    token: token_address,
+                                    ir: identity_registry.contract_address,
+                                    irs: identity_registry_storage.contract_address,
+                                    tir: trusted_issuers_registry.contract_address,
+                                    ctr: claim_topics_registry.contract_address,
+                                    mc: compliance.contract_address,
+                                    salt,
+                                },
+                            ),
+                        ),
+                    ],
+                );
+        };
     }
 
     #[test]
     fn test_should_deploy_tokens_for_full_fee_in_a_batch_when_called_by_not_deployer_when_deployment_fees_are_activated_when_caller_has_no_discount() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(true);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+        let fee_collector = starknet::contract_address_const::<'FEE_TOKEN'>();
+        let (fee_token_address, _) = declare("MockERC20")
+            .unwrap()
+            .contract_class()
+            .deploy(@array![starknet::get_contract_address().into()])
+            .unwrap();
+        let fee_token = IERC20Dispatcher { contract_address: fee_token_address };
+        IMintableDispatcher { contract_address: fee_token_address }.mint(not_deployer, 100_000);
+        gateway.set_deployment_fee(20_000, fee_token_address, fee_collector);
+        gateway.enable_deployment_fee(true);
+        start_cheat_caller_address(fee_token_address, not_deployer);
+        fee_token.approve(gateway.contract_address, 100_000);
+        stop_cheat_caller_address(fee_token_address);
+
+        let mut token_details_array = array![];
+        let mut claim_details_array = array![];
+
+        for i in 0..5_u8 {
+            let token_details = TokenDetails {
+                owner: not_deployer,
+                name: format!("Token Name {i}"),
+                symbol: format!("SYM{i}"),
+                decimals: 8,
+                irs: Zero::zero(),
+                onchain_id: Zero::zero(),
+                ir_agents: [].span(),
+                token_agents: [].span(),
+                compliance_modules: [].span(),
+                compliance_settings: [].span(),
+            };
+
+            let claim_details = ClaimDetails {
+                claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+            };
+            token_details_array.append(token_details);
+            claim_details_array.append(claim_details);
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.batch_deploy_TREX_suite(token_details_array.span(), claim_details_array.span());
+        stop_cheat_caller_address(gateway.contract_address);
+
+        for i in 0..token_details_array.len() {
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            gateway.contract_address,
+                            TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                                TREXGateway::GatewaySuiteDeploymentProcessed {
+                                    requester: not_deployer,
+                                    intended_owner: not_deployer,
+                                    fee_applied: 20_000,
+                                },
+                            ),
+                        ),
+                    ],
+                );
+
+            let mut salt_preimage: Array<felt252> = array![not_deployer.into()];
+            token_details_array.at(i).clone().name.serialize(ref salt_preimage);
+            let salt = poseidon_hash_span(salt_preimage.span());
+
+            let token_address = setup.trex_factory.get_token(salt);
+            let token = ITokenDispatcher { contract_address: token_address };
+            let identity_registry = token.identity_registry();
+            let compliance = token.compliance();
+            let identity_registry_storage = identity_registry.identity_storage();
+            let trusted_issuers_registry = identity_registry.issuers_registry();
+            let claim_topics_registry = identity_registry.topics_registry();
+
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            setup.trex_factory.contract_address,
+                            TREXFactory::Event::TREXSuiteDeployed(
+                                TREXFactory::TREXSuiteDeployed {
+                                    token: token_address,
+                                    ir: identity_registry.contract_address,
+                                    irs: identity_registry_storage.contract_address,
+                                    tir: trusted_issuers_registry.contract_address,
+                                    ctr: claim_topics_registry.contract_address,
+                                    mc: compliance.contract_address,
+                                    salt,
+                                },
+                            ),
+                        ),
+                    ],
+                );
+        };
+
+        /// Check token transfer
+        assert(fee_token.balance_of(fee_collector) == 100_000, 'Balance mismatch');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        fee_token.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer {
+                                from: not_deployer, to: fee_collector, value: 100_000,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 
     #[test]
     fn test_should_deploy_tokens_for_half_fee_in_a_batch_when_called_by_not_deployer_when_deployment_fees_are_activated_when_caller_has_50_percent_discount() {
-        assert!(true, "");
+        let (setup, gateway) = setup_gateway(true);
+        let not_deployer = starknet::contract_address_const::<'NOT_DEPLOYER'>();
+        let fee_collector = starknet::contract_address_const::<'FEE_TOKEN'>();
+        let (fee_token_address, _) = declare("MockERC20")
+            .unwrap()
+            .contract_class()
+            .deploy(@array![starknet::get_contract_address().into()])
+            .unwrap();
+        let fee_token = IERC20Dispatcher { contract_address: fee_token_address };
+        IMintableDispatcher { contract_address: fee_token_address }.mint(not_deployer, 100_000);
+        gateway.set_deployment_fee(20_000, fee_token_address, fee_collector);
+        gateway.enable_deployment_fee(true);
+        gateway.apply_fee_discount(not_deployer, 5_000);
+        start_cheat_caller_address(fee_token_address, not_deployer);
+        fee_token.approve(gateway.contract_address, 100_000);
+        stop_cheat_caller_address(fee_token_address);
+
+        let mut token_details_array = array![];
+        let mut claim_details_array = array![];
+
+        for i in 0..5_u8 {
+            let token_details = TokenDetails {
+                owner: not_deployer,
+                name: format!("Token Name {i}"),
+                symbol: format!("SYM{i}"),
+                decimals: 8,
+                irs: Zero::zero(),
+                onchain_id: Zero::zero(),
+                ir_agents: [].span(),
+                token_agents: [].span(),
+                compliance_modules: [].span(),
+                compliance_settings: [].span(),
+            };
+
+            let claim_details = ClaimDetails {
+                claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+            };
+            token_details_array.append(token_details);
+            claim_details_array.append(claim_details);
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, not_deployer);
+        gateway.batch_deploy_TREX_suite(token_details_array.span(), claim_details_array.span());
+        stop_cheat_caller_address(gateway.contract_address);
+
+        for i in 0..token_details_array.len() {
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            gateway.contract_address,
+                            TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                                TREXGateway::GatewaySuiteDeploymentProcessed {
+                                    requester: not_deployer,
+                                    intended_owner: not_deployer,
+                                    fee_applied: 10_000,
+                                },
+                            ),
+                        ),
+                    ],
+                );
+
+            let mut salt_preimage: Array<felt252> = array![not_deployer.into()];
+            token_details_array.at(i).clone().name.serialize(ref salt_preimage);
+            let salt = poseidon_hash_span(salt_preimage.span());
+
+            let token_address = setup.trex_factory.get_token(salt);
+            let token = ITokenDispatcher { contract_address: token_address };
+            let identity_registry = token.identity_registry();
+            let compliance = token.compliance();
+            let identity_registry_storage = identity_registry.identity_storage();
+            let trusted_issuers_registry = identity_registry.issuers_registry();
+            let claim_topics_registry = identity_registry.topics_registry();
+
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            setup.trex_factory.contract_address,
+                            TREXFactory::Event::TREXSuiteDeployed(
+                                TREXFactory::TREXSuiteDeployed {
+                                    token: token_address,
+                                    ir: identity_registry.contract_address,
+                                    irs: identity_registry_storage.contract_address,
+                                    tir: trusted_issuers_registry.contract_address,
+                                    ctr: claim_topics_registry.contract_address,
+                                    mc: compliance.contract_address,
+                                    salt,
+                                },
+                            ),
+                        ),
+                    ],
+                );
+        };
+
+        /// Check token transfer
+        assert(fee_token.balance_of(fee_collector) == 50_000, 'Balance mismatch');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        fee_token.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer {
+                                from: not_deployer, to: fee_collector, value: 50_000,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 
     #[test]
-    fn test_should_deploy_in_batch_when_called_by_deployer_when_public_deployments_disabled() {
-        assert!(true, "");
+    fn test_should_deploy_in_batch_when_called_by_deployer_when_public_deployments_disabled_when_fees_are_not_activated() {
+        let (setup, gateway) = setup_gateway(false);
+        let another_deployer = starknet::contract_address_const::<'ANOTHER_DEPLOYER'>();
+        gateway.add_deployer(another_deployer);
+
+        let mut token_details_array = array![];
+        let mut claim_details_array = array![];
+
+        for i in 0..5_u8 {
+            let token_details = TokenDetails {
+                owner: another_deployer,
+                name: format!("Token Name {i}"),
+                symbol: format!("SYM{i}"),
+                decimals: 8,
+                irs: Zero::zero(),
+                onchain_id: Zero::zero(),
+                ir_agents: [].span(),
+                token_agents: [].span(),
+                compliance_modules: [].span(),
+                compliance_settings: [].span(),
+            };
+
+            let claim_details = ClaimDetails {
+                claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+            };
+            token_details_array.append(token_details);
+            claim_details_array.append(claim_details);
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, another_deployer);
+        gateway.batch_deploy_TREX_suite(token_details_array.span(), claim_details_array.span());
+        stop_cheat_caller_address(gateway.contract_address);
+
+        for i in 0..token_details_array.len() {
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            gateway.contract_address,
+                            TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                                TREXGateway::GatewaySuiteDeploymentProcessed {
+                                    requester: another_deployer,
+                                    intended_owner: another_deployer,
+                                    fee_applied: 0,
+                                },
+                            ),
+                        ),
+                    ],
+                );
+
+            let mut salt_preimage: Array<felt252> = array![another_deployer.into()];
+            token_details_array.at(i).clone().name.serialize(ref salt_preimage);
+            let salt = poseidon_hash_span(salt_preimage.span());
+
+            let token_address = setup.trex_factory.get_token(salt);
+            let token = ITokenDispatcher { contract_address: token_address };
+            let identity_registry = token.identity_registry();
+            let compliance = token.compliance();
+            let identity_registry_storage = identity_registry.identity_storage();
+            let trusted_issuers_registry = identity_registry.issuers_registry();
+            let claim_topics_registry = identity_registry.topics_registry();
+
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            setup.trex_factory.contract_address,
+                            TREXFactory::Event::TREXSuiteDeployed(
+                                TREXFactory::TREXSuiteDeployed {
+                                    token: token_address,
+                                    ir: identity_registry.contract_address,
+                                    irs: identity_registry_storage.contract_address,
+                                    tir: trusted_issuers_registry.contract_address,
+                                    ctr: claim_topics_registry.contract_address,
+                                    mc: compliance.contract_address,
+                                    salt,
+                                },
+                            ),
+                        ),
+                    ],
+                );
+        };
     }
 
     #[test]
-    fn test_should_deploy_in_batch_when_called_by_deployer_when_trying_to_deploy_on_behalf() {
-        assert!(true, "");
+    fn test_should_deploy_in_batch_when_called_by_deployer_when_trying_to_deploy_on_behalf_when_fees_are_not_activated() {
+        let (setup, gateway) = setup_gateway(false);
+        let another_deployer = starknet::contract_address_const::<'ANOTHER_DEPLOYER'>();
+        gateway.add_deployer(another_deployer);
+
+        let mut token_details_array = array![];
+        let mut claim_details_array = array![];
+
+        let token_owner = setup.accounts.bob.account.contract_address;
+        for i in 0..5_u8 {
+            let token_details = TokenDetails {
+                owner: token_owner,
+                name: format!("Token Name {i}"),
+                symbol: format!("SYM{i}"),
+                decimals: 8,
+                irs: Zero::zero(),
+                onchain_id: Zero::zero(),
+                ir_agents: [].span(),
+                token_agents: [].span(),
+                compliance_modules: [].span(),
+                compliance_settings: [].span(),
+            };
+
+            let claim_details = ClaimDetails {
+                claim_topics: [].span(), issuers: [].span(), issuer_claims: [].span(),
+            };
+            token_details_array.append(token_details);
+            claim_details_array.append(claim_details);
+        };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(gateway.contract_address, another_deployer);
+        gateway.batch_deploy_TREX_suite(token_details_array.span(), claim_details_array.span());
+        stop_cheat_caller_address(gateway.contract_address);
+
+        for i in 0..token_details_array.len() {
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            gateway.contract_address,
+                            TREXGateway::Event::GatewaySuiteDeploymentProcessed(
+                                TREXGateway::GatewaySuiteDeploymentProcessed {
+                                    requester: another_deployer,
+                                    intended_owner: token_owner,
+                                    fee_applied: 0,
+                                },
+                            ),
+                        ),
+                    ],
+                );
+
+            let mut salt_preimage: Array<felt252> = array![token_owner.into()];
+            token_details_array.at(i).clone().name.serialize(ref salt_preimage);
+            let salt = poseidon_hash_span(salt_preimage.span());
+
+            let token_address = setup.trex_factory.get_token(salt);
+            let token = ITokenDispatcher { contract_address: token_address };
+            let identity_registry = token.identity_registry();
+            let compliance = token.compliance();
+            let identity_registry_storage = identity_registry.identity_storage();
+            let trusted_issuers_registry = identity_registry.issuers_registry();
+            let claim_topics_registry = identity_registry.topics_registry();
+
+            spy
+                .assert_emitted(
+                    @array![
+                        (
+                            setup.trex_factory.contract_address,
+                            TREXFactory::Event::TREXSuiteDeployed(
+                                TREXFactory::TREXSuiteDeployed {
+                                    token: token_address,
+                                    ir: identity_registry.contract_address,
+                                    irs: identity_registry_storage.contract_address,
+                                    tir: trusted_issuers_registry.contract_address,
+                                    ctr: claim_topics_registry.contract_address,
+                                    mc: compliance.contract_address,
+                                    salt,
+                                },
+                            ),
+                        ),
+                    ],
+                );
+        };
     }
 }
 
