@@ -1,4 +1,3 @@
-///! Add tests for batch operations
 pub mod init {
     use core::num::traits::Zero;
     use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
@@ -137,6 +136,140 @@ pub mod register_identity {
     }
 }
 
+pub mod batch_register_identity {
+    use factory::tests_common::setup_full_suite;
+    use registry::{
+        identity_registry::IdentityRegistry,
+        interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
+    };
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+
+    #[test]
+    #[should_panic(expected: 'Caller is not agent')]
+    fn test_should_panic_when_caller_is_not_agent() {
+        let setup = setup_full_suite();
+
+        let first_investor_address = starknet::contract_address_const::<'FIRST_INVESTOR_ADDRESS'>();
+        let first_investor_identity = starknet::contract_address_const::<'FIRST_INVESTOR_ID'>();
+        let first_investor_country = 42;
+        let second_investor_address = starknet::contract_address_const::<
+            'SECOND_INVESTOR_ADDRESS',
+        >();
+        let second_investor_identity = starknet::contract_address_const::<'SECOND_INVESTOR_ID'>();
+        let second_investor_country = 43;
+
+        setup
+            .identity_registry
+            .batch_register_identity(
+                [first_investor_address, second_investor_address].span(),
+                [first_investor_identity, second_investor_identity].span(),
+                [first_investor_country, second_investor_country].span(),
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: 'Arrays lenghts not equal')]
+    fn test_should_panic_when_arrays_not_parralel() {
+        let setup = setup_full_suite();
+
+        let first_investor_address = starknet::contract_address_const::<'FIRST_INVESTOR_ADDRESS'>();
+        let first_investor_identity = starknet::contract_address_const::<'FIRST_INVESTOR_ID'>();
+        let first_investor_country = 42;
+        let second_investor_address = starknet::contract_address_const::<
+            'SECOND_INVESTOR_ADDRESS',
+        >();
+        let second_investor_identity = starknet::contract_address_const::<'SECOND_INVESTOR_ID'>();
+        let second_investor_country = 43;
+
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
+        setup
+            .identity_registry
+            .batch_register_identity(
+                [first_investor_address, second_investor_address].span(),
+                [first_investor_identity, second_investor_identity].span(),
+                [first_investor_country, second_investor_country, 66].span(),
+            );
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
+    }
+
+    #[test]
+    fn test_should_batch_register_identity() {
+        let setup = setup_full_suite();
+        let first_investor_address = starknet::contract_address_const::<'FIRST_INVESTOR_ADDRESS'>();
+        let first_investor_identity = starknet::contract_address_const::<'FIRST_INVESTOR_ID'>();
+        let first_investor_country = 42;
+        let second_investor_address = starknet::contract_address_const::<
+            'SECOND_INVESTOR_ADDRESS',
+        >();
+        let second_investor_identity = starknet::contract_address_const::<'SECOND_INVESTOR_ID'>();
+        let second_investor_country = 43;
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
+        setup
+            .identity_registry
+            .batch_register_identity(
+                [first_investor_address, second_investor_address].span(),
+                [first_investor_identity, second_investor_identity].span(),
+                [first_investor_country, second_investor_country].span(),
+            );
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
+
+        assert(
+            setup.identity_registry.identity(first_investor_address) == first_investor_identity,
+            'Investor id does not match',
+        );
+        assert(
+            setup
+                .identity_registry
+                .investor_country(first_investor_address) == first_investor_country,
+            'Investor country does not match',
+        );
+        assert(
+            setup.identity_registry.identity(second_investor_address) == second_investor_identity,
+            'Investor id does not match',
+        );
+        assert(
+            setup
+                .identity_registry
+                .investor_country(second_investor_address) == second_investor_country,
+            'Investor country does not match',
+        );
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.identity_registry.contract_address,
+                        IdentityRegistry::Event::IdentityRegistered(
+                            IdentityRegistry::IdentityRegistered {
+                                investor_address: first_investor_address,
+                                identity: first_investor_identity,
+                            },
+                        ),
+                    ),
+                    (
+                        setup.identity_registry.contract_address,
+                        IdentityRegistry::Event::IdentityRegistered(
+                            IdentityRegistry::IdentityRegistered {
+                                investor_address: second_investor_address,
+                                identity: second_investor_identity,
+                            },
+                        ),
+                    ),
+                ],
+            );
+    }
+}
+
 pub mod delete_identity {
     use core::num::traits::Zero;
     use factory::tests_common::setup_full_suite;
@@ -152,7 +285,6 @@ pub mod delete_identity {
     #[should_panic(expected: 'Caller is not agent')]
     fn test_should_panic_when_caller_is_not_agent() {
         let setup = setup_full_suite();
-
         let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
 
         setup.identity_registry.delete_identity(investor_address);
@@ -216,7 +348,6 @@ pub mod update_identity {
     #[should_panic(expected: 'Caller is not agent')]
     fn test_should_panic_when_caller_is_not_agent() {
         let setup = setup_full_suite();
-
         let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
         let new_identity = starknet::contract_address_const::<'NEW_INVESTOR_ID'>();
 
@@ -278,7 +409,6 @@ pub mod update_country {
     #[should_panic(expected: 'Caller is not agent')]
     fn test_should_panic_when_caller_is_not_agent() {
         let setup = setup_full_suite();
-
         let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
         let new_country = 30;
 
