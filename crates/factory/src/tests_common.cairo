@@ -87,6 +87,7 @@ pub struct OnchainIdentitySetup {
     pub claim_issuer: ClaimIssuerABIDispatcher,
     pub alice_identity: IdentityABIDispatcher,
     pub bob_identity: IdentityABIDispatcher,
+    pub charlie_identity: IdentityABIDispatcher,
     pub claim_for_alice: TestClaim,
     pub claim_for_bob: TestClaim,
 }
@@ -411,12 +412,21 @@ fn setup_onchain_id(accounts: @TestAccounts) -> OnchainIdentitySetup {
         );
     stop_cheat_caller_address(bob_identity.contract_address);
 
+    /// Deploy OID for Charlie
+    id_factory_dispatcher.create_identity(*accounts.charlie.account.contract_address, 'charlie');
+
+    let charlie_identity = IdentityABIDispatcher {
+        contract_address: id_factory_dispatcher
+            .get_identity(*accounts.charlie.account.contract_address),
+    };
+
     OnchainIdentitySetup {
         identity_factory: id_factory_dispatcher,
         implementation_authority: implementation_authority_dispatcher,
         claim_issuer: claim_issuer_dispatcher,
         alice_identity,
         bob_identity,
+        charlie_identity,
         claim_for_alice,
         claim_for_bob,
     }
