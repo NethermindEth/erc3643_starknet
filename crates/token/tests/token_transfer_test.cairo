@@ -793,6 +793,190 @@ pub mod forced_transfer {
     }
 }
 
+pub mod batch_forced_transfer {
+    use compliance::imodular_compliance::IModularComplianceDispatcherTrait;
+    use core::num::traits::Zero;
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_token::erc20::{
+        ERC20Component, interface::{IERC20Dispatcher, IERC20DispatcherTrait},
+    };
+    use snforge_std::{
+        ContractClassTrait, DeclareResultTrait, EventSpyAssertionsTrait, declare, spy_events,
+        start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use token::{itoken::ITokenDispatcherTrait, token::Token};
+
+    #[test]
+    #[should_panic(expected: 'Caller is not agent')]
+    fn test_should_panic_when_sender_is_not_an_agent() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = setup.accounts.bob.account.contract_address;
+        let amount = 100;
+
+        start_cheat_caller_address(
+            setup.token.contract_address, starknet::contract_address_const::<'NOT_AGENT'>(),
+        );
+        setup.token.batch_forced_transfer([sender].span(), [recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Arrays length not parrallel')]
+    fn test_should_panic_when_arrays_len_not_parallel() {
+        let setup = setup_full_suite();
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup
+            .token
+            .batch_forced_transfer(
+                [Zero::zero(), Zero::zero(), Zero::zero()].span(),
+                [Zero::zero(), Zero::zero()].span(),
+                [100].span(),
+            );
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'ERC20: insufficient balance')]
+    fn test_should_panic_when_source_wallet_has_not_enough_balance() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = setup.accounts.bob.account.contract_address;
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
+        let amount = erc20_dispatcher.balance_of(sender) + 1;
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.batch_forced_transfer([sender].span(), [recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Transfer not possible')]
+    fn test_should_panic_when_recipient_identity_is_not_verified() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = starknet::contract_address_const::<'NOT_VERIFIED'>();
+        let amount = 100;
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.batch_forced_transfer([sender].span(), [recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    fn test_should_still_transfer_tokens_when_the_transfer_breaks_compliance_rules() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = setup.accounts.bob.account.contract_address;
+        let amount = 100;
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
+
+        let compliance_module_contract = declare("CountryAllowModule").unwrap().contract_class();
+        let (compliance_module_address, _) = compliance_module_contract
+            .deploy(@array![starknet::get_contract_address().into()])
+            .unwrap();
+        setup.modular_compliance.add_module(compliance_module_address);
+
+        let sender_balance_prev = erc20_dispatcher.balance_of(sender);
+        let recipient_balance_prev = erc20_dispatcher.balance_of(recipient);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.batch_forced_transfer([sender].span(), [recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+
+        let sender_balance_after = erc20_dispatcher.balance_of(sender);
+        let recipient_balance_after = erc20_dispatcher.balance_of(recipient);
+        assert(sender_balance_prev - amount == sender_balance_after, 'Sender balance mismatch');
+        assert(
+            recipient_balance_prev + amount == recipient_balance_after,
+            'Recipient balance mismatch',
+        );
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        erc20_dispatcher.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer { from: sender, to: recipient, value: amount },
+                        ),
+                    ),
+                ],
+            );
+    }
+
+    #[test]
+    fn test_should_unfreeze_tokens_when_amount_is_greater_than_unfrozen_balance() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = setup.accounts.bob.account.contract_address;
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
+
+        let sender_balance_prev = erc20_dispatcher.balance_of(sender);
+        let recipient_balance_prev = erc20_dispatcher.balance_of(recipient);
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.freeze_partial_tokens(sender, sender_balance_prev - 100);
+
+        let mut spy = spy_events();
+        setup
+            .token
+            .batch_forced_transfer(
+                [sender].span(), [recipient].span(), [sender_balance_prev - 50].span(),
+            );
+        stop_cheat_caller_address(setup.token.contract_address);
+
+        let sender_balance_after = erc20_dispatcher.balance_of(sender);
+        let recipient_balance_after = erc20_dispatcher.balance_of(recipient);
+        assert(sender_balance_after == 50, 'Sender balance mismatch');
+        assert(
+            recipient_balance_prev + sender_balance_prev - 50 == recipient_balance_after,
+            'Recipient balance mismatch',
+        );
+        assert(setup.token.get_frozen_tokens(sender) == 50, 'Frozen token mismatch');
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        erc20_dispatcher.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer {
+                                from: sender, to: recipient, value: sender_balance_prev - 50,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        erc20_dispatcher.contract_address,
+                        Token::Event::TokensUnfrozen(
+                            Token::TokensUnfrozen {
+                                user_address: sender, amount: sender_balance_prev - 150,
+                            },
+                        ),
+                    ),
+                ],
+            );
+    }
+}
+
 pub mod mint {
     use compliance::imodular_compliance::IModularComplianceDispatcherTrait;
     use core::num::traits::Zero;
@@ -886,6 +1070,111 @@ pub mod mint {
     }
 }
 
+pub mod batch_mint {
+    use compliance::imodular_compliance::IModularComplianceDispatcherTrait;
+    use core::num::traits::Zero;
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_token::erc20::{
+        ERC20Component, interface::{IERC20Dispatcher, IERC20DispatcherTrait},
+    };
+    use snforge_std::{
+        ContractClassTrait, DeclareResultTrait, EventSpyAssertionsTrait, declare, spy_events,
+        start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use token::itoken::ITokenDispatcherTrait;
+
+    #[test]
+    #[should_panic(expected: 'Caller is not agent')]
+    fn test_should_panic_when_caller_is_not_an_agent() {
+        let setup = setup_full_suite();
+        let recipient = setup.accounts.alice.account.contract_address;
+        let amount = 100;
+
+        start_cheat_caller_address(
+            setup.token.contract_address, starknet::contract_address_const::<'NOT_AGENT'>(),
+        );
+        setup.token.batch_mint([recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Arrays length not parrallel')]
+    fn test_should_panic_when_arrays_len_not_parallel() {
+        let setup = setup_full_suite();
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.batch_mint([Zero::zero(), Zero::zero()].span(), [100].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Identity is not verified')]
+    fn test_should_panic_when_recipient_identity_is_not_verified() {
+        let setup = setup_full_suite();
+        let recipient = starknet::contract_address_const::<'NOT_VERIFIED'>();
+        let amount = 100;
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.batch_mint([recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Compliance not followed')]
+    fn test_should_panic_when_the_mint_breaks_compliance_rules() {
+        let setup = setup_full_suite();
+        let recipient = setup.accounts.alice.account.contract_address;
+        let amount = 100;
+
+        let compliance_module_contract = declare("CountryAllowModule").unwrap().contract_class();
+        let (compliance_module_address, _) = compliance_module_contract
+            .deploy(@array![starknet::get_contract_address().into()])
+            .unwrap();
+        setup.modular_compliance.add_module(compliance_module_address);
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.batch_mint([recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    fn test_should_mint_tokens() {
+        let setup = setup_full_suite();
+        let recipient = setup.accounts.alice.account.contract_address;
+        let amount = 100;
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
+        let recipient_balance_prev = erc20_dispatcher.balance_of(recipient);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.batch_mint([recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+        let recipient_balance_after = erc20_dispatcher.balance_of(recipient);
+        assert(recipient_balance_prev + amount == recipient_balance_after, 'Tokens not minted');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        erc20_dispatcher.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer {
+                                from: Zero::zero(), to: recipient, value: amount,
+                            },
+                        ),
+                    ),
+                ],
+            );
+    }
+}
+
 pub mod burn {
     use core::num::traits::Zero;
     use factory::tests_common::setup_full_suite;
@@ -940,6 +1229,107 @@ pub mod burn {
 
         let mut spy = spy_events();
         setup.token.burn(burner, balance_prev - 50);
+        stop_cheat_caller_address(setup.token.contract_address);
+
+        let balance_after = erc20_dispatcher.balance_of(burner);
+        assert(balance_after == 50, 'Tokens not burned');
+        assert(setup.token.get_frozen_tokens(burner) == 50, 'Frozen balance mismatch');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        erc20_dispatcher.contract_address,
+                        ERC20Component::Event::Transfer(
+                            ERC20Component::Transfer {
+                                from: burner, to: Zero::zero(), value: balance_prev - 50,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        erc20_dispatcher.contract_address,
+                        Token::Event::TokensUnfrozen(
+                            Token::TokensUnfrozen {
+                                user_address: burner, amount: balance_prev - 150,
+                            },
+                        ),
+                    ),
+                ],
+            );
+    }
+}
+
+pub mod batch_burn {
+    use core::num::traits::Zero;
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_token::erc20::{
+        ERC20Component, interface::{IERC20Dispatcher, IERC20DispatcherTrait},
+    };
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use token::{itoken::ITokenDispatcherTrait, token::Token};
+
+    #[test]
+    #[should_panic(expected: 'Caller is not agent')]
+    fn test_should_panic_when_caller_is_not_an_agent() {
+        let setup = setup_full_suite();
+        let burner = setup.accounts.alice.account.contract_address;
+        let amount = 100;
+
+        start_cheat_caller_address(
+            setup.token.contract_address, starknet::contract_address_const::<'NOT_AGENT'>(),
+        );
+        setup.token.batch_burn([burner].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Arrays length not parrallel')]
+    fn test_should_panic_when_arrays_len_not_parallel() {
+        let setup = setup_full_suite();
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.batch_burn([Zero::zero(), Zero::zero()].span(), [100].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Cannot burn more than balance')]
+    fn test_should_panic_when_source_wallet_has_not_enough_balance() {
+        let setup = setup_full_suite();
+        let burner = setup.accounts.alice.account.contract_address;
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
+        let amount = erc20_dispatcher.balance_of(burner) + 1;
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.batch_burn([burner].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    fn test_should_burn_and_decrease_frozen_balance_when_amount_to_burn_is_greater_than_unfrozen_balance() {
+        let setup = setup_full_suite();
+        let burner = setup.accounts.alice.account.contract_address;
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
+        let balance_prev = erc20_dispatcher.balance_of(burner);
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.freeze_partial_tokens(burner, balance_prev - 100);
+
+        let mut spy = spy_events();
+        setup.token.batch_burn([burner].span(), [balance_prev - 50].span());
         stop_cheat_caller_address(setup.token.contract_address);
 
         let balance_after = erc20_dispatcher.balance_of(burner);
