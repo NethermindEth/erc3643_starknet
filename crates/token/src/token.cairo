@@ -360,6 +360,7 @@ pub mod Token {
             ref self: ContractState, to_list: Span<ContractAddress>, amounts: Span<u256>,
         ) {
             self.pausable.assert_not_paused();
+            assert(to_list.len() == amounts.len(), 'Arrays length not parrallel');
             let caller = starknet::get_caller_address();
             assert(!self.frozen.entry(caller).read(), 'Wallet is frozen');
 
