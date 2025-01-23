@@ -1,94 +1,3 @@
-///! Add tests for batch operations
-///! NOTE: Migth deploy full suite instead of mocks
-use registry::interface::{
-    iclaim_topics_registry::IClaimTopicsRegistryDispatcher,
-    iidentity_registry::IIdentityRegistryDispatcher,
-    iidentity_registry_storage::{
-        IIdentityRegistryStorageDispatcher, IIdentityRegistryStorageDispatcherTrait,
-    },
-    itrusted_issuers_registry::ITrustedIssuersRegistryDispatcher,
-};
-use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
-
-#[derive(Drop, Copy)]
-struct Setup {
-    trusted_issuers_registry: ITrustedIssuersRegistryDispatcher,
-    claim_topics_registry: IClaimTopicsRegistryDispatcher,
-    identity_registry_storage: IIdentityRegistryStorageDispatcher,
-    identity_registry: IIdentityRegistryDispatcher,
-}
-
-fn setup() -> Setup {
-    // Deploy trusted issuers registry
-    let trusted_issuers_registry_contract = declare("TrustedIssuersRegistry")
-        .unwrap()
-        .contract_class();
-    let (trusted_issuers_registry_address, _) = trusted_issuers_registry_contract
-        .deploy(
-            @array![
-                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
-                starknet::get_contract_address().into(),
-            ],
-        )
-        .unwrap();
-    let trusted_issuers_registry = ITrustedIssuersRegistryDispatcher {
-        contract_address: trusted_issuers_registry_address,
-    };
-    // Deploy identity registry storage
-    let identity_registry_storage_contract = declare("IdentityRegistryStorage")
-        .unwrap()
-        .contract_class();
-    let (identity_registry_storage_address, _) = identity_registry_storage_contract
-        .deploy(
-            @array![
-                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
-                starknet::get_contract_address().into(),
-            ],
-        )
-        .unwrap();
-    let identity_registry_storage = IIdentityRegistryStorageDispatcher {
-        contract_address: identity_registry_storage_address,
-    };
-    // Deploy claim topics registry
-    let claim_topics_registry_contract = declare("ClaimTopicsRegistry").unwrap().contract_class();
-    let (claim_topics_registry_address, _) = claim_topics_registry_contract
-        .deploy(
-            @array![
-                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
-                starknet::get_contract_address().into(),
-            ],
-        )
-        .unwrap();
-    let claim_topics_registry = IClaimTopicsRegistryDispatcher {
-        contract_address: claim_topics_registry_address,
-    };
-    // Deploy identity registry
-    let identity_registry_contract = declare("IdentityRegistry").unwrap().contract_class();
-    let (identity_registry_address, _) = identity_registry_contract
-        .deploy(
-            @array![
-                trusted_issuers_registry_address.into(),
-                claim_topics_registry_address.into(),
-                identity_registry_storage_address.into(),
-                starknet::contract_address_const::<'IMPLEMENTATION_AUTHORITY'>().into(),
-                starknet::get_contract_address().into(),
-            ],
-        )
-        .unwrap();
-    let identity_registry = IIdentityRegistryDispatcher {
-        contract_address: identity_registry_address,
-    };
-
-    identity_registry_storage.bind_identity_registry(identity_registry_address);
-
-    Setup {
-        trusted_issuers_registry,
-        claim_topics_registry,
-        identity_registry_storage,
-        identity_registry,
-    }
-}
-
 pub mod init {
     use core::num::traits::Zero;
     use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
@@ -163,21 +72,22 @@ pub mod init {
 }
 
 pub mod register_identity {
+    use factory::tests_common::setup_full_suite;
     use registry::{
         identity_registry::IdentityRegistry,
         interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
     };
-    use roles::agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait};
-    use snforge_std::{EventSpyAssertionsTrait, spy_events};
-    use super::setup;
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
 
     #[test]
     #[should_panic(expected: 'Caller is not agent')]
     fn test_should_panic_when_caller_is_not_agent() {
-        let setup = setup();
+        let setup = setup_full_suite();
 
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
-        let investor_identity = starknet::contract_address_const::<'ALICE_ID'>();
+        let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
+        let investor_identity = starknet::contract_address_const::<'INVESTOR_ID'>();
         let investor_country = 42;
 
         setup
@@ -187,19 +97,20 @@ pub mod register_identity {
 
     #[test]
     fn test_should_register_identity() {
-        let setup = setup();
-        IAgentRoleDispatcher { contract_address: setup.identity_registry.contract_address }
-            .add_agent(starknet::get_contract_address());
-
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
-        let investor_identity = starknet::contract_address_const::<'ALICE_ID'>();
+        let setup = setup_full_suite();
+        let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
+        let investor_identity = starknet::contract_address_const::<'INVESTOR_ID'>();
         let investor_country = 42;
 
         let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
         setup
             .identity_registry
             .register_identity(investor_address, investor_identity, investor_country);
-
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
         assert(
             setup.identity_registry.identity(investor_address) == investor_identity,
             'Investor id does not match',
@@ -225,42 +136,178 @@ pub mod register_identity {
     }
 }
 
-pub mod delete_identity {
-    use core::num::traits::Zero;
+pub mod batch_register_identity {
+    use factory::tests_common::setup_full_suite;
     use registry::{
         identity_registry::IdentityRegistry,
         interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
     };
-    use roles::agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait};
-    use snforge_std::{EventSpyAssertionsTrait, spy_events};
-    use super::setup;
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
 
     #[test]
     #[should_panic(expected: 'Caller is not agent')]
     fn test_should_panic_when_caller_is_not_agent() {
-        let setup = setup();
+        let setup = setup_full_suite();
 
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
+        let first_investor_address = starknet::contract_address_const::<'FIRST_INVESTOR_ADDRESS'>();
+        let first_investor_identity = starknet::contract_address_const::<'FIRST_INVESTOR_ID'>();
+        let first_investor_country = 42;
+        let second_investor_address = starknet::contract_address_const::<
+            'SECOND_INVESTOR_ADDRESS',
+        >();
+        let second_investor_identity = starknet::contract_address_const::<'SECOND_INVESTOR_ID'>();
+        let second_investor_country = 43;
+
+        setup
+            .identity_registry
+            .batch_register_identity(
+                [first_investor_address, second_investor_address].span(),
+                [first_investor_identity, second_investor_identity].span(),
+                [first_investor_country, second_investor_country].span(),
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: 'Arrays lenghts not equal')]
+    fn test_should_panic_when_arrays_not_parralel() {
+        let setup = setup_full_suite();
+
+        let first_investor_address = starknet::contract_address_const::<'FIRST_INVESTOR_ADDRESS'>();
+        let first_investor_identity = starknet::contract_address_const::<'FIRST_INVESTOR_ID'>();
+        let first_investor_country = 42;
+        let second_investor_address = starknet::contract_address_const::<
+            'SECOND_INVESTOR_ADDRESS',
+        >();
+        let second_investor_identity = starknet::contract_address_const::<'SECOND_INVESTOR_ID'>();
+        let second_investor_country = 43;
+
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
+        setup
+            .identity_registry
+            .batch_register_identity(
+                [first_investor_address, second_investor_address].span(),
+                [first_investor_identity, second_investor_identity].span(),
+                [first_investor_country, second_investor_country, 66].span(),
+            );
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
+    }
+
+    #[test]
+    fn test_should_batch_register_identity() {
+        let setup = setup_full_suite();
+        let first_investor_address = starknet::contract_address_const::<'FIRST_INVESTOR_ADDRESS'>();
+        let first_investor_identity = starknet::contract_address_const::<'FIRST_INVESTOR_ID'>();
+        let first_investor_country = 42;
+        let second_investor_address = starknet::contract_address_const::<
+            'SECOND_INVESTOR_ADDRESS',
+        >();
+        let second_investor_identity = starknet::contract_address_const::<'SECOND_INVESTOR_ID'>();
+        let second_investor_country = 43;
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
+        setup
+            .identity_registry
+            .batch_register_identity(
+                [first_investor_address, second_investor_address].span(),
+                [first_investor_identity, second_investor_identity].span(),
+                [first_investor_country, second_investor_country].span(),
+            );
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
+
+        assert(
+            setup.identity_registry.identity(first_investor_address) == first_investor_identity,
+            'Investor id does not match',
+        );
+        assert(
+            setup
+                .identity_registry
+                .investor_country(first_investor_address) == first_investor_country,
+            'Investor country does not match',
+        );
+        assert(
+            setup.identity_registry.identity(second_investor_address) == second_investor_identity,
+            'Investor id does not match',
+        );
+        assert(
+            setup
+                .identity_registry
+                .investor_country(second_investor_address) == second_investor_country,
+            'Investor country does not match',
+        );
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.identity_registry.contract_address,
+                        IdentityRegistry::Event::IdentityRegistered(
+                            IdentityRegistry::IdentityRegistered {
+                                investor_address: first_investor_address,
+                                identity: first_investor_identity,
+                            },
+                        ),
+                    ),
+                    (
+                        setup.identity_registry.contract_address,
+                        IdentityRegistry::Event::IdentityRegistered(
+                            IdentityRegistry::IdentityRegistered {
+                                investor_address: second_investor_address,
+                                identity: second_investor_identity,
+                            },
+                        ),
+                    ),
+                ],
+            );
+    }
+}
+
+pub mod delete_identity {
+    use core::num::traits::Zero;
+    use factory::tests_common::setup_full_suite;
+    use registry::{
+        identity_registry::IdentityRegistry,
+        interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
+    };
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+
+    #[test]
+    #[should_panic(expected: 'Caller is not agent')]
+    fn test_should_panic_when_caller_is_not_agent() {
+        let setup = setup_full_suite();
+        let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
 
         setup.identity_registry.delete_identity(investor_address);
     }
 
     #[test]
     fn test_should_delete_identity() {
-        let setup = setup();
-        IAgentRoleDispatcher { contract_address: setup.identity_registry.contract_address }
-            .add_agent(starknet::get_contract_address());
-
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
-        let investor_identity = starknet::contract_address_const::<'ALICE_ID'>();
+        let setup = setup_full_suite();
+        let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
+        let investor_identity = starknet::contract_address_const::<'INVESTOR_ID'>();
         let investor_country = 42;
 
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
         setup
             .identity_registry
             .register_identity(investor_address, investor_identity, investor_country);
 
         let mut spy = spy_events();
         setup.identity_registry.delete_identity(investor_address);
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
 
         assert(
             setup.identity_registry.identity(investor_address) == Zero::zero(),
@@ -288,42 +335,44 @@ pub mod delete_identity {
 }
 
 pub mod update_identity {
+    use factory::tests_common::setup_full_suite;
     use registry::{
         identity_registry::IdentityRegistry,
         interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
     };
-    use roles::agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait};
-    use snforge_std::{EventSpyAssertionsTrait, spy_events};
-    use super::setup;
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
 
     #[test]
     #[should_panic(expected: 'Caller is not agent')]
     fn test_should_panic_when_caller_is_not_agent() {
-        let setup = setup();
-
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
-        let new_identity = starknet::contract_address_const::<'NEW_ALICE_ID'>();
+        let setup = setup_full_suite();
+        let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
+        let new_identity = starknet::contract_address_const::<'NEW_INVESTOR_ID'>();
 
         setup.identity_registry.update_identity(investor_address, new_identity);
     }
 
     #[test]
     fn test_should_update_identity() {
-        let setup = setup();
-        IAgentRoleDispatcher { contract_address: setup.identity_registry.contract_address }
-            .add_agent(starknet::get_contract_address());
-
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
-        let investor_identity = starknet::contract_address_const::<'ALICE_ID'>();
+        let setup = setup_full_suite();
+        let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
+        let investor_identity = starknet::contract_address_const::<'INVESTOR_ID'>();
         let investor_country = 42;
-        let new_identity = starknet::contract_address_const::<'NEW_ALICE_ID'>();
+        let new_identity = starknet::contract_address_const::<'NEW_INVESTOR_ID'>();
 
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
         setup
             .identity_registry
             .register_identity(investor_address, investor_identity, investor_country);
 
         let mut spy = spy_events();
         setup.identity_registry.update_identity(investor_address, new_identity);
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
 
         assert(
             setup.identity_registry.identity(investor_address) == new_identity,
@@ -347,20 +396,20 @@ pub mod update_identity {
 }
 
 pub mod update_country {
+    use factory::tests_common::setup_full_suite;
     use registry::{
         identity_registry::IdentityRegistry,
         interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
     };
-    use roles::agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait};
-    use snforge_std::{EventSpyAssertionsTrait, spy_events};
-    use super::setup;
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
 
     #[test]
     #[should_panic(expected: 'Caller is not agent')]
     fn test_should_panic_when_caller_is_not_agent() {
-        let setup = setup();
-
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
+        let setup = setup_full_suite();
+        let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
         let new_country = 30;
 
         setup.identity_registry.update_country(investor_address, new_country);
@@ -368,21 +417,23 @@ pub mod update_country {
 
     #[test]
     fn test_should_update_country() {
-        let setup = setup();
-        IAgentRoleDispatcher { contract_address: setup.identity_registry.contract_address }
-            .add_agent(starknet::get_contract_address());
-
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
-        let investor_identity = starknet::contract_address_const::<'ALICE_ID'>();
+        let setup = setup_full_suite();
+        let investor_address = starknet::contract_address_const::<'INVESTOR_ADDRESS'>();
+        let investor_identity = starknet::contract_address_const::<'INVESTOR_ID'>();
         let investor_country = 42;
         let new_country = 30;
 
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
         setup
             .identity_registry
             .register_identity(investor_address, investor_identity, investor_country);
 
         let mut spy = spy_events();
         setup.identity_registry.update_country(investor_address, new_country);
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
 
         assert(
             setup.identity_registry.investor_country(investor_address) == new_country,
@@ -406,6 +457,7 @@ pub mod update_country {
 }
 
 pub mod set_identity_registry_storage {
+    use factory::tests_common::setup_full_suite;
     use registry::{
         identity_registry::IdentityRegistry,
         interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
@@ -413,12 +465,11 @@ pub mod set_identity_registry_storage {
     use snforge_std::{
         EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
     };
-    use super::setup;
 
     #[test]
     #[should_panic(expected: 'Caller is not the owner')]
     fn test_should_panic_when_caller_is_not_the_owner() {
-        let setup = setup();
+        let setup = setup_full_suite();
         let new_ir_storage = starknet::contract_address_const::<'NEW_IR_STORAGE'>();
 
         start_cheat_caller_address(
@@ -431,7 +482,7 @@ pub mod set_identity_registry_storage {
 
     #[test]
     fn test_should_set_the_identity_registry_storage() {
-        let setup = setup();
+        let setup = setup_full_suite();
         let new_ir_storage = starknet::contract_address_const::<'NEW_IR_STORAGE'>();
 
         let mut spy = spy_events();
@@ -458,6 +509,7 @@ pub mod set_identity_registry_storage {
 }
 
 pub mod set_claim_topics_registry {
+    use factory::tests_common::setup_full_suite;
     use registry::{
         identity_registry::IdentityRegistry,
         interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
@@ -465,12 +517,11 @@ pub mod set_claim_topics_registry {
     use snforge_std::{
         EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
     };
-    use super::setup;
 
     #[test]
     #[should_panic(expected: 'Caller is not the owner')]
     fn test_should_panic_when_caller_is_not_the_owner() {
-        let setup = setup();
+        let setup = setup_full_suite();
         let new_claim_topics_registry = starknet::contract_address_const::<
             'NEW_CLAIM_TOPICS_REGISTRY',
         >();
@@ -485,7 +536,7 @@ pub mod set_claim_topics_registry {
 
     #[test]
     fn test_should_set_the_claim_topics_registry() {
-        let setup = setup();
+        let setup = setup_full_suite();
         let new_claim_topics_registry = starknet::contract_address_const::<
             'NEW_CLAIM_TOPICS_REGISTRY',
         >();
@@ -514,6 +565,7 @@ pub mod set_claim_topics_registry {
 }
 
 pub mod set_trusted_issuers_registry {
+    use factory::tests_common::setup_full_suite;
     use registry::{
         identity_registry::IdentityRegistry,
         interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
@@ -521,12 +573,11 @@ pub mod set_trusted_issuers_registry {
     use snforge_std::{
         EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
     };
-    use super::setup;
 
     #[test]
     #[should_panic(expected: 'Caller is not the owner')]
     fn test_should_panic_when_caller_is_not_the_owner() {
-        let setup = setup();
+        let setup = setup_full_suite();
         let new_trusted_issuers_registry = starknet::contract_address_const::<
             'NEW_TRUSTED_ISSUERS_REGISTRY',
         >();
@@ -541,7 +592,7 @@ pub mod set_trusted_issuers_registry {
 
     #[test]
     fn test_should_set_the_trusted_issuers_registry() {
-        let setup = setup();
+        let setup = setup_full_suite();
         let new_trusted_issuers_registry = starknet::contract_address_const::<
             'NEW_TRUSTED_ISSUERS_REGISTRY',
         >();
@@ -573,30 +624,41 @@ pub mod set_trusted_issuers_registry {
 }
 
 pub mod is_verified {
-    use onchain_id_starknet::storage::structs::Signature;
+    use core::num::traits::Zero;
+    use factory::tests_common::setup_full_suite;
+    use onchain_id_starknet::interface::{
+        iclaim_issuer::ClaimIssuerABIDispatcherTrait, iidentity::IdentityABIDispatcherTrait,
+    };
     use registry::interface::{
         iclaim_topics_registry::IClaimTopicsRegistryDispatcherTrait,
         iidentity_registry::IIdentityRegistryDispatcherTrait,
         itrusted_issuers_registry::ITrustedIssuersRegistryDispatcherTrait,
     };
-    use roles::agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait};
-    use snforge_std::mock_call;
-    use super::setup;
+    use snforge_std::{mock_call, start_cheat_caller_address, stop_cheat_caller_address};
 
     #[test]
     fn test_should_return_true_when_the_identity_is_registered_when_there_are_no_required_claim_topics() {
-        let setup = setup();
+        let setup = setup_full_suite();
+        let investor_address = setup.accounts.charlie.account.contract_address;
+        let investor_identity = setup.onchain_id.charlie_identity.contract_address;
+        let investor_country = Zero::zero();
 
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
-        let investor_identity = starknet::contract_address_const::<'ALICE_ID'>();
-        let investor_country = 42;
-
-        IAgentRoleDispatcher { contract_address: setup.identity_registry.contract_address }
-            .add_agent(starknet::get_contract_address());
-
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
         setup
             .identity_registry
             .register_identity(investor_address, investor_identity, investor_country);
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
+
+        let verification_result = setup.identity_registry.is_verified(investor_address);
+        assert(!verification_result, 'Should have returned false');
+
+        let topics = setup.claim_topics_registry.get_claim_topics();
+        for topic in topics {
+            setup.claim_topics_registry.remove_claim_topic(*topic);
+        };
 
         let verification_result = setup.identity_registry.is_verified(investor_address);
         assert(verification_result, 'Should have returned true');
@@ -604,112 +666,80 @@ pub mod is_verified {
 
     #[test]
     fn test_should_return_false_when_claim_topics_are_required_but_there_are_no_trusted_issuers_for_them() {
-        let setup = setup();
-
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
-        let investor_identity = starknet::contract_address_const::<'ALICE_ID'>();
-        let investor_country = 42;
-
-        IAgentRoleDispatcher { contract_address: setup.identity_registry.contract_address }
-            .add_agent(starknet::get_contract_address());
-
-        setup
-            .identity_registry
-            .register_identity(investor_address, investor_identity, investor_country);
-
-        setup.claim_topics_registry.add_claim_topic('CLAIM_TOPIC');
+        let setup = setup_full_suite();
+        let investor_address = setup.accounts.alice.account.contract_address;
+        let topics = setup.claim_topics_registry.get_claim_topics();
+        let trusted_issuers = setup
+            .trusted_issuers_registry
+            .get_trusted_issuers_for_claim_topic(*topics.at(0));
+        for issuer in trusted_issuers {
+            setup.trusted_issuers_registry.remove_trusted_issuer(*issuer);
+        };
 
         let verification_result = setup.identity_registry.is_verified(investor_address);
         assert(!verification_result, 'Should have returned false');
     }
 
     #[test]
-    fn test_should_return_false_when_the_there_is_no_valid_claim() {
-        let setup = setup();
+    fn test_should_return_false_when_the_only_claim_required_was_revoked() {
+        let setup = setup_full_suite();
+        let investor_address = setup.accounts.alice.account.contract_address;
+        let verification_result = setup.identity_registry.is_verified(investor_address);
+        assert(verification_result, 'Should have returned true');
 
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
-        let investor_identity = starknet::contract_address_const::<'ALICE_ID'>();
-        let investor_country = 42;
-        let trusted_issuer = starknet::contract_address_const::<'TRUSTED_ISSUER'>();
-        let claim_topic = 'CLAIM_TOPIC';
-        IAgentRoleDispatcher { contract_address: setup.identity_registry.contract_address }
-            .add_agent(starknet::get_contract_address());
+        let topics = setup.claim_topics_registry.get_claim_topics();
+        let claim_ids = setup.onchain_id.alice_identity.get_claim_ids_by_topics(*topics.at(0));
+        let (_, _, _, sig, _, _) = setup.onchain_id.alice_identity.get_claim(*claim_ids.at(0));
 
-        setup
-            .identity_registry
-            .register_identity(investor_address, investor_identity, investor_country);
-
-        setup.claim_topics_registry.add_claim_topic(claim_topic);
-        setup.trusted_issuers_registry.add_trusted_issuer(trusted_issuer, [claim_topic].span());
-        let empty_bytearray: ByteArray = "";
-        mock_call(
-            investor_identity,
-            selector!("get_claim"),
-            (
-                claim_topic,
-                0,
-                trusted_issuer,
-                Signature::StarkSignature(Default::default()),
-                empty_bytearray.clone(),
-                empty_bytearray,
-            ),
-            1,
+        start_cheat_caller_address(
+            setup.onchain_id.claim_issuer.contract_address,
+            setup.accounts.claim_issuer.account.contract_address,
         );
-        mock_call(trusted_issuer, selector!("is_claim_valid"), false, 1);
+        setup.onchain_id.claim_issuer.revoke_claim_by_signature(sig);
+        stop_cheat_caller_address(setup.onchain_id.claim_issuer.contract_address);
 
         let verification_result = setup.identity_registry.is_verified(investor_address);
         assert(!verification_result, 'Should have returned false');
     }
 
     #[test]
-    fn test_should_return_true_when_the_there_is_valid_claim() {
-        let setup = setup();
+    fn test_should_return_false_when_there_is_no_identity_stored_for_wallet() {
+        let setup = setup_full_suite();
 
-        let investor_address = starknet::contract_address_const::<'ALICE'>();
-        let investor_identity = starknet::contract_address_const::<'ALICE_ID'>();
-        let investor_country = 42;
-        let trusted_issuer = starknet::contract_address_const::<'TRUSTED_ISSUER'>();
-        let claim_topic = 'CLAIM_TOPIC';
-
-        IAgentRoleDispatcher { contract_address: setup.identity_registry.contract_address }
-            .add_agent(starknet::get_contract_address());
-
-        setup
+        let verification_result = setup
             .identity_registry
-            .register_identity(investor_address, investor_identity, investor_country);
+            .is_verified(starknet::contract_address_const::<'WALLET_W_O_IDENTITY'>());
+        assert(!verification_result, 'Should have returned false');
+    }
 
-        setup.claim_topics_registry.add_claim_topic(claim_topic);
-        setup.trusted_issuers_registry.add_trusted_issuer(trusted_issuer, [claim_topic].span());
-        let empty_bytearray: ByteArray = "";
-        mock_call(
-            investor_identity,
-            selector!("get_claim"),
-            (
-                claim_topic,
-                0,
-                trusted_issuer,
-                Signature::StarkSignature(Default::default()),
-                empty_bytearray.clone(),
-                empty_bytearray,
-            ),
-            1,
-        );
-        mock_call(trusted_issuer, selector!("is_claim_valid"), true, 1);
-
+    #[test]
+    fn test_should_return_true_when_there_is_valid_claim() {
+        let setup = setup_full_suite();
+        let investor_address = setup.accounts.alice.account.contract_address;
         let verification_result = setup.identity_registry.is_verified(investor_address);
         assert(verification_result, 'Should have returned true');
     }
-    //#[test]
-//fn
-//test_should_return_true_if_there_is_another_valid_claim_when_the_claim_issuer_throws_an_error()
-//{
-//    assert(true, '');
-//}
-//
-//#[test]
-//fn
-//test_should_return_false_if_there_are_no_other_valid_claim_when_the_claim_issuer_throws_an_error()
-//{
-//    assert(true, '');
-//}
+
+    #[test]
+    fn test_should_return_true_when_multiple_trusted_issuer_at_least_one_valid_claim() {
+        let setup = setup_full_suite();
+        let investor_address = setup.accounts.alice.account.contract_address;
+        let topics = setup.claim_topics_registry.get_claim_topics();
+        let trusted_issuers = setup
+            .trusted_issuers_registry
+            .get_trusted_issuers_for_claim_topic(*topics.at(0));
+        for issuer in trusted_issuers {
+            setup.trusted_issuers_registry.remove_trusted_issuer(*issuer);
+        };
+
+        let random_issuer = starknet::contract_address_const::<'RANDOM_ISSUER'>();
+        setup.trusted_issuers_registry.add_trusted_issuer(random_issuer, [*topics.at(0)].span());
+        mock_call(random_issuer, selector!("is_claim_valid"), false, 1);
+
+        for issuer in trusted_issuers {
+            setup.trusted_issuers_registry.add_trusted_issuer(*issuer, [*topics.at(0)].span());
+        };
+        let verification_result = setup.identity_registry.is_verified(investor_address);
+        assert(verification_result, 'Should have returned true');
+    }
 }
