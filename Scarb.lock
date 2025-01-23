@@ -156,6 +156,7 @@ dependencies = [
  "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_introspection",
+ "openzeppelin_security",
  "openzeppelin_token",
  "registry",
  "snforge_std",

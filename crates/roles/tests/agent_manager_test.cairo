@@ -3,9 +3,7 @@ pub mod call_force_transfer {
     use openzeppelin_access::accesscontrol::interface::{
         IAccessControlDispatcher, IAccessControlDispatcherTrait,
     };
-    use openzeppelin_token::erc20::{
-        ERC20Component, interface::{IERC20Dispatcher, IERC20DispatcherTrait},
-    };
+    use openzeppelin_token::erc20::ERC20Component;
     use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
     use snforge_std::{
         EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
@@ -103,9 +101,7 @@ pub mod call_batch_force_transfer {
     use openzeppelin_access::accesscontrol::interface::{
         IAccessControlDispatcher, IAccessControlDispatcherTrait,
     };
-    use openzeppelin_token::erc20::{
-        ERC20Component, interface::{IERC20Dispatcher, IERC20DispatcherTrait},
-    };
+    use openzeppelin_token::erc20::ERC20Component;
     use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
     use snforge_std::{
         EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
@@ -213,40 +209,164 @@ pub mod call_batch_force_transfer {
 }
 
 pub mod call_pause {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_access::accesscontrol::interface::{
+        IAccessControlDispatcher, IAccessControlDispatcherTrait,
+    };
+    use openzeppelin_security::{
+        interface::{IPausableDispatcher, IPausableDispatcherTrait}, pausable::PausableComponent,
+    };
+    use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'OID is not freezer')]
     fn test_should_revert_when_specified_identity_missing_freezer_role() {
-        panic!("");
+        let setup = setup_full_suite();
+
+        setup.agent_manager.call_pause(setup.onchain_id.alice_identity.contract_address);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Caller is not management key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
-        panic!("");
+        let setup = setup_full_suite();
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::FREEZER, setup.onchain_id.alice_identity.contract_address);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            starknet::contract_address_const::<'NOT_ALICE_ID_MANAGER'>(),
+        );
+        setup.agent_manager.call_pause(setup.onchain_id.alice_identity.contract_address);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
     }
 
     #[test]
     fn test_should_perform_the_pause_when_identity_has_role_and_sender_authorized() {
-        assert(true, '');
+        let setup = setup_full_suite();
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::FREEZER, setup.onchain_id.alice_identity.contract_address);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        setup.agent_manager.call_pause(setup.onchain_id.alice_identity.contract_address);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        assert(
+            IPausableDispatcher { contract_address: setup.token.contract_address }.is_paused(),
+            'Token is not paused',
+        );
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.token.contract_address,
+                        PausableComponent::Event::Paused(
+                            PausableComponent::Paused {
+                                account: setup.agent_manager.contract_address,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
 
 pub mod call_unpause {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_access::accesscontrol::interface::{
+        IAccessControlDispatcher, IAccessControlDispatcherTrait,
+    };
+    use openzeppelin_security::{
+        interface::{IPausableDispatcher, IPausableDispatcherTrait}, pausable::PausableComponent,
+    };
+    use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'OID is not freezer')]
     fn test_should_revert_when_specified_identity_missing_freezer_role() {
-        panic!("");
+        let setup = setup_full_suite();
+
+        setup.agent_manager.call_unpause(setup.onchain_id.alice_identity.contract_address);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Caller is not management key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
-        panic!("");
+        let setup = setup_full_suite();
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::FREEZER, setup.onchain_id.alice_identity.contract_address);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            starknet::contract_address_const::<'NOT_ALICE_ID_MANAGER'>(),
+        );
+        setup.agent_manager.call_unpause(setup.onchain_id.alice_identity.contract_address);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
     }
 
     #[test]
     fn test_should_perform_the_unpause_when_identity_has_role_and_sender_authorized() {
-        assert(true, '');
+        let setup = setup_full_suite();
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::FREEZER, setup.onchain_id.alice_identity.contract_address);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        setup.agent_manager.call_pause(setup.onchain_id.alice_identity.contract_address);
+
+        let mut spy = spy_events();
+        setup.agent_manager.call_unpause(setup.onchain_id.alice_identity.contract_address);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        assert(
+            !IPausableDispatcher { contract_address: setup.token.contract_address }.is_paused(),
+            'Token is not unpaused',
+        );
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.token.contract_address,
+                        PausableComponent::Event::Unpaused(
+                            PausableComponent::Unpaused {
+                                account: setup.agent_manager.contract_address,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
 

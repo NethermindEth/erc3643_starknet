@@ -16,6 +16,7 @@ factory = { path = "../factory"}
 [dev-dependencies]
 snforge_std.workspace = true
 openzeppelin_token.workspace = true
+openzeppelin_security.workspace = true
 
 [[target.starknet-contract]]
 sierra = true
