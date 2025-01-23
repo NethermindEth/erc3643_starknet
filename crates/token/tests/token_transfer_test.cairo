@@ -219,14 +219,149 @@ pub mod transfer {
 }
 
 pub mod batch_transfer {
+    use compliance::imodular_compliance::IModularComplianceDispatcherTrait;
+    use core::num::traits::Zero;
     use factory::tests_common::setup_full_suite;
     use openzeppelin_token::erc20::{
         ERC20Component, interface::{IERC20Dispatcher, IERC20DispatcherTrait},
     };
     use snforge_std::{
-        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+        ContractClassTrait, DeclareResultTrait, EventSpyAssertionsTrait, declare, spy_events,
+        start_cheat_caller_address, stop_cheat_caller_address,
     };
     use token::itoken::ITokenDispatcherTrait;
+
+    #[test]
+    #[should_panic(expected: 'Pausable: paused')]
+    fn test_should_panic_when_token_is_paused() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = setup.accounts.bob.account.contract_address;
+        let amount = 100;
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.pause();
+        stop_cheat_caller_address(setup.token.contract_address);
+
+        start_cheat_caller_address(setup.token.contract_address, sender);
+        setup.token.batch_transfer([recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Wallet is frozen')]
+    fn test_should_panic_when_the_recipient_balance_is_frozen() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = setup.accounts.bob.account.contract_address;
+        let amount = 100;
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.set_address_frozen(recipient, true);
+        stop_cheat_caller_address(setup.token.contract_address);
+
+        start_cheat_caller_address(setup.token.contract_address, sender);
+        setup.token.batch_transfer([recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Wallet is frozen')]
+    fn test_should_panic_when_the_sender_balance_is_frozen() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = setup.accounts.bob.account.contract_address;
+        let amount = 100;
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.set_address_frozen(sender, true);
+        stop_cheat_caller_address(setup.token.contract_address);
+
+        start_cheat_caller_address(setup.token.contract_address, sender);
+        setup.token.batch_transfer([recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Insufficient available balance')]
+    fn test_should_panic_when_the_sender_has_not_enough_balance() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = setup.accounts.bob.account.contract_address;
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
+        let amount = erc20_dispatcher.balance_of(sender) + 1;
+
+        start_cheat_caller_address(setup.token.contract_address, sender);
+        setup.token.batch_transfer([recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Insufficient available balance')]
+    fn test_should_panic_when_the_sender_has_not_enough_balance_unfrozen() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = setup.accounts.bob.account.contract_address;
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
+        let balance = erc20_dispatcher.balance_of(sender);
+
+        start_cheat_caller_address(
+            setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        setup.token.freeze_partial_tokens(sender, 1);
+        stop_cheat_caller_address(setup.token.contract_address);
+
+        start_cheat_caller_address(setup.token.contract_address, sender);
+        setup.token.batch_transfer([recipient].span(), [balance].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Transfer not possible')]
+    fn test_should_panic_when_the_recipient_identity_is_not_verified() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = starknet::contract_address_const::<'NOT_VERIFIED'>();
+        let amount = 100;
+
+        start_cheat_caller_address(setup.token.contract_address, sender);
+        setup.token.batch_transfer([recipient].span(), [amount].span());
+        stop_cheat_caller_address(setup.token.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Transfer not possible')]
+    fn test_should_panic_when_the_transfer_breaks_compliance_rules() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let recipient = setup.accounts.bob.account.contract_address;
+        let amount = 100;
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
+
+        let compliance_module_contract = declare("CountryAllowModule").unwrap().contract_class();
+        let (compliance_module_address, _) = compliance_module_contract
+            .deploy(@array![starknet::get_contract_address().into()])
+            .unwrap();
+        setup.modular_compliance.add_module(compliance_module_address);
+
+        start_cheat_caller_address(setup.token.contract_address, sender);
+        setup.token.batch_transfer([recipient].span(), [amount].span());
+        stop_cheat_caller_address(erc20_dispatcher.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Arrays length not parrallel')]
+    fn test_should_panic_when_arrays_len_not_parallel() {
+        let setup = setup_full_suite();
+
+        setup.token.batch_transfer([Zero::zero(), Zero::zero()].span(), [100].span());
+    }
 
     #[test]
     fn test_should_transfer_tokens() {
