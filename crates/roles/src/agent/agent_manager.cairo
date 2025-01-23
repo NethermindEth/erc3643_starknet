@@ -58,12 +58,12 @@ mod AgentManager {
 
     pub mod Errors {
         pub const CALLER_NOT_MANAGEMENT_KEY: felt252 = 'Caller is not management key';
-        pub const NOT_TRANSFER_MANAGER: felt252 = 'oid is not transfer manager';
-        pub const NOT_FREEZER: felt252 = 'oid is not freezer';
-        pub const NOT_SUPPLY_MODIFIER: felt252 = 'oid is not supply modifier';
-        pub const NOT_RECOVERY_AGENT: felt252 = 'oid is not recovery agent';
-        pub const NOT_COMPLIANCE_AGENT: felt252 = 'oid is not compliance agent';
-        pub const NOT_WHITELIST_MANAGER: felt252 = 'oid is not whitelist manger';
+        pub const NOT_TRANSFER_MANAGER: felt252 = 'OID is not transfer manager';
+        pub const NOT_FREEZER: felt252 = 'OID is not freezer';
+        pub const NOT_SUPPLY_MODIFIER: felt252 = 'OID is not supply modifier';
+        pub const NOT_RECOVERY_AGENT: felt252 = 'OID is not recovery agent';
+        pub const NOT_COMPLIANCE_AGENT: felt252 = 'OID is not compliance agent';
+        pub const NOT_WHITELIST_MANAGER: felt252 = 'OID is not whitelist manger';
     }
 
     #[constructor]
