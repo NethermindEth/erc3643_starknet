@@ -357,10 +357,7 @@ pub mod Token {
         }
 
         fn batch_transfer(
-            ref self: ContractState,
-            from_list: Span<ContractAddress>,
-            to_list: Span<ContractAddress>,
-            amounts: Span<u256>,
+            ref self: ContractState, to_list: Span<ContractAddress>, amounts: Span<u256>,
         ) {
             self.pausable.assert_not_paused();
             let caller = starknet::get_caller_address();
@@ -536,24 +533,23 @@ pub mod Token {
             amount: u256,
         ) -> bool {
             self.pausable.assert_not_paused();
-            let caller = starknet::get_caller_address();
             assert(
-                !self.frozen.entry(recipient).read() && !self.frozen.entry(caller).read(),
+                !self.frozen.entry(recipient).read() && !self.frozen.entry(sender).read(),
                 'Wallet is frozen',
             );
             assert(
-                amount <= self.erc20.balance_of(caller) - self.frozen_tokens.entry(caller).read(),
+                amount <= self.erc20.balance_of(sender) - self.frozen_tokens.entry(sender).read(),
                 'Insufficient available balance',
             );
             let token_compliance = self.token_compliance.read();
             assert(
                 self.token_identity_registry.read().is_verified(recipient)
-                    && token_compliance.can_transfer(caller, recipient, amount),
+                    && token_compliance.can_transfer(sender, recipient, amount),
                 'Transfer not possible',
             );
-            self.erc20._spend_allowance(sender, caller, amount);
-            self.erc20._transfer(caller, recipient, amount);
-            token_compliance.transferred(caller, recipient, amount);
+            self.erc20._spend_allowance(sender, starknet::get_caller_address(), amount);
+            self.erc20._transfer(sender, recipient, amount);
+            token_compliance.transferred(sender, recipient, amount);
             true
         }
 
@@ -583,14 +579,14 @@ pub mod Token {
             ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
         ) -> bool {
             let from_balance = self.erc20.balance_of(from);
-            assert(from_balance >= amount, 'Sender balance insufficient');
+            assert(from_balance >= amount, 'ERC20: insufficient balance');
             let from_frozen_tokens_storage = self.frozen_tokens.entry(from);
             let from_frozen_tokens = from_frozen_tokens_storage.read();
             let free_balance = from_balance - from_frozen_tokens;
             if amount > free_balance {
                 let tokens_to_unfreeze = amount - free_balance;
                 from_frozen_tokens_storage.write(from_frozen_tokens - tokens_to_unfreeze);
-                self.emit(TokensUnfrozen { user_address: from, amount });
+                self.emit(TokensUnfrozen { user_address: from, amount: tokens_to_unfreeze });
             }
             assert(self.token_identity_registry.read().is_verified(to), 'Transfer not possible');
             self.erc20._transfer(from, to, amount);
@@ -650,7 +646,7 @@ pub mod Token {
             if amount > free_balance {
                 let tokens_to_unfreeze = amount - free_balance;
                 user_frozen_tokens_storage.write(user_frozen_tokens - tokens_to_unfreeze);
-                self.emit(TokensUnfrozen { user_address, amount });
+                self.emit(TokensUnfrozen { user_address, amount: tokens_to_unfreeze });
             }
             self.erc20.burn(user_address, amount);
             self.token_compliance.read().destroyed(user_address, amount);
