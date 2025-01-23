@@ -763,40 +763,192 @@ pub mod call_batch_burn {
 }
 
 pub mod call_set_address_frozen {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_access::accesscontrol::interface::{
+        IAccessControlDispatcher, IAccessControlDispatcherTrait,
+    };
+    use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use token::{itoken::ITokenDispatcherTrait, token::Token};
+
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'OID is not freezer')]
     fn test_should_revert_when_specified_identity_missing_freezer_role() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_wallet = setup.accounts.alice.account.contract_address;
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+
+        setup.agent_manager.call_set_address_frozen(alice_wallet, true, alice_identity);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Caller is not management key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_wallet = setup.accounts.alice.account.contract_address;
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::FREEZER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            starknet::contract_address_const::<'NOT_ALICE_ID_MANAGER'>(),
+        );
+        setup.agent_manager.call_set_address_frozen(alice_wallet, true, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
     }
 
     #[test]
     fn test_should_perform_the_freeze_when_identity_has_role_and_sender_authorized() {
-        assert(true, '');
+        let setup = setup_full_suite();
+        let alice_wallet = setup.accounts.alice.account.contract_address;
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::FREEZER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(setup.agent_manager.contract_address, alice_wallet);
+        setup.agent_manager.call_set_address_frozen(alice_wallet, true, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        assert(setup.token.is_frozen(alice_wallet), 'Address not frozen');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.token.contract_address,
+                        Token::Event::AddressFrozen(
+                            Token::AddressFrozen {
+                                user_address: alice_wallet,
+                                is_frozen: true,
+                                owner: setup.agent_manager.contract_address,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
 
 pub mod call_batch_set_address_frozen {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_access::accesscontrol::interface::{
+        IAccessControlDispatcher, IAccessControlDispatcherTrait,
+    };
+    use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use token::{itoken::ITokenDispatcherTrait, token::Token};
+
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'OID is not freezer')]
     fn test_should_revert_when_specified_identity_missing_freezer_role() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_wallet = setup.accounts.alice.account.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+
+        setup
+            .agent_manager
+            .call_batch_set_address_frozen(
+                [alice_wallet, bob_wallet].span(), [true, false].span(), alice_identity,
+            );
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Caller is not management key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_wallet = setup.accounts.alice.account.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::FREEZER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            starknet::contract_address_const::<'NOT_ALICE_ID_MANAGER'>(),
+        );
+        setup
+            .agent_manager
+            .call_batch_set_address_frozen(
+                [alice_wallet, bob_wallet].span(), [true, false].span(), alice_identity,
+            );
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
     }
 
     #[test]
     fn test_should_perform_the_batch_pause_when_identity_has_role_and_sender_authorized() {
-        assert(true, '');
+        let setup = setup_full_suite();
+        let alice_wallet = setup.accounts.alice.account.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::FREEZER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(setup.agent_manager.contract_address, alice_wallet);
+        setup
+            .agent_manager
+            .call_batch_set_address_frozen(
+                [alice_wallet, bob_wallet].span(), [true, false].span(), alice_identity,
+            );
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        assert(setup.token.is_frozen(alice_wallet), 'Address not frozen');
+        assert(!setup.token.is_frozen(bob_wallet), 'Address is frozen');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.token.contract_address,
+                        Token::Event::AddressFrozen(
+                            Token::AddressFrozen {
+                                user_address: alice_wallet,
+                                is_frozen: true,
+                                owner: setup.agent_manager.contract_address,
+                            },
+                        ),
+                    ),
+                    (
+                        setup.token.contract_address,
+                        Token::Event::AddressFrozen(
+                            Token::AddressFrozen {
+                                user_address: bob_wallet,
+                                is_frozen: false,
+                                owner: setup.agent_manager.contract_address,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
 
