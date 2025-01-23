@@ -9,16 +9,18 @@ openzeppelin_access.workspace = true
 openzeppelin_token.workspace = true
 openzeppelin_security.workspace = true
 openzeppelin_upgrades.workspace = true
+onchain_id_starknet.workspace = true
 registry = {path = "../registry"}
 roles = { path = "../roles"}
 compliance = {path ="../compliance" }
-onchain_id_starknet.workspace = true
+factory = { path = "../factory"}
 
 [dev-dependencies]
 snforge_std.workspace = true
 
 [[target.starknet-contract]]
 sierra = true
+build-external-contracts = ["onchain_id_starknet::*", "registry::*", "roles::*", "compliance::*", "factory::*", "mocks::*"]
 
 [tool]
 fmt.workspace = true
