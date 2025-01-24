@@ -75,7 +75,6 @@ mod AgentManager {
         self.access.set_role_admin(AgentRoles::FREEZER, AgentRoles::AGENT_ADMIN);
         self.access.set_role_admin(AgentRoles::TRANSFER_MANAGER, AgentRoles::AGENT_ADMIN);
         self.access.set_role_admin(AgentRoles::RECOVERY_AGENT, AgentRoles::AGENT_ADMIN);
-        self.access.set_role_admin(AgentRoles::COMPLIANCE_AGENT, AgentRoles::AGENT_ADMIN);
         self.access.set_role_admin(AgentRoles::WHITELIST_MANAGER, AgentRoles::AGENT_ADMIN);
         self.access.set_role_admin(AgentRoles::AGENT_ADMIN, AgentRoles::AGENT_ADMIN);
         self.access._grant_role(AgentRoles::AGENT_ADMIN, owner);
