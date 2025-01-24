@@ -1320,21 +1320,109 @@ pub mod call_batch_unfreeze_partial_tokens {
 }
 
 pub mod call_recovery_address {
+    use core::poseidon::poseidon_hash_span;
+    use factory::tests_common::setup_full_suite;
+    use onchain_id_starknet::interface::iidentity::IdentityABIDispatcherTrait;
+    use openzeppelin_access::accesscontrol::interface::{
+        IAccessControlDispatcher, IAccessControlDispatcherTrait,
+    };
+    use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+    use token::token::Token;
+
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'OID is not recovery agent')]
     fn test_should_revert_when_specified_identity_missing_recovery_agent_role() {
-        panic!("");
+        let setup = setup_full_suite();
+
+        setup
+            .agent_manager
+            .call_recovery_address(
+                setup.accounts.bob.account.contract_address,
+                starknet::contract_address_const::<'RECOVERY_WALLET'>(),
+                setup.onchain_id.bob_identity.contract_address,
+                setup.onchain_id.alice_identity.contract_address,
+            );
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Caller is not management key')]
     fn test_should_revert_when_specified_identity_has_recovery_agent_role_but_sender_not_authorized() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::RECOVERY_AGENT, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            starknet::contract_address_const::<'NOT_ALICE_ID_MANAGER'>(),
+        );
+        setup
+            .agent_manager
+            .call_recovery_address(
+                setup.accounts.bob.account.contract_address,
+                starknet::contract_address_const::<'RECOVERY_WALLET'>(),
+                setup.onchain_id.bob_identity.contract_address,
+                alice_identity,
+            );
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
     }
 
     #[test]
     fn test_should_perform_recovery_of_address_when_identity_has_role_and_sender_authorized() {
-        assert(true, '');
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+        let bob_identity = setup.onchain_id.bob_identity.contract_address;
+        let recovery_wallet = starknet::contract_address_const::<'RECOVERY_WALLET'>();
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::RECOVERY_AGENT, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(bob_identity, bob_wallet);
+        setup
+            .onchain_id
+            .bob_identity
+            .add_key(poseidon_hash_span([recovery_wallet.into()].span()), 1, 1);
+        stop_cheat_caller_address(bob_identity);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        setup
+            .agent_manager
+            .call_recovery_address(bob_wallet, recovery_wallet, bob_identity, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.token.contract_address,
+                        Token::Event::RecoverySuccess(
+                            Token::RecoverySuccess {
+                                lost_wallet: bob_wallet,
+                                new_wallet: recovery_wallet,
+                                investor_onchain_id: bob_identity,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
 
