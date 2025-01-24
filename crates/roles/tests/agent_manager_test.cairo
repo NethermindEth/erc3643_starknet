@@ -1427,77 +1427,377 @@ pub mod call_recovery_address {
 }
 
 pub mod call_register_identity {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_access::accesscontrol::interface::{
+        IAccessControlDispatcher, IAccessControlDispatcherTrait,
+    };
+    use registry::{
+        identity_registry::IdentityRegistry,
+        interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
+    };
+    use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'OID is not whitelist manger')]
     fn test_should_revert_when_specified_identity_missing_whitelist_manager_role() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let charlie_wallet = setup.accounts.charlie.account.contract_address;
+        let charlie_identity = setup.onchain_id.charlie_identity.contract_address;
+        let charlie_country = 42;
+
+        setup
+            .agent_manager
+            .call_register_identity(
+                charlie_wallet, charlie_identity, charlie_country, alice_identity,
+            );
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Caller is not management key')]
     fn test_should_revert_when_specified_identity_has_whitelist_manager_role_but_sender_not_authorized() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let charlie_wallet = setup.accounts.charlie.account.contract_address;
+        let charlie_identity = setup.onchain_id.charlie_identity.contract_address;
+        let charlie_country = 42;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::WHITELIST_MANAGER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            starknet::contract_address_const::<'NOT_ALICE_ID_MANAGER'>(),
+        );
+        setup
+            .agent_manager
+            .call_register_identity(
+                charlie_wallet, charlie_identity, charlie_country, alice_identity,
+            );
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
     }
 
     #[test]
     fn test_should_perform_registration_of_identity_when_identity_has_role_and_sender_authorized() {
-        assert(true, '');
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let charlie_wallet = setup.accounts.charlie.account.contract_address;
+        let charlie_identity = setup.onchain_id.charlie_identity.contract_address;
+        let charlie_country = 42;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::WHITELIST_MANAGER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        setup
+            .agent_manager
+            .call_register_identity(
+                charlie_wallet, charlie_identity, charlie_country, alice_identity,
+            );
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        assert(setup.identity_registry.contains(charlie_wallet), 'Identity not registered');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.identity_registry.contract_address,
+                        IdentityRegistry::Event::IdentityRegistered(
+                            IdentityRegistry::IdentityRegistered {
+                                investor_address: charlie_wallet, identity: charlie_identity,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
 
 pub mod call_update_identity {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_access::accesscontrol::interface::{
+        IAccessControlDispatcher, IAccessControlDispatcherTrait,
+    };
+    use registry::{
+        identity_registry::IdentityRegistry,
+        interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
+    };
+    use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'OID is not whitelist manger')]
     fn test_should_revert_when_specified_identity_missing_whitelist_manager_role() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+        let bob_new_identity = setup.onchain_id.charlie_identity.contract_address;
+
+        setup.agent_manager.call_update_identity(bob_wallet, bob_new_identity, alice_identity);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Caller is not management key')]
     fn test_should_revert_when_specified_identity_has_whitelist_manager_role_but_sender_not_authorized() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+        let bob_new_identity = setup.onchain_id.charlie_identity.contract_address;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::WHITELIST_MANAGER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            starknet::contract_address_const::<'NOT_ALICE_ID_MANAGER'>(),
+        );
+        setup.agent_manager.call_update_identity(bob_wallet, bob_new_identity, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
     }
 
     #[test]
     fn test_should_perform_update_of_identity_when_identity_has_role_and_sender_authorized() {
-        assert(true, '');
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+        let bob_identity = setup.onchain_id.bob_identity.contract_address;
+        let bob_new_identity = setup.onchain_id.charlie_identity.contract_address;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::WHITELIST_MANAGER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        setup.agent_manager.call_update_identity(bob_wallet, bob_new_identity, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        assert(
+            setup
+                .identity_registry
+                .identity(setup.accounts.bob.account.contract_address) == bob_new_identity,
+            'Bobs identity not updated',
+        );
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.identity_registry.contract_address,
+                        IdentityRegistry::Event::IdentityUpdated(
+                            IdentityRegistry::IdentityUpdated {
+                                old_identity: bob_identity, new_identity: bob_new_identity,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
 
 pub mod call_update_country {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_access::accesscontrol::interface::{
+        IAccessControlDispatcher, IAccessControlDispatcherTrait,
+    };
+    use registry::{
+        identity_registry::IdentityRegistry,
+        interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
+    };
+    use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'OID is not whitelist manger')]
     fn test_should_revert_when_specified_identity_missing_whitelist_manager_role() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+        let new_country = 100;
+
+        setup.agent_manager.call_update_country(bob_wallet, new_country, alice_identity);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Caller is not management key')]
     fn test_should_revert_when_specified_identity_has_whitelist_manager_role_but_sender_not_authorized() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+        let new_country = 100;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::WHITELIST_MANAGER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            starknet::contract_address_const::<'NOT_ALICE_ID_MANAGER'>(),
+        );
+        setup.agent_manager.call_update_country(bob_wallet, new_country, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
     }
 
     #[test]
     fn test_should_perform_update_of_country_when_identity_has_role_and_sender_authorized() {
-        assert(true, '');
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+        let new_country = 100;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::WHITELIST_MANAGER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        setup.agent_manager.call_update_country(bob_wallet, new_country, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        assert(
+            setup
+                .identity_registry
+                .investor_country(setup.accounts.bob.account.contract_address) == new_country,
+            'Bobs country not updated',
+        );
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.identity_registry.contract_address,
+                        IdentityRegistry::Event::CountryUpdated(
+                            IdentityRegistry::CountryUpdated {
+                                investor_address: bob_wallet, country: new_country,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
 
 pub mod call_delete_identity {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_access::accesscontrol::interface::{
+        IAccessControlDispatcher, IAccessControlDispatcherTrait,
+    };
+    use registry::{
+        identity_registry::IdentityRegistry,
+        interface::iidentity_registry::IIdentityRegistryDispatcherTrait,
+    };
+    use roles::{AgentRoles, agent::iagent_manager::IAgentManagerDispatcherTrait};
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
+
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'OID is not whitelist manger')]
     fn test_should_revert_when_specified_identity_missing_whitelist_manager_role() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+
+        setup.agent_manager.call_delete_identity(bob_wallet, alice_identity);
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected: 'Caller is not management key')]
     fn test_should_revert_when_specified_identity_has_whitelist_manager_role_but_sender_not_authorized() {
-        panic!("");
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::WHITELIST_MANAGER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            starknet::contract_address_const::<'NOT_ALICE_ID_MANAGER'>(),
+        );
+        setup.agent_manager.call_delete_identity(bob_wallet, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
     }
 
     #[test]
     fn test_should_perform_deletion_of_identity_when_identity_has_role_and_sender_authorized() {
-        assert(true, '');
+        let setup = setup_full_suite();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let bob_wallet = setup.accounts.bob.account.contract_address;
+
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address,
+            setup.accounts.token_admin.account.contract_address,
+        );
+        IAccessControlDispatcher { contract_address: setup.agent_manager.contract_address }
+            .grant_role(AgentRoles::WHITELIST_MANAGER, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            setup.agent_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        setup.agent_manager.call_delete_identity(bob_wallet, alice_identity);
+        stop_cheat_caller_address(setup.agent_manager.contract_address);
+
+        assert(!setup.identity_registry.contains(bob_wallet), 'Bobs identity not deleted');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.identity_registry.contract_address,
+                        IdentityRegistry::Event::IdentityRemoved(
+                            IdentityRegistry::IdentityRemoved {
+                                investor_address: bob_wallet,
+                                identity: setup.onchain_id.bob_identity.contract_address,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
