@@ -25,7 +25,7 @@ pub mod call_force_transfer {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_transfer_manager_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;
@@ -120,7 +120,7 @@ pub mod call_batch_force_transfer {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_transfer_manager_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_wallet = setup.accounts.alice.account.contract_address;
@@ -222,7 +222,7 @@ pub mod call_pause {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;
@@ -304,7 +304,7 @@ pub mod call_unpause {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;
@@ -394,7 +394,7 @@ pub mod call_mint {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_supply_modifier_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let recipient = setup.accounts.bob.account.contract_address;
@@ -485,7 +485,7 @@ pub mod call_batch_mint {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_supply_modifier_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;
@@ -601,7 +601,7 @@ pub mod call_burn {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_supply_modifier_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let bob_identity = setup.onchain_id.bob_identity.contract_address;
@@ -687,7 +687,7 @@ pub mod call_batch_burn {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_supply_modifier_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_wallet = setup.accounts.alice.account.contract_address;
@@ -784,7 +784,7 @@ pub mod call_set_address_frozen {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_wallet = setup.accounts.alice.account.contract_address;
@@ -871,7 +871,7 @@ pub mod call_batch_set_address_frozen {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_wallet = setup.accounts.alice.account.contract_address;
@@ -974,7 +974,7 @@ pub mod call_freeze_partial_tokens {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_wallet = setup.accounts.alice.account.contract_address;
@@ -1058,7 +1058,7 @@ pub mod call_batch_freeze_partial_tokens {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_wallet = setup.accounts.alice.account.contract_address;
@@ -1153,7 +1153,7 @@ pub mod call_unfreeze_partial_tokens {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_wallet = setup.accounts.alice.account.contract_address;
@@ -1240,7 +1240,7 @@ pub mod call_batch_unfreeze_partial_tokens {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_freezer_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_wallet = setup.accounts.alice.account.contract_address;
@@ -1348,7 +1348,7 @@ pub mod call_recovery_address {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_recovery_agent_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;
@@ -1457,7 +1457,7 @@ pub mod call_register_identity {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_whitelist_manager_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;
@@ -1555,7 +1555,7 @@ pub mod call_update_identity {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_whitelist_manager_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;
@@ -1649,7 +1649,7 @@ pub mod call_update_country {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_whitelist_manager_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;
@@ -1741,7 +1741,7 @@ pub mod call_delete_identity {
     }
 
     #[test]
-    #[should_panic(expected: 'Caller is not management key')]
+    #[should_panic(expected: 'Caller is not action key')]
     fn test_should_revert_when_specified_identity_has_whitelist_manager_role_but_sender_not_authorized() {
         let setup = setup_full_suite();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;

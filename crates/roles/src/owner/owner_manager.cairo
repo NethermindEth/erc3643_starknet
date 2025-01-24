@@ -74,7 +74,7 @@ mod OwnerManager {
     }
 
     pub mod Errors {
-        pub const CALLER_NOT_MANAGEMENT_KEY: felt252 = 'Caller is not management key';
+        pub const CALLER_IS_NOT_ACTION_KEY: felt252 = 'Caller is not action key';
         pub const NOT_REGISTRY_ADDRESS_SETTER: felt252 = 'oid not registry address setter';
         pub const NOT_COMPLIANCE_SETTER: felt252 = 'oid is not compliance setter';
         pub const NOT_COMPLIANCE_MANAGER: felt252 = 'oid is not compliance manager';
@@ -116,7 +116,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().set_identity_registry(identity_registry);
         }
@@ -134,7 +134,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().set_compliance(compliance);
         }
@@ -155,7 +155,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             let target_address = self.token.read().compliance().contract_address;
             starknet::syscalls::call_contract_syscall(target_address, selector, calldata).unwrap();
@@ -175,7 +175,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().set_name(name);
         }
@@ -193,7 +193,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().set_symbol(symbol);
         }
@@ -211,7 +211,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().set_onchain_id(token_onchain_id);
         }
@@ -231,7 +231,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().identity_registry().set_claim_topics_registry(claim_topics_registry);
         }
@@ -251,7 +251,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self
                 .token
@@ -276,7 +276,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self
                 .token
@@ -302,7 +302,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self
                 .token
@@ -328,7 +328,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self
                 .token
@@ -351,7 +351,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().identity_registry().topics_registry().add_claim_topic(claim_topic);
         }
@@ -369,7 +369,7 @@ mod OwnerManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().identity_registry().topics_registry().remove_claim_topic(claim_topic);
         }
