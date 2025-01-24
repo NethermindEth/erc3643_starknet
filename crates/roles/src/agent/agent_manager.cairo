@@ -62,7 +62,6 @@ mod AgentManager {
         pub const NOT_FREEZER: felt252 = 'OID is not freezer';
         pub const NOT_SUPPLY_MODIFIER: felt252 = 'OID is not supply modifier';
         pub const NOT_RECOVERY_AGENT: felt252 = 'OID is not recovery agent';
-        pub const NOT_COMPLIANCE_AGENT: felt252 = 'OID is not compliance agent';
         pub const NOT_WHITELIST_MANAGER: felt252 = 'OID is not whitelist manger';
     }
 
