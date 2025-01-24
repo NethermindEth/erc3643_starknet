@@ -6,18 +6,11 @@ mod AgentManager {
     use onchain_id_starknet::interface::iidentity::{
         IdentityABIDispatcher, IdentityABIDispatcherTrait,
     };
-    use openzeppelin_access::{accesscontrol::AccessControlComponent, ownable::OwnableComponent};
+    use openzeppelin_access::accesscontrol::AccessControlComponent;
     use openzeppelin_introspection::src5::SRC5Component;
     use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
     use starknet::{ContractAddress, storage::{StoragePointerReadAccess, StoragePointerWriteAccess}};
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
-
-    // Ownable Component
-    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
-
-    #[abi(embed_v0)]
-    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
-    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     // SRC5 Component
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -41,8 +34,6 @@ mod AgentManager {
         src5: SRC5Component::Storage,
         #[substorage(v0)]
         access: AccessControlComponent::Storage,
-        #[substorage(v0)]
-        ownable: OwnableComponent::Storage,
     }
 
     #[event]
@@ -52,8 +43,6 @@ mod AgentManager {
         AccessControlEvent: AccessControlComponent::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
-        #[flat]
-        OwnableEvent: OwnableComponent::Event,
     }
 
     pub mod Errors {
@@ -68,8 +57,6 @@ mod AgentManager {
     #[constructor]
     fn constructor(ref self: ContractState, token: ContractAddress, owner: ContractAddress) {
         self.token.write(ITokenDispatcher { contract_address: token });
-        // NOTE: might remove ownable.
-        self.ownable.initializer(owner);
         self.access.initializer();
         self.access.set_role_admin(AgentRoles::SUPPLY_MODIFIER, AgentRoles::AGENT_ADMIN);
         self.access.set_role_admin(AgentRoles::FREEZER, AgentRoles::AGENT_ADMIN);
