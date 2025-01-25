@@ -186,13 +186,12 @@ pub mod set_public_deployment_status {
     }
 
     #[test]
-    fn test_should_set_new_status(status_u8: u8) {
-        let status = status_u8 % 2 == 0;
-        let (_, gateway) = setup_gateway(status);
+    fn test_should_set_new_status() {
+        let (_, gateway) = setup_gateway(false);
         let mut spy = spy_events();
-
-        gateway.set_public_deployment_status(!status);
-        assert(gateway.get_public_deployment_status() == !status, 'Status didnt changed');
+        /// Set status false -> true
+        gateway.set_public_deployment_status(true);
+        assert(gateway.get_public_deployment_status() == true, 'Status didnt changed');
         spy
             .assert_emitted(
                 @array![
@@ -200,7 +199,24 @@ pub mod set_public_deployment_status {
                         gateway.contract_address,
                         TREXGateway::Event::PublicDeploymentStatusSet(
                             TREXGateway::PublicDeploymentStatusSet {
-                                public_deployment_status: !status,
+                                public_deployment_status: true,
+                            },
+                        ),
+                    ),
+                ],
+            );
+        /// Set status true -> false
+        let mut spy = spy_events();
+        gateway.set_public_deployment_status(false);
+        assert(gateway.get_public_deployment_status() == false, 'Status didnt changed');
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        gateway.contract_address,
+                        TREXGateway::Event::PublicDeploymentStatusSet(
+                            TREXGateway::PublicDeploymentStatusSet {
+                                public_deployment_status: false,
                             },
                         ),
                     ),
