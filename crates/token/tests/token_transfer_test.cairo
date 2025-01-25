@@ -255,17 +255,20 @@ pub mod batch_transfer {
     fn test_should_panic_when_the_recipient_balance_is_frozen() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
-        let recipient = setup.accounts.bob.account.contract_address;
+        let first_recipient = setup.accounts.david.account.contract_address;
+        let second_recipient = setup.accounts.bob.account.contract_address;
         let amount = 100;
 
         start_cheat_caller_address(
             setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
         );
-        setup.token.set_address_frozen(recipient, true);
+        setup.token.set_address_frozen(second_recipient, true);
         stop_cheat_caller_address(setup.token.contract_address);
 
         start_cheat_caller_address(setup.token.contract_address, sender);
-        setup.token.batch_transfer([recipient].span(), [amount].span());
+        setup
+            .token
+            .batch_transfer([first_recipient, second_recipient].span(), [amount, amount].span());
         stop_cheat_caller_address(setup.token.contract_address);
     }
 
@@ -327,11 +330,16 @@ pub mod batch_transfer {
     fn test_should_panic_when_the_recipient_identity_is_not_verified() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
-        let recipient = starknet::contract_address_const::<'NOT_VERIFIED'>();
+        let valid_recipient = setup.accounts.bob.account.contract_address;
+        let non_verified_recipient = starknet::contract_address_const::<'NOT_VERIFIED'>();
         let amount = 100;
 
         start_cheat_caller_address(setup.token.contract_address, sender);
-        setup.token.batch_transfer([recipient].span(), [amount].span());
+        setup
+            .token
+            .batch_transfer(
+                [valid_recipient, non_verified_recipient].span(), [amount, amount].span(),
+            );
         stop_cheat_caller_address(setup.token.contract_address);
     }
 
@@ -860,13 +868,20 @@ pub mod batch_forced_transfer {
     fn test_should_panic_when_recipient_identity_is_not_verified() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
-        let recipient = starknet::contract_address_const::<'NOT_VERIFIED'>();
+        let valid_recipient = setup.accounts.bob.account.contract_address;
+        let non_verified_recipient = starknet::contract_address_const::<'NOT_VERIFIED'>();
         let amount = 100;
 
         start_cheat_caller_address(
             setup.token.contract_address, setup.accounts.token_agent.account.contract_address,
         );
-        setup.token.batch_forced_transfer([sender].span(), [recipient].span(), [amount].span());
+        setup
+            .token
+            .batch_forced_transfer(
+                [sender, sender].span(),
+                [valid_recipient, non_verified_recipient].span(),
+                [amount, amount].span(),
+            );
         stop_cheat_caller_address(setup.token.contract_address);
     }
 
