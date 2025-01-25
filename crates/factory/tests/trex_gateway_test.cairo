@@ -428,7 +428,7 @@ pub mod add_deployer {
 
     #[test]
     #[should_panic(expected: 'Deployer already exists')]
-    fn test_should_when_called_by_owner_when_deployer_already_exists() {
+    fn test_should_panic_when_called_by_owner_when_deployer_already_exists() {
         let (setup, gateway) = setup_gateway(false);
         let deployer = setup.accounts.alice.account.contract_address;
 
@@ -441,10 +441,11 @@ pub mod add_deployer {
     fn test_should_add_new_deployer_when_called_by_agent() {
         let (setup, gateway) = setup_gateway(false);
         let deployer = setup.accounts.alice.account.contract_address;
+        let agent = setup.accounts.token_agent.account.contract_address;
         let mut spy = spy_events();
 
         start_cheat_caller_address(
-            gateway.contract_address, setup.accounts.token_agent.account.contract_address,
+            gateway.contract_address, agent,
         );
         gateway.add_deployer(deployer);
         stop_cheat_caller_address(gateway.contract_address);
@@ -537,7 +538,7 @@ pub mod batch_add_deployer {
         };
         deployers.append(deployer);
         // When batch has registered deployer should revert the whole batch
-        gateway.batch_add_deployer([deployer].span());
+        gateway.batch_add_deployer(deployers.span());
     }
 
     #[test]
@@ -568,7 +569,7 @@ pub mod batch_add_deployer {
         };
         deployers.append(deployer);
         // When batch has registered deployer should revert the whole batch
-        gateway.batch_add_deployer([deployer].span());
+        gateway.batch_add_deployer(deployers.span());
         stop_cheat_caller_address(gateway.contract_address);
     }
 
