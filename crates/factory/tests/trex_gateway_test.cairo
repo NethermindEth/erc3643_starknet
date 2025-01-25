@@ -227,8 +227,12 @@ pub mod set_public_deployment_status {
 
 pub mod transfer_factory_ownership {
     use factory::itrex_gateway::ITREXGatewayDispatcherTrait;
-    use openzeppelin_access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
-    use snforge_std::{start_cheat_caller_address, stop_cheat_caller_address};
+    use openzeppelin_access::ownable::{
+        OwnableComponent, interface::{IOwnableDispatcher, IOwnableDispatcherTrait},
+    };
+    use snforge_std::{
+        EventSpyAssertionsTrait, spy_events, start_cheat_caller_address, stop_cheat_caller_address,
+    };
     use super::setup_gateway;
 
     #[test]
@@ -246,13 +250,28 @@ pub mod transfer_factory_ownership {
     fn test_should_transfer_factory_ownership() {
         let (setup, gateway) = setup_gateway(false);
 
+        let mut spy = spy_events();
         let new_owner = starknet::contract_address_const::<'SOME_ADDRESS'>();
         gateway.transfer_factory_ownership(new_owner);
+
         assert(
             IOwnableDispatcher { contract_address: setup.trex_factory.contract_address }
                 .owner() == new_owner,
             'Ownership didnt transferred',
         );
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        setup.trex_factory.contract_address,
+                        OwnableComponent::Event::OwnershipTransferred(
+                            OwnableComponent::OwnershipTransferred {
+                                previous_owner: gateway.contract_address, new_owner,
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
 
