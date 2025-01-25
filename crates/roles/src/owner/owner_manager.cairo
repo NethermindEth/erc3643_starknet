@@ -287,10 +287,7 @@ mod OwnerManager {
         }
 
         fn call_remove_trusted_issuer(
-            ref self: ContractState,
-            trusted_issuer: ContractAddress,
-            claim_topics: Span<felt252>,
-            onchain_id: ContractAddress,
+            ref self: ContractState, trusted_issuer: ContractAddress, onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(

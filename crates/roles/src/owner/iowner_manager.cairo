@@ -38,10 +38,7 @@ pub trait IOwnerManager<TContractState> {
         onchain_id: ContractAddress,
     );
     fn call_remove_trusted_issuer(
-        ref self: TContractState,
-        trusted_issuer: ContractAddress,
-        claim_topics: Span<felt252>,
-        onchain_id: ContractAddress,
+        ref self: TContractState, trusted_issuer: ContractAddress, onchain_id: ContractAddress,
     );
     fn call_update_issuer_claim_topics(
         ref self: TContractState,
