@@ -479,9 +479,7 @@ pub mod add_deployer {
         let agent = setup.accounts.token_agent.account.contract_address;
         let mut spy = spy_events();
 
-        start_cheat_caller_address(
-            gateway.contract_address, agent,
-        );
+        start_cheat_caller_address(gateway.contract_address, agent);
         gateway.add_deployer(deployer);
         stop_cheat_caller_address(gateway.contract_address);
 
@@ -1274,6 +1272,7 @@ pub mod deploy_trex_suite {
         );
         /// Check token transfer
         assert(fee_token.balance_of(fee_collector) == 20_000, 'Fee not transferred');
+        assert(fee_token.balance_of(not_deployer) == 80_000, 'Fee not transferred');
         spy
             .assert_emitted(
                 @array![
@@ -1332,6 +1331,7 @@ pub mod deploy_trex_suite {
 
         /// Check token transfer
         assert(fee_token.balance_of(fee_collector) == 10_000, 'Fee not transferred');
+        assert(fee_token.balance_of(not_deployer) == 90_000, 'Fee not transferred');
         spy
             .assert_emitted(
                 @array![
@@ -1457,6 +1457,7 @@ pub mod deploy_trex_suite {
 
         /// Check token transfer
         assert(fee_token.balance_of(fee_collector) == 20_000, 'Fee not transferred');
+        assert(fee_token.balance_of(another_deployer) == 80_000, 'Fee not transferred');
         spy
             .assert_emitted(
                 @array![
@@ -1516,6 +1517,7 @@ pub mod deploy_trex_suite {
 
         /// Check token transfer
         assert(fee_token.balance_of(fee_collector) == 10_000, 'Fee not transferred');
+        assert(fee_token.balance_of(another_deployer) == 90_000, 'Fee not transferred');
         spy
             .assert_emitted(
                 @array![
@@ -1575,6 +1577,7 @@ pub mod deploy_trex_suite {
 
         /// Check token transfer
         assert(fee_token.balance_of(fee_collector) == 0, 'Balance mismatch');
+        assert(fee_token.balance_of(another_deployer) == 100_000, 'Fee not transferred');
         spy
             .assert_not_emitted(
                 @array![
@@ -1823,6 +1826,7 @@ pub mod batch_deploy_trex_suite {
 
         /// Check token transfer
         assert(fee_token.balance_of(fee_collector) == 100_000, 'Balance mismatch');
+        assert(fee_token.balance_of(not_deployer) == 0, 'Balance mismatch');
         spy
             .assert_emitted(
                 @array![
@@ -1890,6 +1894,7 @@ pub mod batch_deploy_trex_suite {
 
         /// Check token transfer
         assert(fee_token.balance_of(fee_collector) == 50_000, 'Balance mismatch');
+        assert(fee_token.balance_of(not_deployer) == 50_000, 'Balance mismatch');
         spy
             .assert_emitted(
                 @array![
