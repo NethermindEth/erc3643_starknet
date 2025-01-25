@@ -45,7 +45,7 @@ fn test_should_panic_when_wallet_to_recover_has_no_balance() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected: 'Recovery not possible')]
 fn test_should_panic_when_new_wallet_is_not_authorized_on_the_identity() {
     let setup = setup_full_suite();
     let recovery_wallet = starknet::contract_address_const::<'RECOVERY_WALLET'>();
