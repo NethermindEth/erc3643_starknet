@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod TREXGateway {
+pub mod TREXGateway {
     use core::{num::traits::Zero, panic_with_felt252, poseidon::poseidon_hash_span};
     use crate::{
         itrex_factory::{
@@ -45,7 +45,7 @@ mod TREXGateway {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         FactorySet: FactorySet,
         PublicDeploymentStatusSet: PublicDeploymentStatusSet,
         DeploymentFeeSet: DeploymentFeeSet,
@@ -63,56 +63,56 @@ mod TREXGateway {
     #[derive(Drop, starknet::Event)]
     pub struct FactorySet {
         #[key]
-        factory: ContractAddress,
+        pub factory: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct PublicDeploymentStatusSet {
         #[key]
-        public_deployment_status: bool,
+        pub public_deployment_status: bool,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct DeploymentFeeSet {
         #[key]
-        fee: u256,
+        pub fee: u256,
         #[key]
-        fee_token: ContractAddress,
+        pub fee_token: ContractAddress,
         #[key]
-        fee_collector: ContractAddress,
+        pub fee_collector: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct DeploymentFeeEnabled {
         #[key]
-        is_enabled: bool,
+        pub is_enabled: bool,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct DeployerAdded {
         #[key]
-        deployer: ContractAddress,
+        pub deployer: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct DeployerRemoved {
         #[key]
-        deployer: ContractAddress,
+        pub deployer: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct FeeDiscountApplied {
         #[key]
-        deployer: ContractAddress,
-        discount: u16,
+        pub deployer: ContractAddress,
+        pub discount: u16,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct GatewaySuiteDeploymentProcessed {
         #[key]
-        requester: ContractAddress,
-        intended_owner: ContractAddress,
-        fee_applied: u256,
+        pub requester: ContractAddress,
+        pub intended_owner: ContractAddress,
+        pub fee_applied: u256,
     }
 
     pub mod Errors {
@@ -126,7 +126,7 @@ mod TREXGateway {
         pub const PUBLIC_DEPLOYMENTS_NOT_ALLOWED: felt252 = 'Public deployment not allowed';
         pub const PUBLIC_CANNOT_DEPLOY_ON_BEHALF: felt252 = 'Public cannot deploy on behalf';
         pub const DISCOUNT_OUT_OF_RANGE: felt252 = 'Discount out of range';
-        pub const ONLY_ADMIN_CALL: felt252 = 'Only admin call';
+        pub const ONLY_ADMIN_CALL: felt252 = 'Only admin can call';
         pub const BATCH_MAX_LENGTH_EXCEEDED: felt252 = 'Batch max length exceeded';
         pub const ARRAY_LEN_MISMATCH: felt252 = 'Arrays have different length';
     }
@@ -309,11 +309,13 @@ mod TREXGateway {
                 let deployment_fee = self.deployment_fee.read();
                 if deployment_fee.fee.is_non_zero() {
                     fee_applied = self.calculate_fee(caller);
-                    assert(
-                        IERC20Dispatcher { contract_address: deployment_fee.fee_token }
-                            .transfer_from(caller, deployment_fee.fee_collector, fee_applied),
-                        'ERC20: Transfer from failed',
-                    );
+                    if fee_applied.is_non_zero() {
+                        assert(
+                            IERC20Dispatcher { contract_address: deployment_fee.fee_token }
+                                .transfer_from(caller, deployment_fee.fee_collector, fee_applied),
+                            'ERC20: Transfer from failed',
+                        );
+                    }
                 }
             }
 
@@ -361,11 +363,13 @@ mod TREXGateway {
                 if deployment_fee.fee.is_non_zero() {
                     fee_applied = self.calculate_fee(caller);
                     let fee_total = fee_applied * token_details.len().into();
-                    assert(
-                        IERC20Dispatcher { contract_address: deployment_fee.fee_token }
-                            .transfer_from(caller, deployment_fee.fee_collector, fee_total),
-                        'ERC20: Transfer from failed',
-                    );
+                    if fee_total.is_non_zero() {
+                        assert(
+                            IERC20Dispatcher { contract_address: deployment_fee.fee_token }
+                                .transfer_from(caller, deployment_fee.fee_collector, fee_total),
+                            'ERC20: Transfer from failed',
+                        );
+                    }
                 }
             }
 

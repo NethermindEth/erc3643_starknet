@@ -47,6 +47,7 @@ name = "factory"
 version = "0.1.0"
 dependencies = [
  "compliance",
+ "mocks",
  "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_token",
@@ -192,6 +193,7 @@ name = "token"
 version = "0.1.0"
 dependencies = [
  "compliance",
+ "factory",
  "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_security",
