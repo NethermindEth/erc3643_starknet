@@ -31,10 +31,7 @@ pub trait IToken<TContractState> {
         investor_onchain_id: ContractAddress,
     ) -> bool;
     fn batch_transfer(
-        ref self: TContractState,
-        from_list: Span<ContractAddress>,
-        to_list: Span<ContractAddress>,
-        amounts: Span<u256>,
+        ref self: TContractState, to_list: Span<ContractAddress>, amounts: Span<u256>,
     );
     fn batch_forced_transfer(
         ref self: TContractState,
