@@ -74,6 +74,7 @@ pub struct TestAccounts {
     pub alice: Account,
     pub bob: Account,
     pub charlie: Account,
+    pub david: Account,
     pub claim_issuer: Account,
     pub token_issuer: Account,
     pub token_agent: Account,
@@ -87,6 +88,8 @@ pub struct OnchainIdentitySetup {
     pub claim_issuer: ClaimIssuerABIDispatcher,
     pub alice_identity: IdentityABIDispatcher,
     pub bob_identity: IdentityABIDispatcher,
+    pub charlie_identity: IdentityABIDispatcher,
+    pub david_identity: IdentityABIDispatcher,
     pub claim_for_alice: TestClaim,
     pub claim_for_bob: TestClaim,
 }
@@ -215,10 +218,17 @@ pub fn setup_full_suite() -> FullSuiteSetup {
     );
     identity_registry
         .batch_register_identity(
-            [accounts.alice.account.contract_address, accounts.bob.account.contract_address].span(),
-            [oid_setup.alice_identity.contract_address, oid_setup.bob_identity.contract_address]
+            [
+                accounts.alice.account.contract_address, accounts.bob.account.contract_address,
+                accounts.david.account.contract_address,
+            ]
                 .span(),
-            [42, 666].span(),
+            [
+                oid_setup.alice_identity.contract_address, oid_setup.bob_identity.contract_address,
+                oid_setup.david_identity.contract_address,
+            ]
+                .span(),
+            [42, 666, 777].span(),
         );
     stop_cheat_caller_address(identity_registry.contract_address);
 
@@ -393,7 +403,7 @@ fn setup_onchain_id(accounts: @TestAccounts) -> OnchainIdentitySetup {
         issuer: claim_issuer_address,
         topic: claim_topic,
         scheme: 1,
-        data: claim_data,
+        data: claim_data.clone(),
         signature: Signature::StarkSignature(
             StarkSignature { r, s, public_key: *accounts.claim_issuer.key_pair.public_key },
         ),
@@ -411,12 +421,67 @@ fn setup_onchain_id(accounts: @TestAccounts) -> OnchainIdentitySetup {
         );
     stop_cheat_caller_address(bob_identity.contract_address);
 
+    id_factory_dispatcher.create_identity(*accounts.david.account.contract_address, 'david');
+    let david_identity = IdentityABIDispatcher {
+        contract_address: id_factory_dispatcher
+            .get_identity((*accounts).david.account.contract_address),
+    };
+    /// Register claim for Bob
+    start_cheat_caller_address(
+        david_identity.contract_address, *accounts.david.account.contract_address,
+    );
+
+    let mut serialized_claim_to_sign: Array<felt252> = array![];
+    david_identity.contract_address.serialize(ref serialized_claim_to_sign);
+    claim_topic.serialize(ref serialized_claim_to_sign);
+    claim_data.serialize(ref serialized_claim_to_sign);
+
+    let hashed_claim = poseidon_hash_span(
+        array!['Starknet Message', poseidon_hash_span(serialized_claim_to_sign.span())].span(),
+    );
+
+    let (r, s) = (*accounts).claim_issuer.key_pair.sign(hashed_claim).unwrap();
+
+    let claim_for_david = TestClaim {
+        claim_id,
+        identity: david_identity.contract_address,
+        issuer: claim_issuer_address,
+        topic: claim_topic,
+        scheme: 1,
+        data: claim_data,
+        signature: Signature::StarkSignature(
+            StarkSignature { r, s, public_key: *accounts.claim_issuer.key_pair.public_key },
+        ),
+        uri: "https://example.com",
+    };
+
+    david_identity
+        .add_claim(
+            claim_for_david.topic,
+            claim_for_david.scheme,
+            claim_for_david.issuer,
+            claim_for_david.signature,
+            claim_for_david.data.clone(),
+            claim_for_david.uri.clone(),
+        );
+    stop_cheat_caller_address(david_identity.contract_address);
+
+    /// Deploy OID for Charlie
+    id_factory_dispatcher.create_identity(*accounts.charlie.account.contract_address, 'charlie');
+
+    let charlie_identity = IdentityABIDispatcher {
+        contract_address: id_factory_dispatcher
+            .get_identity(*accounts.charlie.account.contract_address),
+    };
+
     OnchainIdentitySetup {
         identity_factory: id_factory_dispatcher,
         implementation_authority: implementation_authority_dispatcher,
         claim_issuer: claim_issuer_dispatcher,
         alice_identity,
         bob_identity,
+        charlie_identity,
+        david_identity,
         claim_for_alice,
         claim_for_bob,
     }
@@ -482,14 +547,10 @@ pub fn setup_accounts() -> TestAccounts {
         alice: generate_account(),
         bob: generate_account(),
         charlie: generate_account(),
+        david: generate_account(),
         claim_issuer: generate_account(),
         token_issuer: generate_account(),
         token_agent: generate_account(),
         token_admin: generate_account(),
     }
-}
-
-#[test]
-fn test_setup() {
-    setup_full_suite();
 }

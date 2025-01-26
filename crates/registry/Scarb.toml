@@ -7,6 +7,7 @@ edition = "2024_07"
 starknet.workspace = true
 storage = { path = "../storage"}
 roles = { path = "../roles"}
+factory = { path = "../factory"}
 onchain_id_starknet.workspace = true
 openzeppelin_access.workspace = true
 openzeppelin_upgrades.workspace = true
@@ -16,6 +17,7 @@ snforge_std.workspace = true
 
 [[target.starknet-contract]]
 sierra = true
+build-external-contracts = ["onchain_id_starknet::*", "factory::*", "roles::*", "compliance::*", "token::*", "mocks::*"]
 
 [tool]
 fmt.workspace = true

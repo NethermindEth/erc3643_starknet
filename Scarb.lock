@@ -47,6 +47,7 @@ name = "factory"
 version = "0.1.0"
 dependencies = [
  "compliance",
+ "mocks",
  "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_token",
@@ -138,6 +139,7 @@ checksum = "sha256:44f32d242af1e43982decc49c563e613a9b67ade552f5c3d5cde504e92f74
 name = "registry"
 version = "0.1.0"
 dependencies = [
+ "factory",
  "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_upgrades",
