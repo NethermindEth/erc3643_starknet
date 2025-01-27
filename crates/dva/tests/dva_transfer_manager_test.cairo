@@ -67,6 +67,25 @@ fn setup_full_suite_with_transfer(
     (setup, transfer_manager, transfer_id)
 }
 
+mod get_next_tx_nonce {
+    use super::{
+        IDVATransferManagerDispatcherTrait, setup_full_suite_with_transfer,
+        setup_full_suite_with_verified_transfer_manager,
+    };
+
+    #[test]
+    fn test_when_no_transfer_should_return_zero() {
+        let (_, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        assert_eq!(transfer_manager.get_next_tx_nonce(), 0);
+    }
+
+    #[test]
+    fn test_when_one_transfer_exists_should_return_one() {
+        let (_, transfer_manager, _) = setup_full_suite_with_transfer(false);
+        assert_eq!(transfer_manager.get_next_tx_nonce(), 1);
+    }
+}
+
 mod get_next_approver {
     use super::*;
 
