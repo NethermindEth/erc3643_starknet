@@ -67,6 +67,65 @@ fn setup_full_suite_with_transfer(
     (setup, transfer_manager, transfer_id)
 }
 
+mod get_next_approver {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected: 'Invalid transfer ID')]
+    fn test_when_transfer_does_not_exist_should_panic() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        let transfer_id = transfer_manager
+            .calculate_transfer_id(
+                0,
+                setup.accounts.alice.account.contract_address,
+                setup.accounts.bob.account.contract_address,
+                100,
+            );
+        transfer_manager.get_next_approver(transfer_id);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Transfer not in pending status')]
+    fn test_when_transfer_status_is_not_pending_should_panic() {
+        let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        transfer_manager.cancel_transfer(transfer_id);
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        transfer_manager.get_next_approver(transfer_id);
+        stop_cheat_caller_address(transfer_manager.contract_address);
+    }
+
+    #[test]
+    fn test_when_no_one_approved_the_transfer_should_return_first_approver() {
+        let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(true);
+        let (next_approver, any_token_agent) = transfer_manager.get_next_approver(transfer_id);
+        assert_eq!(next_approver, setup.accounts.bob.account.contract_address);
+        assert_eq!(any_token_agent, false);
+    }
+
+    #[test]
+    fn test_when_one_approver_approved_the_transfer_should_return_second_approver() {
+        let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(true);
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.bob.account.contract_address,
+        );
+        transfer_manager.approve_transfer(transfer_id);
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        let (next_approver, any_token_agent) = transfer_manager.get_next_approver(transfer_id);
+        assert_eq!(next_approver, Zero::zero());
+        assert_eq!(any_token_agent, true);
+    }
+}
+
 mod get_approval_criteria {
     use super::{
         IDVATransferManagerDispatcherTrait, setup_full_suite_with_transfer,

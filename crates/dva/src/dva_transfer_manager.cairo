@@ -126,8 +126,8 @@ pub mod DVATransferManager {
             let token = IERC20Dispatcher { contract_address: token_address };
             token.transfer_from(caller, starknet::get_contract_address(), amount);
 
-            let nonce = self.tx_nonce.read() + 1;
-            self.tx_nonce.write(nonce);
+            let nonce = self.tx_nonce.read();
+            self.tx_nonce.write(nonce + 1);
             let transfer_id = self.calculate_transfer_id(nonce, caller, recipient, amount);
 
             // Write transfer
