@@ -72,7 +72,7 @@ pub mod DVATransferManager {
         TransferRejected: TransferRejected,
         TransferCancelled: TransferCancelled,
         TransferCompleted: TransferCompleted,
-        TransferApprovalReset: TransferApprovalReset,
+        TransferApprovalStateReset: TransferApprovalStateReset,
     }
 
     #[abi(embed_v0)]
@@ -438,7 +438,7 @@ pub mod DVATransferManager {
             // delete transfer.approvers;
             transfer.approvers.clear();
             self.add_approvers_to_transfer(transfer, approval_criteria.storage_node());
-            self.emit(TransferApprovalReset { transfer_id, approval_criteria_hash });
+            self.emit(TransferApprovalStateReset { transfer_id, approval_criteria_hash });
 
             true
         }

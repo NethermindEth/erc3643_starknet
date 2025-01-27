@@ -145,7 +145,7 @@ pub mod Events {
 
     /// Emitted when a transfer's approval criteria are reset
     #[derive(Drop, starknet::Event)]
-    pub struct TransferApprovalReset {
+    pub struct TransferApprovalStateReset {
         #[key]
         pub transfer_id: felt252,
         pub approval_criteria_hash: felt252,
