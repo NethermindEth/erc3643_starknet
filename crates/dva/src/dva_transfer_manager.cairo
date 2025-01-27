@@ -1,39 +1,13 @@
-use core::hash::{HashStateExTrait, HashStateTrait};
-use core::poseidon::PoseidonTrait;
-use openzeppelin_utils::cryptography::snip12::StructHash;
-
-#[derive(Copy, Drop, Hash)]
-pub struct DelegatedApprovalMessage {
-    transfer_id: felt252,
-}
-
-// Todo: compute off chain and hardcode as constant
-// selector!(
-//   "\"DelegatedApprovalMessage\"(
-//     \"transfer_id\":\"felt"
-// );
-pub const DELEGATED_APPROVAL_MESSAGE_TYPE_HASH: felt252 = selector!(
-    "\"DelegatedApprovalMessage\"(\"transfer_id\":\"felt",
-);
-
-impl StructHashImpl of StructHash<DelegatedApprovalMessage> {
-    fn hash_struct(self: @DelegatedApprovalMessage) -> felt252 {
-        PoseidonTrait::new()
-            .update_with(DELEGATED_APPROVAL_MESSAGE_TYPE_HASH)
-            .update_with(*self)
-            .finalize()
-    }
-}
-
 #[starknet::contract]
 pub mod DVATransferManager {
     use core::num::traits::Zero;
     use core::poseidon::poseidon_hash_span;
+    use dva::idva_transfer_manager::IDVATransferManager;
     use dva::idva_transfer_manager::{
         ApprovalCriteria, ApprovalCriteriaStore, ApprovalCriteriaStoreStorageNode,
     };
-    use dva::idva_transfer_manager::{Approver, DelegatedApproval, TransferStatus};
-    use dva::idva_transfer_manager::{Errors, Events::*, IDVATransferManager};
+    use dva::idva_transfer_manager::{Approver, Errors, Events::*, TransferStatus};
+    use dva::idva_transfer_manager::{DelegatedApproval, DelegatedApprovalMessage};
     use dva::idva_transfer_manager::{
         Transfer, TransferStore, TransferStoreStorageNode, TransferStoreStorageNodeMut,
     };

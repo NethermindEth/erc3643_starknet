@@ -1,4 +1,7 @@
+use core::hash::{HashStateExTrait, HashStateTrait};
 use core::num::traits::Zero;
+use core::poseidon::PoseidonTrait;
+use openzeppelin_utils::cryptography::snip12::StructHash;
 use starknet::ContractAddress;
 use storage::storage_array::{
     ApproverVecToApproverArray, StorageArrayApprover, StorageArrayContractAddress,
@@ -81,6 +84,30 @@ pub struct Approver {
 pub struct DelegatedApproval {
     pub signer: ContractAddress,
     pub signature: Array<felt252>,
+}
+
+/// Delegated approval message to be signed
+#[derive(Copy, Drop, Hash)]
+pub struct DelegatedApprovalMessage {
+    pub transfer_id: felt252,
+}
+
+// Todo: compute off chain and hardcode as constant
+// selector!(
+//   "\"DelegatedApprovalMessage\"(
+//     \"transfer_id\":\"felt"
+// );
+pub const DELEGATED_APPROVAL_MESSAGE_TYPE_HASH: felt252 = selector!(
+    "\"DelegatedApprovalMessage\"(\"transfer_id\":\"felt",
+);
+
+pub impl DelegatedApprovalMessageStructHash of StructHash<DelegatedApprovalMessage> {
+    fn hash_struct(self: @DelegatedApprovalMessage) -> felt252 {
+        PoseidonTrait::new()
+            .update_with(DELEGATED_APPROVAL_MESSAGE_TYPE_HASH)
+            .update_with(*self)
+            .finalize()
+    }
 }
 
 pub mod Events {
