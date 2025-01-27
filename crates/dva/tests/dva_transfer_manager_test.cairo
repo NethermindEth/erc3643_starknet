@@ -66,3 +66,15 @@ fn setup_full_suite_with_transfer(
 
     (setup, transfer_manager, transfer_id)
 }
+
+mod name {
+    use super::{
+        IDVATransferManagerDispatcherTrait, setup_full_suite_with_verified_transfer_manager,
+    };
+
+    #[test]
+    fn test_should_return_module_name() {
+        let (_, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        assert_eq!(transfer_manager.name(), "DVATransferManager");
+    }
+}
