@@ -67,6 +67,34 @@ fn setup_full_suite_with_transfer(
     (setup, transfer_manager, transfer_id)
 }
 
+mod get_approval_criteria {
+    use super::{
+        IDVATransferManagerDispatcherTrait, setup_full_suite_with_transfer,
+        setup_full_suite_with_verified_transfer_manager,
+    };
+
+    #[test]
+    #[should_panic(expected: 'Token is not registered')]
+    fn test_when_token_is_not_registered_should_panic() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        transfer_manager.get_approval_criteria(setup.token.contract_address);
+    }
+
+    #[test]
+    fn test_when_token_is_registered_should_return_criteria() {
+        let (setup, transfer_manager, _) = setup_full_suite_with_transfer(true);
+        let approval_criteria = transfer_manager
+            .get_approval_criteria(setup.token.contract_address);
+        assert_eq!(approval_criteria.include_recipient_approver, true);
+        assert_eq!(approval_criteria.include_agent_approver, true);
+        assert_eq!(approval_criteria.sequential_approval, true);
+        assert_eq!(
+            approval_criteria.additional_approvers,
+            array![setup.accounts.charlie.account.contract_address],
+        );
+    }
+}
+
 mod name {
     use super::{
         IDVATransferManagerDispatcherTrait, setup_full_suite_with_verified_transfer_manager,
