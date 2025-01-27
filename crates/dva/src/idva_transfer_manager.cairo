@@ -1,9 +1,10 @@
 use core::num::traits::Zero;
 use starknet::ContractAddress;
-use starknet::storage::Vec;
-use storage::storage_array::{ApproverVecToApproverArray, StorageArrayApprover};
+use storage::storage_array::{
+    ApproverVecToApproverArray, StorageArrayApprover, StorageArrayContractAddress,
+};
 
-#[derive(Serde, Default, Drop, PartialEq, starknet::Store)]
+#[derive(Serde, Default, Drop, Debug, PartialEq, starknet::Store)]
 pub enum TransferStatus {
     #[default]
     PENDING,
@@ -33,7 +34,7 @@ pub struct ApprovalCriteriaStore {
     pub include_recipient_approver: bool,
     pub include_agent_approver: bool,
     pub sequential_approval: bool,
-    pub additional_approvers: Vec<ContractAddress>,
+    pub additional_approvers: StorageArrayContractAddress,
     pub hash: felt252,
 }
 

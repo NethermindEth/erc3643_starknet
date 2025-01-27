@@ -45,13 +45,14 @@ pub mod DVATransferManager {
     use roles::agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait};
     use starknet::ContractAddress;
     use starknet::storage::{
-        Map, MutableVecTrait, StorageNode, StorageNodeMut, StoragePathEntry,
-        StoragePointerReadAccess, StoragePointerWriteAccess, VecTrait,
+        Map, StorageAsPath, StorageNode, StorageNodeMut, StoragePathEntry, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
     };
     use storage::storage_array::{
+        MutableStorageArrayContractAddressImpl, MutableStorageArrayContractAddressIndexView,
         PathableMutableStorageArrayApproverImpl, PathableStorageArrayApproverImpl,
+        StorageArrayContractAddressImpl, StorageArrayContractAddressIndexView,
     };
-    use super::DelegatedApprovalMessage;
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
 
     #[storage]
@@ -112,8 +113,9 @@ pub mod DVATransferManager {
             approval_criteria.include_recipient_approver.write(include_recipient_approver);
             approval_criteria.include_agent_approver.write(include_agent_approver);
             approval_criteria.sequential_approval.write(sequential_approval);
+            approval_criteria.additional_approvers.as_path().clear();
             for approver in additional_approvers {
-                approval_criteria.additional_approvers.append().write(*approver);
+                approval_criteria.additional_approvers.as_path().append().write(*approver);
             };
             approval_criteria.hash.write(hash);
 
@@ -288,8 +290,9 @@ pub mod DVATransferManager {
             assert(hash.is_non_zero(), Errors::TOKEN_IS_NOT_REGISTERED);
 
             let mut additional_approvers = array![];
-            for i in 0..approval_criteria.additional_approvers.len() {
-                additional_approvers.append(approval_criteria.additional_approvers[i].read());
+            for i in 0..approval_criteria.additional_approvers.as_path().len() {
+                additional_approvers
+                    .append(approval_criteria.additional_approvers.as_path()[i].read());
             };
             ApprovalCriteria {
                 include_recipient_approver: approval_criteria.include_recipient_approver.read(),
@@ -470,13 +473,13 @@ pub mod DVATransferManager {
                     );
             };
 
-            for i in 0..approval_criteria.additional_approvers.len() {
+            for i in 0..approval_criteria.additional_approvers.as_path().len() {
                 transfer
                     .approvers
                     .append()
                     .write(
                         Approver {
-                            wallet: approval_criteria.additional_approvers[i].read(),
+                            wallet: approval_criteria.additional_approvers.as_path()[i].read(),
                             any_token_agent: false,
                             approved: false,
                         },
