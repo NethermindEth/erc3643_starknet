@@ -67,6 +67,45 @@ fn setup_full_suite_with_transfer(
     (setup, transfer_manager, transfer_id)
 }
 
+mod get_transfer {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected: 'Invalid transfer ID')]
+    fn test_when_transfer_does_not_exist_should_panic() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        let transfer_id = transfer_manager
+            .calculate_transfer_id(
+                0,
+                setup.accounts.alice.account.contract_address,
+                setup.accounts.bob.account.contract_address,
+                100,
+            );
+        transfer_manager.get_transfer(transfer_id);
+    }
+
+    #[test]
+    fn test_when_transfer_exists_should_return_transfer() {
+        let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
+
+        let transfer = transfer_manager.get_transfer(transfer_id);
+        assert_eq!(transfer.token_address, setup.token.contract_address);
+        assert_eq!(transfer.sender, setup.accounts.alice.account.contract_address);
+        assert_eq!(transfer.recipient, setup.accounts.bob.account.contract_address);
+        assert_eq!(transfer.amount, 100);
+        assert_eq!(transfer.status, TransferStatus::PENDING);
+        assert_eq!(transfer.approvers.len(), 3);
+        assert_eq!(*transfer.approvers.at(0).wallet, setup.accounts.bob.account.contract_address);
+        assert_eq!(*transfer.approvers.at(0).approved, false);
+        assert_eq!(*transfer.approvers.at(1).wallet, Zero::zero());
+        assert_eq!(*transfer.approvers.at(1).approved, false);
+        assert_eq!(
+            *transfer.approvers.at(2).wallet, setup.accounts.charlie.account.contract_address,
+        );
+        assert_eq!(*transfer.approvers.at(2).approved, false);
+    }
+}
+
 mod get_next_tx_nonce {
     use super::{
         IDVATransferManagerDispatcherTrait, setup_full_suite_with_transfer,
