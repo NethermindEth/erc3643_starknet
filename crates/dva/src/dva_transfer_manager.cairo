@@ -193,6 +193,7 @@ pub mod DVATransferManager {
                     Errors::SIGNER_DOES_NOT_SUPPORT_SRC6,
                 );
 
+                // TODO: try catch the call and revert with 'APPROVER NOT FOUND' first
                 assert(
                     ISRC6Dispatcher { contract_address: delegated_approval.signer }
                         .is_valid_signature(
@@ -511,7 +512,7 @@ pub mod DVATransferManager {
         }
     }
 
-    impl SNIP12MetadataImpl of SNIP12Metadata {
+    pub impl SNIP12MetadataImpl of SNIP12Metadata {
         fn name() -> felt252 {
             unsafe_new_contract_state().name().at(0).unwrap().into()
         }

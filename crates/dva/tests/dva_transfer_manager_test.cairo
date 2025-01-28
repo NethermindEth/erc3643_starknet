@@ -1,15 +1,21 @@
 use core::num::traits::Zero;
 use dva::dva_transfer_manager::DVATransferManager;
+use dva::dva_transfer_manager::DVATransferManager::SNIP12MetadataImpl;
 use dva::idva_transfer_manager::{
     DelegatedApproval, DelegatedApprovalMessage, DelegatedApprovalMessageStructHash, Events::*,
     IDVATransferManagerDispatcher, IDVATransferManagerDispatcherTrait, TransferStatus,
 };
-use factory::tests_common::{FullSuiteSetup, setup_full_suite};
+use factory::tests_common::{Account, FullSuiteSetup, generate_account, setup_full_suite};
 use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use openzeppelin_utils::cryptography::snip12::OffchainMessageHash;
 use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, EventSpyAssertionsTrait, declare, spy_events,
-    start_cheat_caller_address, stop_cheat_caller_address,
+    ContractClassTrait, DeclareResultTrait, EventSpyAssertionsTrait, declare,
+    signature::{
+        SignerTrait,
+        stark_curve::{StarkCurveKeyPairImpl, StarkCurveSignerImpl, StarkCurveVerifierImpl},
+    },
+    spy_events, start_cheat_caller_address, stop_cheat_caller_address,
 };
 
 fn setup_full_suite_with_transfer_manager() -> (FullSuiteSetup, IDVATransferManagerDispatcher) {
@@ -67,11 +73,11 @@ fn setup_full_suite_with_transfer(
     (setup, transfer_manager, transfer_id)
 }
 
-fn sign_transfer(transfer_id: felt252, signer: starknet::ContractAddress) -> DelegatedApproval {
-    let signature = DelegatedApprovalMessageStructHash::hash_struct(
-        @DelegatedApprovalMessage { transfer_id },
-    );
-    DelegatedApproval { signer, signature: array![signature] }
+fn sign_transfer(transfer_id: felt252, signer: Account) -> DelegatedApproval {
+    let approval = DelegatedApprovalMessage { transfer_id };
+    let approval_hash = approval.get_message_hash(signer.account.contract_address);
+    let (r, s) = signer.key_pair.sign(approval_hash).unwrap();
+    DelegatedApproval { signer: signer.account.contract_address, signature: array![r, s] }
 }
 
 mod set_approval_criteria {
@@ -881,6 +887,258 @@ mod approve_transfer {
                                 sender: setup.accounts.alice.account.contract_address,
                                 recipient: setup.accounts.bob.account.contract_address,
                                 amount: 100,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        let transfer = transfer_manager.get_transfer(transfer_id);
+        assert_eq!(transfer.status, TransferStatus::COMPLETED);
+
+        assert_eq!(erc20_dispatcher.balance_of(setup.accounts.alice.account.contract_address), 900);
+        assert_eq!(erc20_dispatcher.balance_of(setup.accounts.bob.account.contract_address), 600);
+        assert_eq!(erc20_dispatcher.balance_of(transfer_manager.contract_address), 0);
+    }
+}
+
+mod delegate_approve_transfer {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected: 'Signatures can not be empty')]
+    fn test_when_signatures_array_is_empty_should_panic() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        let transfer_id = transfer_manager
+            .calculate_transfer_id(
+                0,
+                setup.accounts.alice.account.contract_address,
+                setup.accounts.bob.account.contract_address,
+                100,
+            );
+
+        transfer_manager.delegate_approve_transfer(transfer_id, array![]);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Invalid transfer ID')]
+    fn test_when_transfer_does_not_exist_should_panic() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        let transfer_id = transfer_manager
+            .calculate_transfer_id(
+                0,
+                setup.accounts.alice.account.contract_address,
+                setup.accounts.bob.account.contract_address,
+                100,
+            );
+        transfer_manager
+            .delegate_approve_transfer(
+                transfer_id, array![sign_transfer(transfer_id, setup.accounts.charlie)],
+            );
+    }
+
+    #[test]
+    #[should_panic(expected: 'Transfer not in pending status')]
+    fn test_when_transfer_status_is_not_pending_should_panic() {
+        let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        transfer_manager.cancel_transfer(transfer_id);
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        transfer_manager
+            .delegate_approve_transfer(
+                transfer_id, array![sign_transfer(transfer_id, setup.accounts.charlie)],
+            );
+    }
+
+    // Describe: When approval criteria are changed after the transfer has been initiated
+
+    #[test]
+    fn test_when_trying_to_approve_before_approval_state_reset_should_reset_approvers() {
+        let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
+        let another_wallet = starknet::contract_address_const::<'ANOTHER_WALLET'>();
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .set_approval_criteria(
+                setup.token.contract_address,
+                false,
+                false,
+                false,
+                array![setup.accounts.david.account.contract_address].span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(transfer_manager.contract_address, another_wallet);
+        transfer_manager
+            .delegate_approve_transfer(
+                transfer_id, array![sign_transfer(transfer_id, setup.accounts.charlie)],
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferApprovalStateReset(
+                            TransferApprovalStateReset {
+                                transfer_id,
+                                approval_criteria_hash: transfer_manager
+                                    .get_approval_criteria(setup.token.contract_address)
+                                    .hash,
+                            },
+                        ),
+                    ),
+                ],
+            );
+
+        let transfer = transfer_manager.get_transfer(transfer_id);
+        assert_eq!(transfer.approvers.len(), 1);
+        assert_eq!(*transfer.approvers.at(0).wallet, setup.accounts.david.account.contract_address);
+        assert_eq!(*transfer.approvers.at(0).approved, false);
+    }
+
+    #[test]
+    fn test_when_trying_to_approve_after_approval_state_reset_should_approve() {
+        let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
+        let another_wallet = starknet::contract_address_const::<'ANOTHER_WALLET'>();
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .set_approval_criteria(
+                setup.token.contract_address,
+                false,
+                false,
+                false,
+                array![setup.accounts.david.account.contract_address].span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.charlie.account.contract_address,
+        );
+        transfer_manager.approve_transfer(transfer_id);
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(transfer_manager.contract_address, another_wallet);
+        transfer_manager
+            .delegate_approve_transfer(
+                transfer_id, array![sign_transfer(transfer_id, setup.accounts.david)],
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferApproved(
+                            TransferApproved {
+                                transfer_id,
+                                approver: setup.accounts.david.account.contract_address,
+                            },
+                        ),
+                    ),
+                ],
+            );
+    }
+
+    // Describe: When sequential approval is disabled
+
+    #[test]
+    #[should_panic(expected: 'Approver not found')]
+    fn test_when_caller_is_not_an_approver_should_panic() {
+        let (_, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
+        transfer_manager
+            .delegate_approve_transfer(
+                transfer_id, array![sign_transfer(transfer_id, generate_account())],
+            );
+    }
+
+    #[test]
+    fn test_when_signer_is_an_approver_should_approve() {
+        let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
+        let another_wallet = starknet::contract_address_const::<'ANOTHER_WALLET'>();
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(transfer_manager.contract_address, another_wallet);
+        transfer_manager
+            .delegate_approve_transfer(
+                transfer_id, array![sign_transfer(transfer_id, setup.accounts.charlie)],
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferApproved(
+                            TransferApproved {
+                                transfer_id,
+                                approver: setup.accounts.charlie.account.contract_address,
+                            },
+                        ),
+                    ),
+                ],
+            );
+    }
+
+    #[test]
+    fn test_when_all_parties_approve_the_transfer_should_complete() {
+        let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .delegate_approve_transfer(
+                transfer_id,
+                array![
+                    sign_transfer(transfer_id, setup.accounts.token_agent),
+                    sign_transfer(transfer_id, setup.accounts.bob),
+                    sign_transfer(transfer_id, setup.accounts.charlie),
+                ],
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferApproved(
+                            TransferApproved {
+                                transfer_id,
+                                approver: setup.accounts.token_agent.account.contract_address,
+                            },
+                        ),
+                    ),
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferApproved(
+                            TransferApproved {
+                                transfer_id, approver: setup.accounts.bob.account.contract_address,
+                            },
+                        ),
+                    ),
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferApproved(
+                            TransferApproved {
+                                transfer_id,
+                                approver: setup.accounts.charlie.account.contract_address,
                             },
                         ),
                     ),
