@@ -67,6 +67,201 @@ fn setup_full_suite_with_transfer(
     (setup, transfer_manager, transfer_id)
 }
 
+fn sign_transfer(transfer_id: felt252, signer: starknet::ContractAddress) -> DelegatedApproval {
+    let signature = DelegatedApprovalMessageStructHash::hash_struct(
+        @DelegatedApprovalMessage { transfer_id },
+    );
+    DelegatedApproval { signer, signature: array![signature] }
+}
+
+mod set_approval_criteria {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected: 'Only token agent can call')]
+    fn test_when_sender_is_not_token_agent_should_panic() {
+        let (setup, transfer_manager) = setup_full_suite_with_transfer_manager();
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address,
+            starknet::contract_address_const::<'NOT_TOKEN_AGENT'>(),
+        );
+        transfer_manager
+            .set_approval_criteria(
+                setup.token.contract_address, false, true, true, array![].span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+    }
+
+    // Describe: When sender is token agent
+
+    #[test]
+    #[should_panic(expected: 'DVA Mngr not verified for token')]
+    fn test_when_dva_manager_is_not_verified_for_the_token() {
+        let (setup, transfer_manager) = setup_full_suite_with_transfer_manager();
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .set_approval_criteria(
+                setup.token.contract_address, false, true, true, array![].span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+    }
+
+    // Describe: When dva manager is verified for the token, and sender is token agent
+
+    #[test]
+    fn test_when_token_is_not_already_registered_should_modify_approval_criteria() {
+        let (setup, transfer_manager) = setup_full_suite_with_transfer_manager();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let token_address = setup.token.contract_address;
+
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
+        setup
+            .identity_registry
+            .register_identity(transfer_manager.contract_address, alice_identity, 0);
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .set_approval_criteria(
+                token_address,
+                true,
+                true,
+                true,
+                array![
+                    starknet::contract_address_const::<'ANOTHER_WALLET'>(),
+                    setup.accounts.bob.account.contract_address,
+                ]
+                    .span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        let approval_criteria = transfer_manager.get_approval_criteria(token_address);
+        assert_eq!(approval_criteria.include_recipient_approver, true);
+        assert_eq!(approval_criteria.include_agent_approver, true);
+        assert_eq!(approval_criteria.sequential_approval, true);
+        assert_eq!(
+            approval_criteria.additional_approvers,
+            array![
+                starknet::contract_address_const::<'ANOTHER_WALLET'>(),
+                setup.accounts.bob.account.contract_address,
+            ],
+        );
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::ApprovalCriteriaSet(
+                            ApprovalCriteriaSet {
+                                token_address,
+                                include_recipient_approver: true,
+                                include_agent_approver: true,
+                                sequential_approval: true,
+                                additional_approvers: array![
+                                    starknet::contract_address_const::<'ANOTHER_WALLET'>(),
+                                    setup.accounts.bob.account.contract_address,
+                                ]
+                                    .span(),
+                                hash: approval_criteria.hash,
+                            },
+                        ),
+                    ),
+                ],
+            );
+    }
+
+    #[test]
+    fn test_when_token_is_already_registered_should_modify_approval_criteria() {
+        let (setup, transfer_manager) = setup_full_suite_with_transfer_manager();
+        let alice_identity = setup.onchain_id.alice_identity.contract_address;
+        let token_address = setup.token.contract_address;
+
+        start_cheat_caller_address(
+            setup.identity_registry.contract_address,
+            setup.accounts.token_agent.account.contract_address,
+        );
+        setup
+            .identity_registry
+            .register_identity(transfer_manager.contract_address, alice_identity, 0);
+        stop_cheat_caller_address(setup.identity_registry.contract_address);
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .set_approval_criteria(
+                token_address,
+                true,
+                true,
+                true,
+                array![
+                    starknet::contract_address_const::<'ANOTHER_WALLET'>(),
+                    setup.accounts.bob.account.contract_address,
+                ]
+                    .span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+        let previous_approval_criteria = transfer_manager.get_approval_criteria(token_address);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .set_approval_criteria(
+                token_address,
+                false,
+                false,
+                false,
+                array![setup.accounts.david.account.contract_address].span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+        let approval_criteria = transfer_manager.get_approval_criteria(token_address);
+
+        assert_eq!(approval_criteria.include_recipient_approver, false);
+        assert_eq!(approval_criteria.include_agent_approver, false);
+        assert_eq!(approval_criteria.sequential_approval, false);
+        assert_eq!(
+            approval_criteria.additional_approvers,
+            array![setup.accounts.david.account.contract_address],
+        );
+        assert_ne!(previous_approval_criteria.hash, approval_criteria.hash);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::ApprovalCriteriaSet(
+                            ApprovalCriteriaSet {
+                                token_address,
+                                include_recipient_approver: false,
+                                include_agent_approver: false,
+                                sequential_approval: false,
+                                additional_approvers: array![
+                                    setup.accounts.david.account.contract_address,
+                                ]
+                                    .span(),
+                                hash: approval_criteria.hash,
+                            },
+                        ),
+                    ),
+                ],
+            );
+    }
+}
+
 mod cancel_transfer {
     use super::*;
 
