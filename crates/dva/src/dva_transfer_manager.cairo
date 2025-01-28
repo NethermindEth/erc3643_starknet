@@ -415,6 +415,7 @@ pub mod DVATransferManager {
             // delete transfer.approvers;
             transfer.approvers.clear();
             self.add_approvers_to_transfer(transfer, approval_criteria.storage_node());
+            transfer.approval_criteria_hash.write(approval_criteria_hash);
             self.emit(TransferApprovalStateReset { transfer_id, approval_criteria_hash });
 
             true
