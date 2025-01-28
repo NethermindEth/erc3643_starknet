@@ -53,7 +53,7 @@ pub trait IToken<TContractState> {
         ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>,
     );
     fn onchain_id(self: @TContractState) -> ContractAddress;
-    fn version(self: @TContractState) -> ByteArray;
+    fn version(self: @TContractState) -> felt252;
     fn identity_registry(self: @TContractState) -> IIdentityRegistryDispatcher;
     fn compliance(self: @TContractState) -> IModularComplianceDispatcher;
     fn is_frozen(self: @TContractState, user_address: ContractAddress) -> bool;

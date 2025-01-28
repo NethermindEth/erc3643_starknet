@@ -55,6 +55,8 @@ pub mod Token {
 
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
+    pub const TOKEN_VERSION: felt252 = '0.1.0';
+
     #[storage]
     struct Storage {
         token_decimals: u8,
@@ -106,7 +108,7 @@ pub mod Token {
         #[key]
         pub new_symbol: ByteArray,
         pub new_decimals: u8,
-        pub new_version: ByteArray,
+        pub new_version: felt252,
         #[key]
         pub new_onchain_id: ContractAddress,
     }
@@ -216,7 +218,7 @@ pub mod Token {
                         new_name: name,
                         new_symbol: self.erc20.ERC20_symbol.read(),
                         new_decimals: self.token_decimals.read(),
-                        new_version: self.token_version.read(),
+                        new_version: TOKEN_VERSION,
                         new_onchain_id: self.token_onchain_id.read(),
                     },
                 );
@@ -232,7 +234,7 @@ pub mod Token {
                         new_name: self.erc20.ERC20_name.read(),
                         new_symbol: symbol,
                         new_decimals: self.token_decimals.read(),
-                        new_version: self.token_version.read(),
+                        new_version: TOKEN_VERSION,
                         new_onchain_id: self.token_onchain_id.read(),
                     },
                 );
@@ -247,7 +249,7 @@ pub mod Token {
                         new_name: self.erc20.ERC20_name.read(),
                         new_symbol: self.erc20.ERC20_symbol.read(),
                         new_decimals: self.token_decimals.read(),
-                        new_version: self.token_version.read(),
+                        new_version: TOKEN_VERSION,
                         new_onchain_id: onchain_id,
                     },
                 );
@@ -468,8 +470,8 @@ pub mod Token {
             self.token_onchain_id.read()
         }
 
-        fn version(self: @ContractState) -> ByteArray {
-            self.token_version.read()
+        fn version(self: @ContractState) -> felt252 {
+            TOKEN_VERSION
         }
 
         fn identity_registry(self: @ContractState) -> IIdentityRegistryDispatcher {
