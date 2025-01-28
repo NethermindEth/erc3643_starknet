@@ -19,6 +19,7 @@ pub mod Token {
         ERC20Component, ERC20HooksEmptyImpl, interface::{IERC20, IERC20Metadata},
     };
     use openzeppelin_upgrades::{interface::IUpgradeable, upgradeable::UpgradeableComponent};
+    use openzeppelin_utils::cryptography::{nonces::NoncesComponent, snip12::SNIP12Metadata};
     use registry::interface::iidentity_registry::{
         IIdentityRegistryDispatcher, IIdentityRegistryDispatcherTrait,
     };
@@ -46,10 +47,17 @@ pub mod Token {
     impl PausableImpl = PausableComponent::PausableImpl<ContractState>;
     impl PausableInternalImpl = PausableComponent::InternalImpl<ContractState>;
 
+    component!(path: NoncesComponent, storage: nonces, event: NoncesEvent);
+
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
 
     impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
+    #[abi(embed_v0)]
+    impl ERC20PermitImpl = ERC20Component::ERC20PermitImpl<ContractState>;
     impl ERC20InternalImpl = ERC20Component::InternalImpl<ContractState>;
+    #[abi(embed_v0)]
+    impl SNIP12MetadataExternal =
+        ERC20Component::SNIP12MetadataExternalImpl<ContractState>;
 
     component!(path: UpgradeableComponent, storage: upgrades, event: UpgradeableEvent);
 
@@ -61,7 +69,6 @@ pub mod Token {
     struct Storage {
         token_decimals: u8,
         token_onchain_id: ContractAddress,
-        token_version: ByteArray,
         frozen: Map<ContractAddress, bool>,
         frozen_tokens: Map<ContractAddress, u256>,
         token_identity_registry: IIdentityRegistryDispatcher,
@@ -77,6 +84,8 @@ pub mod Token {
         erc20: ERC20Component::Storage,
         #[substorage(v0)]
         upgrades: UpgradeableComponent::Storage,
+        #[substorage(v0)]
+        nonces: NoncesComponent::Storage,
     }
 
     #[event]
@@ -99,6 +108,8 @@ pub mod Token {
         ERC20Event: ERC20Component::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
+        #[flat]
+        NoncesEvent: NoncesComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -573,6 +584,16 @@ pub mod Token {
 
         fn decimals(self: @ContractState) -> u8 {
             self.token_decimals.read()
+        }
+    }
+
+    impl SNIP12MetadataImpl of SNIP12Metadata {
+        fn name() -> felt252 {
+            'TREX_TOKEN'
+        }
+
+        fn version() -> felt252 {
+            TOKEN_VERSION
         }
     }
 

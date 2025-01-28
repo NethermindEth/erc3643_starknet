@@ -196,6 +196,7 @@ dependencies = [
  "openzeppelin_security",
  "openzeppelin_token",
  "openzeppelin_upgrades",
+ "openzeppelin_utils",
  "registry",
  "roles",
  "snforge_std",
