@@ -262,6 +262,324 @@ mod set_approval_criteria {
     }
 }
 
+mod initiate_transfer {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected: 'Token is not registered')]
+    fn test_when_token_is_not_registered_should_panic() {
+        let (setup, transfer_manager) = setup_full_suite_with_transfer_manager();
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        transfer_manager
+            .initiate_transfer(
+                setup.token.contract_address, setup.accounts.bob.account.contract_address, 10,
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+    }
+
+    // Describe: When token is registered to the DVA manager
+
+    #[test]
+    #[should_panic(expected: 'Recipient is not verified')]
+    fn test_when_recipient_is_not_verified_for_the_token_should_panic() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        let token_address = setup.token.contract_address;
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .set_approval_criteria(
+                token_address,
+                true,
+                true,
+                true,
+                array![
+                    setup.accounts.charlie.account.contract_address,
+                    starknet::contract_address_const::<'ANOTHER_WALLET'>(),
+                ]
+                    .span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        transfer_manager
+            .initiate_transfer(
+                token_address, starknet::contract_address_const::<'ANOTHER_WALLET'>(), 10,
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Insufficient available balance')]
+    fn test_when_amount_is_higher_than_sender_balance_should_panic() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        let token_address = setup.token.contract_address;
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .set_approval_criteria(
+                token_address,
+                true,
+                true,
+                true,
+                array![
+                    setup.accounts.charlie.account.contract_address,
+                    starknet::contract_address_const::<'ANOTHER_WALLET'>(),
+                ]
+                    .span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        start_cheat_caller_address(token_address, setup.accounts.alice.account.contract_address);
+        IERC20Dispatcher { contract_address: token_address }
+            .approve(transfer_manager.contract_address, 100000);
+        stop_cheat_caller_address(token_address);
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.alice.account.contract_address,
+        );
+        transfer_manager
+            .initiate_transfer(token_address, setup.accounts.bob.account.contract_address, 100000);
+        stop_cheat_caller_address(transfer_manager.contract_address);
+    }
+
+    // Describe: When sender has enough balance
+
+    #[test]
+    fn test_when_include_recipient_approver_is_true_should_initiate_transfer_with_recipient_approver() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        let token_address = setup.token.contract_address;
+        let alice = setup.accounts.alice.account.contract_address;
+        let bob = setup.accounts.bob.account.contract_address;
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager.set_approval_criteria(token_address, true, false, true, array![].span());
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        start_cheat_caller_address(token_address, alice);
+        IERC20Dispatcher { contract_address: token_address }
+            .approve(transfer_manager.contract_address, 100000);
+        stop_cheat_caller_address(token_address);
+
+        let transfer_id = transfer_manager.calculate_transfer_id(0, alice, bob, 100);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(transfer_manager.contract_address, alice);
+        transfer_manager.initiate_transfer(token_address, bob, 100);
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        let transfer = transfer_manager.get_transfer(transfer_id);
+        assert_eq!(transfer.approvers.len(), 1);
+        assert_eq!(*transfer.approvers.at(0).wallet, bob);
+        assert_eq!(*transfer.approvers.at(0).approved, false);
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferInitiated(
+                            TransferInitiated {
+                                transfer_id,
+                                token_address,
+                                sender: alice,
+                                recipient: bob,
+                                amount: 100,
+                                approval_criteria_hash: transfer_manager
+                                    .get_approval_criteria(token_address)
+                                    .hash,
+                            },
+                        ),
+                    ),
+                ],
+            )
+    }
+
+    #[test]
+    fn test_when_include_agent_approver_is_true_should_initiate_transfer_with_token_agent_approver() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        let token_address = setup.token.contract_address;
+        let alice = setup.accounts.alice.account.contract_address;
+        let bob = setup.accounts.bob.account.contract_address;
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager.set_approval_criteria(token_address, false, true, true, array![].span());
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        start_cheat_caller_address(token_address, alice);
+        IERC20Dispatcher { contract_address: token_address }
+            .approve(transfer_manager.contract_address, 100000);
+        stop_cheat_caller_address(token_address);
+
+        let transfer_id = transfer_manager.calculate_transfer_id(0, alice, bob, 100);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(transfer_manager.contract_address, alice);
+        transfer_manager.initiate_transfer(token_address, bob, 100);
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        let transfer = transfer_manager.get_transfer(transfer_id);
+        assert_eq!(transfer.approvers.len(), 1);
+        assert_eq!(*transfer.approvers.at(0).wallet, Zero::zero());
+        assert_eq!(*transfer.approvers.at(0).approved, false);
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferInitiated(
+                            TransferInitiated {
+                                transfer_id,
+                                token_address,
+                                sender: alice,
+                                recipient: bob,
+                                amount: 100,
+                                approval_criteria_hash: transfer_manager
+                                    .get_approval_criteria(token_address)
+                                    .hash,
+                            },
+                        ),
+                    ),
+                ],
+            )
+    }
+
+    #[test]
+    fn test_when_additional_approvers_exist_should_initiate_transfer_with_token_agent_approver() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        let token_address = setup.token.contract_address;
+        let alice = setup.accounts.alice.account.contract_address;
+        let bob = setup.accounts.bob.account.contract_address;
+        let charlie = setup.accounts.charlie.account.contract_address;
+        let another_wallet = starknet::contract_address_const::<'ANOTHER_WALLET'>();
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .set_approval_criteria(
+                token_address, false, false, true, array![charlie, another_wallet].span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        start_cheat_caller_address(token_address, alice);
+        IERC20Dispatcher { contract_address: token_address }
+            .approve(transfer_manager.contract_address, 100000);
+        stop_cheat_caller_address(token_address);
+
+        let transfer_id = transfer_manager.calculate_transfer_id(0, alice, bob, 100);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(transfer_manager.contract_address, alice);
+        transfer_manager.initiate_transfer(token_address, bob, 100);
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        let transfer = transfer_manager.get_transfer(transfer_id);
+        assert_eq!(transfer.approvers.len(), 2);
+        assert_eq!(*transfer.approvers.at(0).wallet, charlie);
+        assert_eq!(*transfer.approvers.at(0).approved, false);
+        assert_eq!(*transfer.approvers.at(1).wallet, another_wallet);
+        assert_eq!(*transfer.approvers.at(1).approved, false);
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferInitiated(
+                            TransferInitiated {
+                                transfer_id,
+                                token_address,
+                                sender: alice,
+                                recipient: bob,
+                                amount: 100,
+                                approval_criteria_hash: transfer_manager
+                                    .get_approval_criteria(token_address)
+                                    .hash,
+                            },
+                        ),
+                    ),
+                ],
+            )
+    }
+
+    #[test]
+    fn test_when_all_criteria_are_enabled_should_initiate_the_transfer_with_all_approvers() {
+        let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
+        let token_address = setup.token.contract_address;
+        let alice = setup.accounts.alice.account.contract_address;
+        let bob = setup.accounts.bob.account.contract_address;
+        let charlie = setup.accounts.charlie.account.contract_address;
+        let another_wallet = starknet::contract_address_const::<'ANOTHER_WALLET'>();
+        let erc20_dispatcher = IERC20Dispatcher { contract_address: token_address };
+
+        start_cheat_caller_address(
+            transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
+        );
+        transfer_manager
+            .set_approval_criteria(
+                token_address, true, true, true, array![charlie, another_wallet].span(),
+            );
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        start_cheat_caller_address(token_address, alice);
+        erc20_dispatcher.approve(transfer_manager.contract_address, 100000);
+        stop_cheat_caller_address(token_address);
+
+        let transfer_id = transfer_manager.calculate_transfer_id(0, alice, bob, 100);
+
+        let mut spy = spy_events();
+        start_cheat_caller_address(transfer_manager.contract_address, alice);
+        transfer_manager.initiate_transfer(token_address, bob, 100);
+        stop_cheat_caller_address(transfer_manager.contract_address);
+
+        let transfer = transfer_manager.get_transfer(transfer_id);
+        assert_eq!(transfer.approvers.len(), 4);
+        assert_eq!(*transfer.approvers.at(0).wallet, bob);
+        assert_eq!(*transfer.approvers.at(0).approved, false);
+        assert_eq!(*transfer.approvers.at(1).wallet, Zero::zero());
+        assert_eq!(*transfer.approvers.at(1).approved, false);
+        assert_eq!(*transfer.approvers.at(2).wallet, charlie);
+        assert_eq!(*transfer.approvers.at(2).approved, false);
+        assert_eq!(*transfer.approvers.at(3).wallet, another_wallet);
+        assert_eq!(*transfer.approvers.at(3).approved, false);
+
+        assert_eq!(erc20_dispatcher.balance_of(alice), 900);
+        assert_eq!(erc20_dispatcher.balance_of(transfer_manager.contract_address), 100);
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferInitiated(
+                            TransferInitiated {
+                                transfer_id,
+                                token_address,
+                                sender: alice,
+                                recipient: bob,
+                                amount: 100,
+                                approval_criteria_hash: transfer_manager
+                                    .get_approval_criteria(token_address)
+                                    .hash,
+                            },
+                        ),
+                    ),
+                ],
+            )
+    }
+}
+
 mod cancel_transfer {
     use super::*;
 
