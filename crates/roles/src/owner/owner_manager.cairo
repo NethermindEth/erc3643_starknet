@@ -75,12 +75,12 @@ mod OwnerManager {
 
     pub mod Errors {
         pub const CALLER_IS_NOT_ACTION_KEY: felt252 = 'Caller is not action key';
-        pub const NOT_REGISTRY_ADDRESS_SETTER: felt252 = 'oid not registry address setter';
-        pub const NOT_COMPLIANCE_SETTER: felt252 = 'oid is not compliance setter';
-        pub const NOT_COMPLIANCE_MANAGER: felt252 = 'oid is not compliance manager';
-        pub const NOT_CLAIM_REGISTRY_MANAGER: felt252 = 'oid not claim registry manager';
-        pub const NOT_ISSUERS_REGISTRY_MANAGER: felt252 = 'oid not issuer registry manager';
-        pub const NOT_TOKEN_INFO_MANAGER: felt252 = 'oid not token info manager';
+        pub const NOT_REGISTRY_ADDRESS_SETTER: felt252 = 'OID not registry address setter';
+        pub const NOT_COMPLIANCE_SETTER: felt252 = 'OID is not compliance setter';
+        pub const NOT_COMPLIANCE_MANAGER: felt252 = 'OID is not compliance manager';
+        pub const NOT_CLAIM_REGISTRY_MANAGER: felt252 = 'OID not claim registry manager';
+        pub const NOT_ISSUERS_REGISTRY_MANAGER: felt252 = 'OID not issuer registry manager';
+        pub const NOT_TOKEN_INFO_MANAGER: felt252 = 'OID not token info manager';
     }
 
     #[constructor]
@@ -106,11 +106,11 @@ mod OwnerManager {
             identity_registry: ContractAddress,
             onchain_id: ContractAddress,
         ) {
-            let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 self.access.has_role(OwnerRoles::REGISTRY_ADDRESS_SETTER, onchain_id),
                 Errors::NOT_REGISTRY_ADDRESS_SETTER,
             );
+            let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
                 oid_disatcher
                     .key_has_purpose(
@@ -287,10 +287,7 @@ mod OwnerManager {
         }
 
         fn call_remove_trusted_issuer(
-            ref self: ContractState,
-            trusted_issuer: ContractAddress,
-            claim_topics: Span<felt252>,
-            onchain_id: ContractAddress,
+            ref self: ContractState, trusted_issuer: ContractAddress, onchain_id: ContractAddress,
         ) {
             let oid_disatcher = IdentityABIDispatcher { contract_address: onchain_id };
             assert(
