@@ -152,10 +152,14 @@ dependencies = [
 name = "roles"
 version = "0.1.0"
 dependencies = [
+ "compliance",
+ "factory",
  "mocks",
  "onchain_id_starknet",
  "openzeppelin_access",
  "openzeppelin_introspection",
+ "openzeppelin_security",
+ "openzeppelin_token",
  "registry",
  "snforge_std",
  "token",
