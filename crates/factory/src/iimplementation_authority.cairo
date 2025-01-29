@@ -50,6 +50,7 @@ pub trait IImplementationAuthority<TContractState> {
     );
     fn use_trex_version(ref self: TContractState, version: Version);
     fn upgrade_trex_suite(ref self: TContractState, token: ContractAddress, version: Version);
+    fn get_all_versions(self: @TContractState) -> Span<Version>;
     fn get_current_version(self: @TContractState) -> Version;
     fn get_implementations(self: @TContractState, version: Version) -> TREXImplementations;
     fn get_current_implementations(self: @TContractState) -> TREXImplementations;

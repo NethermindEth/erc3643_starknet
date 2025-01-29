@@ -24,8 +24,8 @@ mod ImplementationAuthority {
     #[storage]
     struct Storage {
         current_version: Version,
-        ///TODO: Consider making this enumerable to enumerate all available implementations
         implementations: Map<u32, TREXImplementationsStore>,
+        available_versions: Vec<u32>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
     }
@@ -200,6 +200,14 @@ mod ImplementationAuthority {
             self.emit(TokenSuiteUpgraded { version, token });
         }
 
+        fn get_all_versions(self: @TContractState) -> Span<Version> {
+            let mut versions = array![];
+            for i in 0..self.available_versions.len() {
+                versions.append(VersionStorePacking::unpack(self.available_versions.at(i).read()));
+            }
+            versions.span()
+        }
+
         fn get_current_version(self: @ContractState) -> Version {
             self.current_version.read()
         }
@@ -294,9 +302,8 @@ mod ImplementationAuthority {
         fn _add_trex_version(
             ref self: ContractState, version: Version, implementations: TREXImplementations,
         ) {
-            let implementation_storage = self
-                .implementations
-                .entry(VersionStorePacking::pack(version));
+            let version_key = VersionStorePacking::pack(version);
+            let implementation_storage = self.implementations.entry(version_key);
             assert(
                 implementation_storage.token_implementation.read().is_zero(),
                 Errors::VERSION_ALREADY_EXISTS,
@@ -316,6 +323,7 @@ mod ImplementationAuthority {
             implementation_storage.irs_implementation.write(implementations.irs_implementation);
             implementation_storage.tir_implementation.write(implementations.tir_implementation);
             implementation_storage.mc_implementation.write(implementations.mc_implementation);
+            self.available_versions.append(version_key);
             self.emit(TREXVersionAdded { version, implementations });
         }
 
