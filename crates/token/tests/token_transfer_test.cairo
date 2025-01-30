@@ -1381,22 +1381,18 @@ pub mod batch_burn {
 }
 
 pub mod permit {
-    use core::hash::{HashStateExTrait, HashStateTrait};
-    use core::poseidon::PoseidonTrait;
     use factory::tests_common::setup_full_suite;
     use openzeppelin_token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
     use openzeppelin_token::erc20::snip12_utils::permit::Permit;
     use openzeppelin_utils::cryptography::{
-        interface::{
-            INoncesDispatcher, INoncesDispatcherTrait, ISNIP12MetadataDispatcher,
-            ISNIP12MetadataDispatcherTrait,
-        },
-        snip12::{StarknetDomain, StructHash},
+        interface::{INoncesDispatcher, INoncesDispatcherTrait}, snip12::OffchainMessageHash,
     };
     use snforge_std::{
         signature::{SignerTrait, stark_curve::StarkCurveSignerImpl}, start_cheat_caller_address,
         stop_cheat_caller_address,
     };
+    use token::token::Token::SNIP12MetadataImpl;
+
 
     #[test]
     fn test_should_approve_via_permit_then_transfer_tokens_via_transfer_from() {
@@ -1410,27 +1406,11 @@ pub mod permit {
         let deadline = starknet::get_block_timestamp() + 60 * 60 * 24;
 
         /// Construct and Sign Permit Data
-        let snip12_metadata_dispatcher = ISNIP12MetadataDispatcher {
-            contract_address: setup.token.contract_address,
-        };
-        let (name, version) = snip12_metadata_dispatcher.snip12_metadata();
-        let sn_domain = StarknetDomain {
-            name: name,
-            version: version,
-            chain_id: starknet::get_tx_info().unbox().chain_id,
-            revision: 1,
-        };
         let nonces_dispatcher = INoncesDispatcher { contract_address: token };
         let nonce = nonces_dispatcher.nonces(sender);
         let permit = Permit { token, spender, amount, nonce, deadline };
-        let msg_hash = PoseidonTrait::new()
-            .update_with('StarkNet Message')
-            .update_with(sn_domain.hash_struct())
-            .update_with(sender)
-            .update_with(permit.hash_struct())
-            .finalize();
-
-        let (r, s) = setup.accounts.alice.key_pair.sign(msg_hash).unwrap();
+        let permit_hash = permit.get_message_hash(sender);
+        let (r, s) = setup.accounts.alice.key_pair.sign(permit_hash).unwrap();
         let permit_sig = array![r, s].span();
 
         let erc20_dispatcher = ERC20ABIDispatcher { contract_address: token };
