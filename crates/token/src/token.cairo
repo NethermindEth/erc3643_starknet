@@ -589,7 +589,7 @@ pub mod Token {
 
     impl SNIP12MetadataImpl of SNIP12Metadata {
         fn name() -> felt252 {
-            'TREX_TOKEN'
+            'ERC3643_TOKEN'
         }
 
         fn version() -> felt252 {
