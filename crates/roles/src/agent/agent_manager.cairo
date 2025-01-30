@@ -6,18 +6,11 @@ mod AgentManager {
     use onchain_id_starknet::interface::iidentity::{
         IdentityABIDispatcher, IdentityABIDispatcherTrait,
     };
-    use openzeppelin_access::{accesscontrol::AccessControlComponent, ownable::OwnableComponent};
+    use openzeppelin_access::accesscontrol::AccessControlComponent;
     use openzeppelin_introspection::src5::SRC5Component;
     use registry::interface::iidentity_registry::IIdentityRegistryDispatcherTrait;
     use starknet::{ContractAddress, storage::{StoragePointerReadAccess, StoragePointerWriteAccess}};
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
-
-    // Ownable Component
-    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
-
-    #[abi(embed_v0)]
-    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
-    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     // SRC5 Component
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -41,8 +34,6 @@ mod AgentManager {
         src5: SRC5Component::Storage,
         #[substorage(v0)]
         access: AccessControlComponent::Storage,
-        #[substorage(v0)]
-        ownable: OwnableComponent::Storage,
     }
 
     #[event]
@@ -52,31 +43,25 @@ mod AgentManager {
         AccessControlEvent: AccessControlComponent::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
-        #[flat]
-        OwnableEvent: OwnableComponent::Event,
     }
 
     pub mod Errors {
-        pub const CALLER_NOT_MANAGEMENT_KEY: felt252 = 'Caller is not management key';
-        pub const NOT_TRANSFER_MANAGER: felt252 = 'oid is not transfer manager';
-        pub const NOT_FREEZER: felt252 = 'oid is not freezer';
-        pub const NOT_SUPPLY_MODIFIER: felt252 = 'oid is not supply modifier';
-        pub const NOT_RECOVERY_AGENT: felt252 = 'oid is not recovery agent';
-        pub const NOT_COMPLIANCE_AGENT: felt252 = 'oid is not compliance agent';
-        pub const NOT_WHITELIST_MANAGER: felt252 = 'oid is not whitelist manger';
+        pub const CALLER_IS_NOT_ACTION_KEY: felt252 = 'Caller is not action key';
+        pub const NOT_TRANSFER_MANAGER: felt252 = 'OID is not transfer manager';
+        pub const NOT_FREEZER: felt252 = 'OID is not freezer';
+        pub const NOT_SUPPLY_MODIFIER: felt252 = 'OID is not supply modifier';
+        pub const NOT_RECOVERY_AGENT: felt252 = 'OID is not recovery agent';
+        pub const NOT_WHITELIST_MANAGER: felt252 = 'OID is not whitelist manger';
     }
 
     #[constructor]
     fn constructor(ref self: ContractState, token: ContractAddress, owner: ContractAddress) {
         self.token.write(ITokenDispatcher { contract_address: token });
-        // NOTE: might remove ownable.
-        self.ownable.initializer(owner);
         self.access.initializer();
         self.access.set_role_admin(AgentRoles::SUPPLY_MODIFIER, AgentRoles::AGENT_ADMIN);
         self.access.set_role_admin(AgentRoles::FREEZER, AgentRoles::AGENT_ADMIN);
         self.access.set_role_admin(AgentRoles::TRANSFER_MANAGER, AgentRoles::AGENT_ADMIN);
         self.access.set_role_admin(AgentRoles::RECOVERY_AGENT, AgentRoles::AGENT_ADMIN);
-        self.access.set_role_admin(AgentRoles::COMPLIANCE_AGENT, AgentRoles::AGENT_ADMIN);
         self.access.set_role_admin(AgentRoles::WHITELIST_MANAGER, AgentRoles::AGENT_ADMIN);
         self.access.set_role_admin(AgentRoles::AGENT_ADMIN, AgentRoles::AGENT_ADMIN);
         self.access._grant_role(AgentRoles::AGENT_ADMIN, owner);
@@ -101,7 +86,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().forced_transfer(from, to, amount);
         }
@@ -123,7 +108,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().batch_forced_transfer(from_list, to_list, amounts);
         }
@@ -136,7 +121,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().pause();
         }
@@ -149,7 +134,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().unpause();
         }
@@ -167,7 +152,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().mint(to, amount);
         }
@@ -188,7 +173,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().batch_mint(to_list, amounts);
         }
@@ -209,7 +194,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().burn(user_address, amount);
         }
@@ -230,7 +215,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().batch_burn(user_addresses, amounts);
         }
@@ -248,7 +233,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().set_address_frozen(user_address, freeze);
         }
@@ -266,7 +251,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().batch_set_address_frozen(user_addresses, freeze);
         }
@@ -284,7 +269,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().freeze_partial_tokens(user_address, amount);
         }
@@ -302,7 +287,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().batch_freeze_partial_tokens(user_addresses, amounts);
         }
@@ -320,7 +305,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().unfreeze_partial_tokens(user_address, amount);
         }
@@ -338,7 +323,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().batch_unfreeze_partial_tokens(user_addresses, amounts);
         }
@@ -360,7 +345,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
             self.token.read().recovery_address(lost_wallet, new_wallet, onchain_id);
         }
@@ -382,7 +367,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
 
             self
@@ -408,7 +393,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
 
             self.token.read().identity_registry().update_identity(user_address, identity);
@@ -430,7 +415,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
 
             self.token.read().identity_registry().update_country(user_address, country);
@@ -449,7 +434,7 @@ mod AgentManager {
                     .key_has_purpose(
                         poseidon_hash_span(array![starknet::get_caller_address().into()].span()), 2,
                     ),
-                Errors::CALLER_NOT_MANAGEMENT_KEY,
+                Errors::CALLER_IS_NOT_ACTION_KEY,
             );
 
             self.token.read().identity_registry().delete_identity(user_address);
