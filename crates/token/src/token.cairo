@@ -587,7 +587,7 @@ pub mod Token {
         }
     }
 
-    impl SNIP12MetadataImpl of SNIP12Metadata {
+    pub impl SNIP12MetadataImpl of SNIP12Metadata {
         fn name() -> felt252 {
             'ERC3643_TOKEN'
         }
