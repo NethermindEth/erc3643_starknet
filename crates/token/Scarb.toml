@@ -11,6 +11,7 @@ openzeppelin_security.workspace = true
 openzeppelin_upgrades.workspace = true
 openzeppelin_utils.workspace = true
 onchain_id_starknet.workspace = true
+openzeppelin_introspection.workspace = true
 registry = {path = "../registry"}
 roles = { path = "../roles"}
 compliance = {path ="../compliance" }
