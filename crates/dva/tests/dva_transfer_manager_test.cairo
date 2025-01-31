@@ -85,7 +85,7 @@ mod set_approval_criteria {
 
     #[test]
     #[should_panic(expected: 'Only token agent can call')]
-    fn test_when_sender_is_not_token_agent_should_panic() {
+    fn test_should_panic_when_sender_is_not_token_agent() {
         let (setup, transfer_manager) = setup_full_suite_with_transfer_manager();
 
         start_cheat_caller_address(
@@ -103,7 +103,7 @@ mod set_approval_criteria {
 
     #[test]
     #[should_panic(expected: 'DVA Mngr not verified for token')]
-    fn test_when_dva_manager_is_not_verified_for_the_token() {
+    fn test_should_panic_when_dva_manager_is_not_verified_for_the_token() {
         let (setup, transfer_manager) = setup_full_suite_with_transfer_manager();
 
         start_cheat_caller_address(
@@ -119,7 +119,7 @@ mod set_approval_criteria {
     // Describe: When dva manager is verified for the token, and sender is token agent
 
     #[test]
-    fn test_when_token_is_not_already_registered_should_modify_approval_criteria() {
+    fn test_should_modify_approval_criteria_when_token_is_not_already_registered() {
         let (setup, transfer_manager) = setup_full_suite_with_transfer_manager();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;
         let token_address = setup.token.contract_address;
@@ -188,7 +188,7 @@ mod set_approval_criteria {
     }
 
     #[test]
-    fn test_when_token_is_already_registered_should_modify_approval_criteria() {
+    fn test_should_modify_approval_criteria_when_token_is_already_registered() {
         let (setup, transfer_manager) = setup_full_suite_with_transfer_manager();
         let alice_identity = setup.onchain_id.alice_identity.contract_address;
         let token_address = setup.token.contract_address;
@@ -273,7 +273,7 @@ mod initiate_transfer {
 
     #[test]
     #[should_panic(expected: 'Token is not registered')]
-    fn test_when_token_is_not_registered_should_panic() {
+    fn test_should_panic_when_token_is_not_registered() {
         let (setup, transfer_manager) = setup_full_suite_with_transfer_manager();
 
         start_cheat_caller_address(
@@ -290,7 +290,7 @@ mod initiate_transfer {
 
     #[test]
     #[should_panic(expected: 'Recipient is not verified')]
-    fn test_when_recipient_is_not_verified_for_the_token_should_panic() {
+    fn test_should_panic_when_recipient_is_not_verified_for_the_token() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let token_address = setup.token.contract_address;
 
@@ -323,7 +323,7 @@ mod initiate_transfer {
 
     #[test]
     #[should_panic(expected: 'Insufficient available balance')]
-    fn test_when_amount_is_higher_than_sender_balance_should_panic() {
+    fn test_should_panic_when_amount_is_higher_than_sender_balance() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let token_address = setup.token.contract_address;
 
@@ -360,7 +360,7 @@ mod initiate_transfer {
     // Describe: When sender has enough balance
 
     #[test]
-    fn test_when_include_recipient_approver_is_true_should_initiate_transfer_with_recipient_approver() {
+    fn test_should_initiate_transfer_with_recipient_approver_when_include_recipient_approver_is_true() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let token_address = setup.token.contract_address;
         let alice = setup.accounts.alice.account.contract_address;
@@ -411,7 +411,7 @@ mod initiate_transfer {
     }
 
     #[test]
-    fn test_when_include_agent_approver_is_true_should_initiate_transfer_with_token_agent_approver() {
+    fn test_should_initiate_transfer_with_token_agent_approver_when_include_agent_approver_is_true() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let token_address = setup.token.contract_address;
         let alice = setup.accounts.alice.account.contract_address;
@@ -462,7 +462,7 @@ mod initiate_transfer {
     }
 
     #[test]
-    fn test_when_additional_approvers_exist_should_initiate_transfer_with_token_agent_approver() {
+    fn test_should_initiate_transfer_with_token_agent_approver_when_additional_approvers_exist() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let token_address = setup.token.contract_address;
         let alice = setup.accounts.alice.account.contract_address;
@@ -520,7 +520,7 @@ mod initiate_transfer {
     }
 
     #[test]
-    fn test_when_all_criteria_are_enabled_should_initiate_the_transfer_with_all_approvers() {
+    fn test_should_initiate_the_transfer_with_all_approvers_when_all_criteria_are_enabled() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let token_address = setup.token.contract_address;
         let alice = setup.accounts.alice.account.contract_address;
@@ -591,7 +591,7 @@ mod approve_transfer {
 
     #[test]
     #[should_panic(expected: 'Invalid transfer ID')]
-    fn test_when_transfer_does_not_exist_should_panic() {
+    fn test_should_panic_when_transfer_does_not_exist() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let transfer_id = transfer_manager
             .calculate_transfer_id(
@@ -605,7 +605,7 @@ mod approve_transfer {
 
     #[test]
     #[should_panic(expected: 'Transfer not in pending status')]
-    fn test_when_transfer_status_is_not_pending_should_panic() {
+    fn test_should_panic_when_transfer_status_is_not_pending() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         start_cheat_caller_address(
             transfer_manager.contract_address, setup.accounts.alice.account.contract_address,
@@ -619,7 +619,7 @@ mod approve_transfer {
     // Describe: When approval criteria are changed after the transfer has been initiated
 
     #[test]
-    fn test_when_trying_to_approve_before_approval_state_reset_should_reset_approvers() {
+    fn test_should_reset_approvers_when_trying_to_approve_before_approval_state_reset() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         start_cheat_caller_address(
             transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
@@ -640,6 +640,7 @@ mod approve_transfer {
         );
         transfer_manager.approve_transfer(transfer_id);
         stop_cheat_caller_address(transfer_manager.contract_address);
+
         spy
             .assert_emitted(
                 @array![
@@ -664,7 +665,7 @@ mod approve_transfer {
     }
 
     #[test]
-    fn test_when_trying_to_approve_after_approval_state_reset_should_approve() {
+    fn test_should_approve_when_trying_to_approve_after_approval_state_reset() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         start_cheat_caller_address(
             transfer_manager.contract_address, setup.accounts.token_agent.account.contract_address,
@@ -711,13 +712,13 @@ mod approve_transfer {
 
     #[test]
     #[should_panic(expected: 'Approver not found')]
-    fn test_when_caller_is_not_an_approver_should_panic() {
+    fn test_should_panic_when_caller_is_not_an_approver() {
         let (_, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         transfer_manager.approve_transfer(transfer_id);
     }
 
     #[test]
-    fn test_when_caller_is_the_last_approver_should_approve() {
+    fn test_should_approve_when_caller_is_the_last_approver() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         let mut spy = spy_events();
         start_cheat_caller_address(
@@ -742,7 +743,7 @@ mod approve_transfer {
     }
 
     #[test]
-    fn test_when_all_parties_approve_the_transfer_should_complete() {
+    fn test_should_complete_when_all_parties_approve_the_transfer() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
 
@@ -802,7 +803,7 @@ mod approve_transfer {
 
     #[test]
     #[should_panic(expected: 'Approvals must be sequential')]
-    fn test_when_caller_is_not_the_next_approver_should_panic() {
+    fn test_should_panic_when_caller_is_not_the_next_approver() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(true);
         start_cheat_caller_address(
             transfer_manager.contract_address, setup.accounts.charlie.account.contract_address,
@@ -812,7 +813,7 @@ mod approve_transfer {
     }
 
     #[test]
-    fn test_when_caller_is_the_next_approver_and_is_token_agent_should_approve() {
+    fn test_should_approve_when_caller_is_the_next_approver_and_is_token_agent() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(true);
 
         start_cheat_caller_address(
@@ -845,7 +846,7 @@ mod approve_transfer {
     }
 
     #[test]
-    fn test_when_all_parties_approve_the_transfer_should_complete_sequential() {
+    fn test_should_complete_sequentially_when_all_parties_approve_the_transfer() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(true);
         let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
 
@@ -907,7 +908,7 @@ mod delegate_approve_transfer {
 
     #[test]
     #[should_panic(expected: 'Signatures can not be empty')]
-    fn test_when_signatures_array_is_empty_should_panic() {
+    fn test_should_panic_when_signatures_array_is_empty() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let transfer_id = transfer_manager
             .calculate_transfer_id(
@@ -922,7 +923,7 @@ mod delegate_approve_transfer {
 
     #[test]
     #[should_panic(expected: 'Invalid transfer ID')]
-    fn test_when_transfer_does_not_exist_should_panic() {
+    fn test_should_panic_when_transfer_does_not_exist() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let transfer_id = transfer_manager
             .calculate_transfer_id(
@@ -939,7 +940,7 @@ mod delegate_approve_transfer {
 
     #[test]
     #[should_panic(expected: 'Transfer not in pending status')]
-    fn test_when_transfer_status_is_not_pending_should_panic() {
+    fn test_should_panic_when_transfer_status_is_not_pending() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
 
         start_cheat_caller_address(
@@ -957,7 +958,7 @@ mod delegate_approve_transfer {
     // Describe: When approval criteria are changed after the transfer has been initiated
 
     #[test]
-    fn test_when_trying_to_approve_before_approval_state_reset_should_reset_approvers() {
+    fn test_should_reset_approvers_when_trying_to_approve_before_approval_state_reset() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         let another_wallet = starknet::contract_address_const::<'ANOTHER_WALLET'>();
 
@@ -1006,7 +1007,7 @@ mod delegate_approve_transfer {
     }
 
     #[test]
-    fn test_when_trying_to_approve_after_approval_state_reset_should_approve() {
+    fn test_should_approve_when_trying_to_approve_after_approval_state_reset() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         let another_wallet = starknet::contract_address_const::<'ANOTHER_WALLET'>();
 
@@ -1056,7 +1057,7 @@ mod delegate_approve_transfer {
 
     #[test]
     #[should_panic(expected: 'Approver not found')]
-    fn test_when_caller_is_not_an_approver_should_panic() {
+    fn test_should_panic_when_caller_is_not_an_approver() {
         let (_, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         transfer_manager
             .delegate_approve_transfer(
@@ -1065,7 +1066,7 @@ mod delegate_approve_transfer {
     }
 
     #[test]
-    fn test_when_signer_is_an_approver_should_approve() {
+    fn test_should_approve_when_signer_is_an_approver() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         let another_wallet = starknet::contract_address_const::<'ANOTHER_WALLET'>();
 
@@ -1094,7 +1095,7 @@ mod delegate_approve_transfer {
     }
 
     #[test]
-    fn test_when_all_parties_approve_the_transfer_should_complete() {
+    fn test_should_complete_when_all_parties_approve_the_transfer() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
 
@@ -1171,7 +1172,7 @@ mod cancel_transfer {
 
     #[test]
     #[should_panic(expected: 'Invalid transfer ID')]
-    fn test_when_transfer_does_not_exist_should_panic() {
+    fn test_should_panic_when_transfer_does_not_exist() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let transfer_id = transfer_manager
             .calculate_transfer_id(
@@ -1185,7 +1186,7 @@ mod cancel_transfer {
 
     #[test]
     #[should_panic(expected: 'Only transfer sender can call')]
-    fn test_when_caller_is_not_sender_should_panic() {
+    fn test_should_panic_when_caller_is_not_sender() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         start_cheat_caller_address(
             transfer_manager.contract_address, setup.accounts.bob.account.contract_address,
@@ -1196,7 +1197,7 @@ mod cancel_transfer {
 
     #[test]
     #[should_panic(expected: 'Transfer not in pending status')]
-    fn test_when_transfer_status_is_not_pending_should_panic() {
+    fn test_should_panic_when_transfer_status_is_not_pending() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         start_cheat_caller_address(
             transfer_manager.contract_address, setup.accounts.alice.account.contract_address,
@@ -1208,7 +1209,7 @@ mod cancel_transfer {
     }
 
     #[test]
-    fn test_when_transfer_status_is_pending_should_cancel() {
+    fn test_should_cancel_when_transfer_status_is_pending() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
 
@@ -1245,7 +1246,7 @@ mod reject_transfer {
 
     #[test]
     #[should_panic(expected: 'Invalid transfer ID')]
-    fn test_when_transfer_does_not_exist_should_panic() {
+    fn test_should_panic_when_transfer_does_not_exist() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let transfer_id = transfer_manager
             .calculate_transfer_id(
@@ -1259,7 +1260,7 @@ mod reject_transfer {
 
     #[test]
     #[should_panic(expected: 'Transfer not in pending status')]
-    fn test_when_transfer_status_is_not_pending_should_panic() {
+    fn test_should_panic_when_transfer_status_is_not_pending() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         start_cheat_caller_address(
             transfer_manager.contract_address, setup.accounts.alice.account.contract_address,
@@ -1274,13 +1275,13 @@ mod reject_transfer {
 
     #[test]
     #[should_panic(expected: 'Approver not found')]
-    fn test_when_caller_is_not_an_approver_should_panic() {
+    fn test_should_panic_when_caller_is_not_an_approver() {
         let (_, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         transfer_manager.reject_transfer(transfer_id);
     }
 
     #[test]
-    fn test_when_caller_is_the_last_approver_should_reject() {
+    fn test_should_reject_when_caller_is_the_last_approver() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
 
@@ -1317,7 +1318,7 @@ mod reject_transfer {
 
     #[test]
     #[should_panic(expected: 'Approvals must be sequential')]
-    fn test_when_caller_is_not_the_next_approver_should_panic() {
+    fn test_should_panic_when_caller_is_not_the_next_approver() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(true);
         start_cheat_caller_address(
             transfer_manager.contract_address, setup.accounts.charlie.account.contract_address,
@@ -1327,7 +1328,7 @@ mod reject_transfer {
     }
 
     #[test]
-    fn test_when_caller_is_the_next_approver_and_is_token_agent_should_reject() {
+    fn test_should_reject_when_caller_is_the_next_approver_and_is_token_agent() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(true);
         let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
 
@@ -1370,7 +1371,7 @@ mod reject_transfer {
     // Describe: When approval criteria are changed after the transfer has been initiated
 
     #[test]
-    fn test_when_trying_to_reject_before_approval_state_reset_should_reset_approvers() {
+    fn test_should_reset_approvers_when_trying_to_reject_before_approval_state_reset() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
 
         start_cheat_caller_address(
@@ -1417,7 +1418,7 @@ mod reject_transfer {
     }
 
     #[test]
-    fn test_when_trying_to_reject_after_approval_state_reset_should_reject() {
+    fn test_should_reject_when_trying_to_reject_after_approval_state_reset() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
         let erc20_dispatcher = IERC20Dispatcher { contract_address: setup.token.contract_address };
 
@@ -1476,7 +1477,7 @@ mod get_transfer {
 
     #[test]
     #[should_panic(expected: 'Invalid transfer ID')]
-    fn test_when_transfer_does_not_exist_should_panic() {
+    fn test_should_panic_when_transfer_does_not_exist() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let transfer_id = transfer_manager
             .calculate_transfer_id(
@@ -1489,7 +1490,7 @@ mod get_transfer {
     }
 
     #[test]
-    fn test_when_transfer_exists_should_return_transfer() {
+    fn test_should_return_transfer_when_transfer_exists() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
 
         let transfer = transfer_manager.get_transfer(transfer_id);
@@ -1517,13 +1518,13 @@ mod get_next_tx_nonce {
     };
 
     #[test]
-    fn test_when_no_transfer_should_return_zero() {
+    fn test_should_return_zero_when_no_transfer() {
         let (_, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         assert_eq!(transfer_manager.get_next_tx_nonce(), 0);
     }
 
     #[test]
-    fn test_when_one_transfer_exists_should_return_one() {
+    fn test_should_return_one_when_one_transfer_exists() {
         let (_, transfer_manager, _) = setup_full_suite_with_transfer(false);
         assert_eq!(transfer_manager.get_next_tx_nonce(), 1);
     }
@@ -1534,7 +1535,7 @@ mod get_next_approver {
 
     #[test]
     #[should_panic(expected: 'Invalid transfer ID')]
-    fn test_when_transfer_does_not_exist_should_panic() {
+    fn test_should_panic_when_transfer_does_not_exist() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         let transfer_id = transfer_manager
             .calculate_transfer_id(
@@ -1548,7 +1549,7 @@ mod get_next_approver {
 
     #[test]
     #[should_panic(expected: 'Transfer not in pending status')]
-    fn test_when_transfer_status_is_not_pending_should_panic() {
+    fn test_should_panic_when_transfer_status_is_not_pending() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(false);
 
         start_cheat_caller_address(
@@ -1565,7 +1566,7 @@ mod get_next_approver {
     }
 
     #[test]
-    fn test_when_no_one_approved_the_transfer_should_return_first_approver() {
+    fn test_should_return_first_approver_when_no_one_approved_the_transfer() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(true);
         let (next_approver, any_token_agent) = transfer_manager.get_next_approver(transfer_id);
         assert_eq!(next_approver, setup.accounts.bob.account.contract_address);
@@ -1573,7 +1574,7 @@ mod get_next_approver {
     }
 
     #[test]
-    fn test_when_one_approver_approved_the_transfer_should_return_second_approver() {
+    fn test_should_return_second_approver_when_one_approver_approved_the_transfer() {
         let (setup, transfer_manager, transfer_id) = setup_full_suite_with_transfer(true);
 
         start_cheat_caller_address(
@@ -1596,13 +1597,13 @@ mod get_approval_criteria {
 
     #[test]
     #[should_panic(expected: 'Token is not registered')]
-    fn test_when_token_is_not_registered_should_panic() {
+    fn test_should_panic_when_token_is_not_registered() {
         let (setup, transfer_manager) = setup_full_suite_with_verified_transfer_manager();
         transfer_manager.get_approval_criteria(setup.token.contract_address);
     }
 
     #[test]
-    fn test_when_token_is_registered_should_return_criteria() {
+    fn test_should_return_criteria_when_token_is_registered() {
         let (setup, transfer_manager, _) = setup_full_suite_with_transfer(true);
         let approval_criteria = transfer_manager
             .get_approval_criteria(setup.token.contract_address);
