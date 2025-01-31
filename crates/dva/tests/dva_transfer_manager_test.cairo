@@ -1142,6 +1142,18 @@ mod delegate_approve_transfer {
                             },
                         ),
                     ),
+                    (
+                        transfer_manager.contract_address,
+                        DVATransferManager::Event::TransferCompleted(
+                            TransferCompleted {
+                                transfer_id,
+                                token_address: setup.token.contract_address,
+                                sender: setup.accounts.alice.account.contract_address,
+                                recipient: setup.accounts.bob.account.contract_address,
+                                amount: 100,
+                            },
+                        ),
+                    ),
                 ],
             );
 
