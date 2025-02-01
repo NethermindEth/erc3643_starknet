@@ -147,7 +147,7 @@ pub mod transfer {
     }
 
     #[test]
-    #[should_panic(expected: 'Transfer not possible')]
+    #[should_panic(expected: 'Identity is not verified')]
     fn test_should_panic_when_the_recipient_identity_is_not_verified() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
@@ -161,7 +161,7 @@ pub mod transfer {
     }
 
     #[test]
-    #[should_panic(expected: 'Transfer not possible')]
+    #[should_panic(expected: 'Compliance check failed')]
     fn test_should_panic_when_the_transfer_breaks_compliance_rules() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
@@ -326,7 +326,7 @@ pub mod batch_transfer {
     }
 
     #[test]
-    #[should_panic(expected: 'Transfer not possible')]
+    #[should_panic(expected: 'Identity is not verified')]
     fn test_should_panic_when_the_recipient_identity_is_not_verified() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
@@ -344,7 +344,7 @@ pub mod batch_transfer {
     }
 
     #[test]
-    #[should_panic(expected: 'Transfer not possible')]
+    #[should_panic(expected: 'Compliance check failed')]
     fn test_should_panic_when_the_transfer_breaks_compliance_rules() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
@@ -364,7 +364,7 @@ pub mod batch_transfer {
     }
 
     #[test]
-    #[should_panic(expected: 'Arrays length not parrallel')]
+    #[should_panic(expected: 'Array lengths not parallel')]
     fn test_should_panic_when_arrays_len_not_parallel() {
         let setup = setup_full_suite();
 
@@ -553,7 +553,7 @@ pub mod transfer_from {
     }
 
     #[test]
-    #[should_panic(expected: 'Transfer not possible')]
+    #[should_panic(expected: 'Identity is not verified')]
     fn test_should_panic_when_the_recipient_identity_is_not_verified() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
@@ -572,7 +572,7 @@ pub mod transfer_from {
     }
 
     #[test]
-    #[should_panic(expected: 'Transfer not possible')]
+    #[should_panic(expected: 'Compliance check failed')]
     fn test_should_panic_when_the_transfer_breaks_compliance_rules() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
@@ -684,7 +684,7 @@ pub mod forced_transfer {
     }
 
     #[test]
-    #[should_panic(expected: 'Transfer not possible')]
+    #[should_panic(expected: 'Identity is not verified')]
     fn test_should_panic_when_recipient_identity_is_not_verified() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
@@ -830,7 +830,7 @@ pub mod batch_forced_transfer {
     }
 
     #[test]
-    #[should_panic(expected: 'Arrays length not parrallel')]
+    #[should_panic(expected: 'Array lengths not parallel')]
     fn test_should_panic_when_arrays_len_not_parallel() {
         let setup = setup_full_suite();
 
@@ -864,7 +864,7 @@ pub mod batch_forced_transfer {
     }
 
     #[test]
-    #[should_panic(expected: 'Transfer not possible')]
+    #[should_panic(expected: 'Identity is not verified')]
     fn test_should_panic_when_recipient_identity_is_not_verified() {
         let setup = setup_full_suite();
         let sender = setup.accounts.alice.account.contract_address;
@@ -1034,7 +1034,7 @@ pub mod mint {
     }
 
     #[test]
-    #[should_panic(expected: 'Compliance not followed')]
+    #[should_panic(expected: 'Compliance check failed')]
     fn test_should_panic_when_the_mint_breaks_compliance_rules() {
         let setup = setup_full_suite();
         let recipient = setup.accounts.alice.account.contract_address;
@@ -1113,7 +1113,7 @@ pub mod batch_mint {
     }
 
     #[test]
-    #[should_panic(expected: 'Arrays length not parrallel')]
+    #[should_panic(expected: 'Array lengths not parallel')]
     fn test_should_panic_when_arrays_len_not_parallel() {
         let setup = setup_full_suite();
 
@@ -1139,7 +1139,7 @@ pub mod batch_mint {
     }
 
     #[test]
-    #[should_panic(expected: 'Compliance not followed')]
+    #[should_panic(expected: 'Compliance check failed')]
     fn test_should_panic_when_the_mint_breaks_compliance_rules() {
         let setup = setup_full_suite();
         let recipient = setup.accounts.alice.account.contract_address;
@@ -1216,7 +1216,7 @@ pub mod burn {
     }
 
     #[test]
-    #[should_panic(expected: 'Cannot burn more than balance')]
+    #[should_panic(expected: 'Burn amount exceeds balance')]
     fn test_should_panic_when_source_wallet_has_not_enough_balance() {
         let setup = setup_full_suite();
         let burner = setup.accounts.alice.account.contract_address;
@@ -1305,7 +1305,7 @@ pub mod batch_burn {
     }
 
     #[test]
-    #[should_panic(expected: 'Arrays length not parrallel')]
+    #[should_panic(expected: 'Array lengths not parallel')]
     fn test_should_panic_when_arrays_len_not_parallel() {
         let setup = setup_full_suite();
 
@@ -1317,7 +1317,7 @@ pub mod batch_burn {
     }
 
     #[test]
-    #[should_panic(expected: 'Cannot burn more than balance')]
+    #[should_panic(expected: 'Burn amount exceeds balance')]
     fn test_should_panic_when_source_wallet_has_not_enough_balance() {
         let setup = setup_full_suite();
         let burner = setup.accounts.alice.account.contract_address;
