@@ -20,12 +20,14 @@ dependencies = [
 name = "dva"
 version = "0.1.0"
 dependencies = [
+ "factory",
  "openzeppelin_account",
  "openzeppelin_introspection",
  "openzeppelin_token",
  "openzeppelin_utils",
  "registry",
  "roles",
+ "snforge_std",
  "storage",
  "token",
 ]

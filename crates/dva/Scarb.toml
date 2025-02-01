@@ -14,8 +14,14 @@ token = { path = "../token" }
 registry = { path = "../registry" }
 storage = { path = "../storage" }
 
+[dev-dependencies]
+snforge_std.workspace = true
+assert_macros.workspace = true
+factory = { path = "../factory" }
+
 [[target.starknet-contract]]
 sierra = true
+build-external-contracts = ["onchain_id_starknet::*", "factory::*", "registry::*", "roles::*", "compliance::*", "token::*", "mocks::*"]
 
 [tool]
 fmt.workspace = true
