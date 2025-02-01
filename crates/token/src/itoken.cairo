@@ -2,6 +2,8 @@ use compliance::imodular_compliance::IModularComplianceDispatcher;
 use registry::interface::iidentity_registry::IIdentityRegistryDispatcher;
 use starknet::ContractAddress;
 
+pub const ITOKEN_ID: felt252 = 0x35b4ee737b43f504a56503bf8e228e0580c9ebf7c11f867326ed1cb8fe9d55;
+
 #[starknet::interface]
 pub trait IToken<TContractState> {
     /// Setters for metadata

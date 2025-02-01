@@ -9,11 +9,12 @@ pub mod Token {
     };
     use core::num::traits::Zero;
     use core::poseidon::poseidon_hash_span;
-    use crate::itoken::IToken;
+    use crate::itoken::{ITOKEN_ID, IToken};
     use onchain_id_starknet::interface::iidentity::{
         IdentityABIDispatcher, IdentityABIDispatcherTrait,
     };
     use openzeppelin_access::ownable::OwnableComponent;
+    use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_security::pausable::PausableComponent;
     use openzeppelin_token::erc20::{
         ERC20Component, ERC20HooksEmptyImpl, interface::{IERC20, IERC20Metadata},
@@ -63,6 +64,12 @@ pub mod Token {
 
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
+    component!(path: SRC5Component, storage: src5, event: SRC5Event);
+
+    #[abi(embed_v0)]
+    impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+    impl SRC5InternalImpl = SRC5Component::InternalImpl<ContractState>;
+
     pub const TOKEN_VERSION: felt252 = '0.1.0';
 
     #[storage]
@@ -86,6 +93,8 @@ pub mod Token {
         upgrades: UpgradeableComponent::Storage,
         #[substorage(v0)]
         nonces: NoncesComponent::Storage,
+        #[substorage(v0)]
+        src5: SRC5Component::Storage,
     }
 
     #[event]
@@ -110,6 +119,8 @@ pub mod Token {
         UpgradeableEvent: UpgradeableComponent::Event,
         #[flat]
         NoncesEvent: NoncesComponent::Event,
+        #[flat]
+        SRC5Event: SRC5Component::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -194,6 +205,7 @@ pub mod Token {
         self.pausable.pause();
         self.set_compliance(compliance);
         self.set_identity_registry(identity_registry);
+        self.src5.register_interface(ITOKEN_ID);
     }
 
     #[abi(embed_v0)]
