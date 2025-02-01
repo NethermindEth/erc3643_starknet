@@ -14,7 +14,6 @@ pub mod AgentRoles {
     pub const FREEZER: felt252 = 'FREEZER_ROLE';
     pub const TRANSFER_MANAGER: felt252 = 'TRANSFER_MANAGER_ROLE';
     pub const RECOVERY_AGENT: felt252 = 'RECOVERY_AGENT_ROLE';
-    pub const COMPLIANCE_AGENT: felt252 = 'COMPLIANCE_AGENT_ROLE';
     pub const WHITELIST_MANAGER: felt252 = 'WHITE_LIST_MANAGER_ROLE';
 }
 

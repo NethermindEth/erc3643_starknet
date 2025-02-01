@@ -1379,3 +1379,58 @@ pub mod batch_burn {
             );
     }
 }
+
+pub mod permit {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_token::erc20::interface::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
+    use openzeppelin_token::erc20::snip12_utils::permit::Permit;
+    use openzeppelin_utils::cryptography::{
+        interface::{INoncesDispatcher, INoncesDispatcherTrait}, snip12::OffchainMessageHash,
+    };
+    use snforge_std::{
+        signature::{SignerTrait, stark_curve::StarkCurveSignerImpl}, start_cheat_caller_address,
+        stop_cheat_caller_address,
+    };
+    use token::token::Token::SNIP12MetadataImpl;
+
+
+    #[test]
+    fn test_should_approve_via_permit_then_transfer_tokens_via_transfer_from() {
+        let setup = setup_full_suite();
+        let sender = setup.accounts.alice.account.contract_address;
+        let spender = starknet::contract_address_const::<'SPENDER'>();
+        let recipient = setup.accounts.bob.account.contract_address;
+        let token = setup.token.contract_address;
+        let amount = 100;
+        /// Current time + DAY
+        let deadline = starknet::get_block_timestamp() + 60 * 60 * 24;
+
+        /// Construct and Sign Permit Data
+        let nonces_dispatcher = INoncesDispatcher { contract_address: token };
+        let nonce = nonces_dispatcher.nonces(sender);
+        let permit = Permit { token, spender, amount, nonce, deadline };
+        let permit_hash = permit.get_message_hash(sender);
+        let (r, s) = setup.accounts.alice.key_pair.sign(permit_hash).unwrap();
+        let permit_sig = array![r, s].span();
+
+        let erc20_dispatcher = ERC20ABIDispatcher { contract_address: token };
+        let sender_balance_prev = erc20_dispatcher.balance_of(sender);
+        let recipient_balance_prev = erc20_dispatcher.balance_of(recipient);
+
+        start_cheat_caller_address(token, spender);
+        erc20_dispatcher.permit(sender, spender, amount, deadline, permit_sig);
+        assert(erc20_dispatcher.allowance(sender, spender) == amount, 'Not approved via permit');
+        erc20_dispatcher.transfer_from(sender, recipient, amount);
+        stop_cheat_caller_address(token);
+
+        assert(erc20_dispatcher.allowance(sender, spender) == 0, 'Allowance not reduced');
+        assert(
+            erc20_dispatcher.balance_of(sender) == sender_balance_prev - amount,
+            'Balance mismatch!',
+        );
+        assert(
+            erc20_dispatcher.balance_of(recipient) == recipient_balance_prev + amount,
+            'Balance mismatch!',
+        );
+    }
+}

@@ -2,6 +2,8 @@ use compliance::imodular_compliance::IModularComplianceDispatcher;
 use registry::interface::iidentity_registry::IIdentityRegistryDispatcher;
 use starknet::ContractAddress;
 
+pub const ITOKEN_ID: felt252 = 0x35b4ee737b43f504a56503bf8e228e0580c9ebf7c11f867326ed1cb8fe9d55;
+
 #[starknet::interface]
 pub trait IToken<TContractState> {
     /// Setters for metadata
@@ -53,7 +55,7 @@ pub trait IToken<TContractState> {
         ref self: TContractState, user_addresses: Span<ContractAddress>, amounts: Span<u256>,
     );
     fn onchain_id(self: @TContractState) -> ContractAddress;
-    fn version(self: @TContractState) -> ByteArray;
+    fn version(self: @TContractState) -> felt252;
     fn identity_registry(self: @TContractState) -> IIdentityRegistryDispatcher;
     fn compliance(self: @TContractState) -> IModularComplianceDispatcher;
     fn is_frozen(self: @TContractState, user_address: ContractAddress) -> bool;
