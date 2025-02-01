@@ -191,13 +191,12 @@ pub mod Token {
         pub const ARRAY_LENGTHS_NOT_PARALLEL: felt252 = 'Array lengths not parallel';
         pub const WALLET_IS_FROZEN: felt252 = 'Wallet is frozen';
         pub const INSUFFICIENT_AVAILABLE_BALANCE: felt252 = 'Insufficient available balance';
-        pub const AMOUNT_EXCEEDS_AVAILABLE_BAL: felt252 = 'Amount exceeds available funds';
+        pub const AMOUNT_EXCEEDS_AVAILABLE_FUNDS: felt252 = 'Amount exceeds available funds';
         pub const AMOUNT_EXCEEDS_FROZEN_TOKENS: felt252 = 'Amount exceeds frozen tokens';
         pub const IDENTITY_NOT_VERIFIED: felt252 = 'Identity is not verified';
         pub const COMPLIANCE_CHECK_FAILED: felt252 = 'Compliance check failed';
         pub const BURN_AMOUNT_EXCEEDS_BALANCE: felt252 = 'Burn amount exceeds balance';
     }
-
 
     #[constructor]
     fn constructor(
@@ -670,7 +669,7 @@ pub mod Token {
             let balance = self.erc20.balance_of(user_address);
             let user_frozen_tokens_storage = self.frozen_tokens.entry(user_address);
             let user_frozen_tokens = user_frozen_tokens_storage.read();
-            assert(balance >= user_frozen_tokens + amount, Errors::AMOUNT_EXCEEDS_AVAILABLE_BAL);
+            assert(balance >= user_frozen_tokens + amount, Errors::AMOUNT_EXCEEDS_AVAILABLE_FUNDS);
             user_frozen_tokens_storage.write(user_frozen_tokens + amount);
             self.emit(TokensFrozen { user_address, amount });
         }
