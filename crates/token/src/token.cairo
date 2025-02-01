@@ -1,7 +1,3 @@
-//! TODO: Ensure address zero checks are needed or not
-//! NOTE: UpdatedTokenInformation event is emitted one parameter change but it reads all the other,
-//! very in efficient but due to expected rare occurance might be neglegible
-//! Revise error messages
 #[starknet::contract]
 pub mod Token {
     use compliance::imodular_compliance::{
@@ -181,6 +177,28 @@ pub mod Token {
         pub amount: u256,
     }
 
+    pub mod Errors {
+        pub const OWNER_ZERO_ADDRESS: felt252 = 'Owner is Zero Address';
+        pub const IDENTITY_REGISTRY_ZERO_ADDRESS: felt252 = 'Identity Registry Zero Address';
+        pub const COMPLIANCE_ZERO_ADDRESS: felt252 = 'Compliance Zero Address';
+        pub const IMPLEMENTATION_AUTHORITY_ZERO_ADDRESS: felt252 = 'Impl. Auth. Zero Address';
+        pub const INVALID_DECIMALS: felt252 = 'Invalid Decimals: [0, 18]';
+        pub const CALLER_NOT_IMPLEMENTATION_AUTHORITY: felt252 = 'Caller is not Impl. Auth.';
+        pub const ERC20_EMPTY_NAME: felt252 = 'ERC20-Name: Empty string';
+        pub const ERC20_EMPTY_SYMBOL: felt252 = 'ERC20-Symbol: Empty string';
+        pub const NO_TOKENS_TO_RECOVER: felt252 = 'No tokens to recover';
+        pub const RECOVERY_WALLET_NOT_AUTHORIZED: felt252 = 'Recovery wallet not authorized';
+        pub const ARRAY_LENGTHS_NOT_PARALLEL: felt252 = 'Array lengths not parallel';
+        pub const WALLET_IS_FROZEN: felt252 = 'Wallet is frozen';
+        pub const INSUFFICIENT_AVAILABLE_BALANCE: felt252 = 'Insufficient available balance';
+        pub const AMOUNT_EXCEEDS_AVAILABLE_BAL: felt252 = 'Amount exceeds available funds';
+        pub const AMOUNT_EXCEEDS_FROZEN_TOKENS: felt252 = 'Amount exceeds frozen tokens';
+        pub const IDENTITY_NOT_VERIFIED: felt252 = 'Identity is not verified';
+        pub const COMPLIANCE_CHECK_FAILED: felt252 = 'Compliance check failed';
+        pub const BURN_AMOUNT_EXCEEDS_BALANCE: felt252 = 'Burn amount exceeds balance';
+    }
+
+
     #[constructor]
     fn constructor(
         ref self: ContractState,
@@ -193,10 +211,13 @@ pub mod Token {
         implementation_authority: ContractAddress,
         owner: ContractAddress,
     ) {
-        assert(owner.is_non_zero(), 'Owner is Zero Address');
-        assert(identity_registry.is_non_zero(), 'Identity Registry Zero Address');
-        assert(compliance.is_non_zero(), 'Compliance Zero Address');
-        assert(decimals <= 18, 'Invalid Decimals: [0, 18]');
+        assert(owner.is_non_zero(), Errors::OWNER_ZERO_ADDRESS);
+        assert(identity_registry.is_non_zero(), Errors::IDENTITY_REGISTRY_ZERO_ADDRESS);
+        assert(compliance.is_non_zero(), Errors::COMPLIANCE_ZERO_ADDRESS);
+        assert(decimals <= 18, Errors::INVALID_DECIMALS);
+        assert(
+            implementation_authority.is_non_zero(), Errors::IMPLEMENTATION_AUTHORITY_ZERO_ADDRESS,
+        );
         self.ownable.initializer(owner);
         self.erc20.initializer(name, symbol);
         self.token_decimals.write(decimals);
@@ -223,7 +244,7 @@ pub mod Token {
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             assert(
                 self.implementation_authority.read() == starknet::get_caller_address(),
-                'Caller is not IA',
+                Errors::CALLER_NOT_IMPLEMENTATION_AUTHORITY,
             );
             self.upgrades.upgrade(new_class_hash);
         }
@@ -233,7 +254,7 @@ pub mod Token {
     impl TokenImpl of IToken<ContractState> {
         fn set_name(ref self: ContractState, name: ByteArray) {
             self.ownable.assert_only_owner();
-            assert(name != "", 'ERC20-Name: Empty string');
+            assert(name != "", Errors::ERC20_EMPTY_NAME);
             self.erc20.ERC20_name.write(name.clone());
             self
                 .emit(
@@ -249,7 +270,7 @@ pub mod Token {
 
         fn set_symbol(ref self: ContractState, symbol: ByteArray) {
             self.ownable.assert_only_owner();
-            assert(symbol != "", 'ERC20-Symbol: Empty string');
+            assert(symbol != "", Errors::ERC20_EMPTY_SYMBOL);
             self.erc20.ERC20_symbol.write(symbol.clone());
             self
                 .emit(
@@ -311,6 +332,7 @@ pub mod Token {
 
         fn set_identity_registry(ref self: ContractState, identity_registry: ContractAddress) {
             self.ownable.assert_only_owner();
+            assert(identity_registry.is_non_zero(), Errors::IDENTITY_REGISTRY_ZERO_ADDRESS);
             self
                 .token_identity_registry
                 .write(IIdentityRegistryDispatcher { contract_address: identity_registry });
@@ -319,6 +341,7 @@ pub mod Token {
 
         fn set_compliance(ref self: ContractState, compliance: ContractAddress) {
             self.ownable.assert_only_owner();
+            assert(compliance.is_non_zero(), Errors::COMPLIANCE_ZERO_ADDRESS);
             let current_compliance = self.token_compliance.read();
             let this_address = starknet::get_contract_address();
             if current_compliance.contract_address.is_non_zero() {
@@ -355,10 +378,10 @@ pub mod Token {
         ) -> bool {
             self.agent_role.assert_only_agent();
             let balance_of_lost_wallet = self.erc20.balance_of(lost_wallet);
-            assert(balance_of_lost_wallet.is_non_zero(), 'No tokens to recover');
+            assert(balance_of_lost_wallet.is_non_zero(), Errors::NO_TOKENS_TO_RECOVER);
             let onchain_id = IdentityABIDispatcher { contract_address: investor_onchain_id };
             let key = poseidon_hash_span(array![new_wallet.into()].span());
-            assert(onchain_id.key_has_purpose(key, 1), 'Recovery not possible');
+            assert(onchain_id.key_has_purpose(key, 1), Errors::RECOVERY_WALLET_NOT_AUTHORIZED);
             let frozen_tokens_of_lost_wallet = self.frozen_tokens.entry(lost_wallet).read();
             let token_identity_registry = self.token_identity_registry.read();
             token_identity_registry
@@ -385,9 +408,9 @@ pub mod Token {
             ref self: ContractState, to_list: Span<ContractAddress>, amounts: Span<u256>,
         ) {
             self.pausable.assert_not_paused();
-            assert(to_list.len() == amounts.len(), 'Arrays length not parrallel');
+            assert(to_list.len() == amounts.len(), Errors::ARRAY_LENGTHS_NOT_PARALLEL);
             let caller = starknet::get_caller_address();
-            assert(!self.frozen.entry(caller).read(), 'Wallet is frozen');
+            assert(!self.frozen.entry(caller).read(), Errors::WALLET_IS_FROZEN);
 
             let mut total_amount = 0;
             for amount in amounts {
@@ -397,20 +420,23 @@ pub mod Token {
             assert(
                 total_amount <= self.erc20.balance_of(caller)
                     - self.frozen_tokens.entry(caller).read(),
-                'Insufficient available balance',
+                Errors::INSUFFICIENT_AVAILABLE_BALANCE,
             );
 
             for i in 0..to_list.len() {
                 let recipient = *to_list.at(i);
                 let amount = *amounts.at(i);
 
-                assert(!self.frozen.entry(recipient).read(), 'Wallet is frozen');
+                assert(!self.frozen.entry(recipient).read(), Errors::WALLET_IS_FROZEN);
 
                 let token_compliance = self.token_compliance.read();
                 assert(
-                    self.token_identity_registry.read().is_verified(recipient)
-                        && token_compliance.can_transfer(caller, recipient, amount),
-                    'Transfer not possible',
+                    self.token_identity_registry.read().is_verified(recipient),
+                    Errors::IDENTITY_NOT_VERIFIED,
+                );
+                assert(
+                    token_compliance.can_transfer(caller, recipient, amount),
+                    Errors::COMPLIANCE_CHECK_FAILED,
                 );
                 self.erc20._transfer(caller, recipient, amount);
                 token_compliance.transferred(caller, recipient, amount);
@@ -427,7 +453,7 @@ pub mod Token {
             let to_list_len = to_list.len();
             assert(
                 from_list.len() == to_list_len && to_list_len == amounts.len(),
-                'Arrays length not parrallel',
+                Errors::ARRAY_LENGTHS_NOT_PARALLEL,
             );
             for i in 0..to_list_len {
                 self._forced_transfer(*from_list.at(i), *to_list.at(i), *amounts.at(i));
@@ -439,7 +465,7 @@ pub mod Token {
         ) {
             self.agent_role.assert_only_agent();
             let to_list_len = to_list.len();
-            assert(to_list_len == amounts.len(), 'Arrays length not parrallel');
+            assert(to_list_len == amounts.len(), Errors::ARRAY_LENGTHS_NOT_PARALLEL);
             for i in 0..to_list_len {
                 self._mint(*to_list.at(i), *amounts.at(i));
             };
@@ -450,7 +476,7 @@ pub mod Token {
         ) {
             self.agent_role.assert_only_agent();
             let user_addresses_len = user_addresses.len();
-            assert(user_addresses_len == amounts.len(), 'Arrays length not parrallel');
+            assert(user_addresses_len == amounts.len(), Errors::ARRAY_LENGTHS_NOT_PARALLEL);
             for i in 0..user_addresses_len {
                 self._burn(*user_addresses.at(i), *amounts.at(i));
             };
@@ -461,7 +487,7 @@ pub mod Token {
         ) {
             self.agent_role.assert_only_agent();
             let user_addresses_len = user_addresses.len();
-            assert(user_addresses_len == freeze.len(), 'Arrays length not parrallel');
+            assert(user_addresses_len == freeze.len(), Errors::ARRAY_LENGTHS_NOT_PARALLEL);
             for i in 0..user_addresses_len {
                 self._set_address_frozen(*user_addresses.at(i), *freeze.at(i));
             };
@@ -472,7 +498,7 @@ pub mod Token {
         ) {
             self.agent_role.assert_only_agent();
             let user_addresses_len = user_addresses.len();
-            assert(user_addresses_len == amounts.len(), 'Arrays length not parrallel');
+            assert(user_addresses_len == amounts.len(), Errors::ARRAY_LENGTHS_NOT_PARALLEL);
             for i in 0..user_addresses_len {
                 self._freeze_partial_tokens(*user_addresses.at(i), *amounts.at(i));
             };
@@ -483,7 +509,7 @@ pub mod Token {
         ) {
             self.agent_role.assert_only_agent();
             let user_addresses_len = user_addresses.len();
-            assert(user_addresses_len == amounts.len(), 'Arrays length not parrallel');
+            assert(user_addresses_len == amounts.len(), Errors::ARRAY_LENGTHS_NOT_PARALLEL);
             for i in 0..user_addresses_len {
                 self._unfreeze_partial_tokens(*user_addresses.at(i), *amounts.at(i));
             };
@@ -535,17 +561,20 @@ pub mod Token {
             let caller = starknet::get_caller_address();
             assert(
                 !self.frozen.entry(recipient).read() && !self.frozen.entry(caller).read(),
-                'Wallet is frozen',
+                Errors::WALLET_IS_FROZEN,
             );
             assert(
                 amount <= self.erc20.balance_of(caller) - self.frozen_tokens.entry(caller).read(),
-                'Insufficient available balance',
+                Errors::INSUFFICIENT_AVAILABLE_BALANCE,
             );
             let token_compliance = self.token_compliance.read();
             assert(
-                self.token_identity_registry.read().is_verified(recipient)
-                    && token_compliance.can_transfer(caller, recipient, amount),
-                'Transfer not possible',
+                self.token_identity_registry.read().is_verified(recipient),
+                Errors::IDENTITY_NOT_VERIFIED,
+            );
+            assert(
+                token_compliance.can_transfer(caller, recipient, amount),
+                Errors::COMPLIANCE_CHECK_FAILED,
             );
             self.erc20._transfer(caller, recipient, amount);
             token_compliance.transferred(caller, recipient, amount);
@@ -561,17 +590,20 @@ pub mod Token {
             self.pausable.assert_not_paused();
             assert(
                 !self.frozen.entry(recipient).read() && !self.frozen.entry(sender).read(),
-                'Wallet is frozen',
+                Errors::WALLET_IS_FROZEN,
             );
             assert(
                 amount <= self.erc20.balance_of(sender) - self.frozen_tokens.entry(sender).read(),
-                'Insufficient available balance',
+                Errors::INSUFFICIENT_AVAILABLE_BALANCE,
             );
             let token_compliance = self.token_compliance.read();
             assert(
-                self.token_identity_registry.read().is_verified(recipient)
-                    && token_compliance.can_transfer(sender, recipient, amount),
-                'Transfer not possible',
+                self.token_identity_registry.read().is_verified(recipient),
+                Errors::IDENTITY_NOT_VERIFIED,
+            );
+            assert(
+                token_compliance.can_transfer(sender, recipient, amount),
+                Errors::COMPLIANCE_CHECK_FAILED,
             );
             self.erc20._spend_allowance(sender, starknet::get_caller_address(), amount);
             self.erc20._transfer(sender, recipient, amount);
@@ -615,7 +647,7 @@ pub mod Token {
             ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256,
         ) -> bool {
             let from_balance = self.erc20.balance_of(from);
-            assert(from_balance >= amount, 'ERC20: insufficient balance');
+            assert(from_balance >= amount, ERC20Component::Errors::INSUFFICIENT_BALANCE);
             let from_frozen_tokens_storage = self.frozen_tokens.entry(from);
             let from_frozen_tokens = from_frozen_tokens_storage.read();
             let free_balance = from_balance - from_frozen_tokens;
@@ -624,7 +656,9 @@ pub mod Token {
                 from_frozen_tokens_storage.write(from_frozen_tokens - tokens_to_unfreeze);
                 self.emit(TokensUnfrozen { user_address: from, amount: tokens_to_unfreeze });
             }
-            assert(self.token_identity_registry.read().is_verified(to), 'Transfer not possible');
+            assert(
+                self.token_identity_registry.read().is_verified(to), Errors::IDENTITY_NOT_VERIFIED,
+            );
             self.erc20._transfer(from, to, amount);
             self.token_compliance.read().transferred(from, to, amount);
             true
@@ -636,7 +670,7 @@ pub mod Token {
             let balance = self.erc20.balance_of(user_address);
             let user_frozen_tokens_storage = self.frozen_tokens.entry(user_address);
             let user_frozen_tokens = user_frozen_tokens_storage.read();
-            assert!(balance >= user_frozen_tokens + amount, "Amount exceeds available balance");
+            assert(balance >= user_frozen_tokens + amount, Errors::AMOUNT_EXCEEDS_AVAILABLE_BAL);
             user_frozen_tokens_storage.write(user_frozen_tokens + amount);
             self.emit(TokensFrozen { user_address, amount });
         }
@@ -646,7 +680,7 @@ pub mod Token {
         ) {
             let user_frozen_tokens_storage = self.frozen_tokens.entry(user_address);
             let user_frozen_tokens = user_frozen_tokens_storage.read();
-            assert!(user_frozen_tokens >= amount, "Amount should be lte to frozen tokens");
+            assert(user_frozen_tokens >= amount, Errors::AMOUNT_EXCEEDS_FROZEN_TOKENS);
             user_frozen_tokens_storage.write(user_frozen_tokens - amount);
             self.emit(TokensUnfrozen { user_address, amount });
         }
@@ -664,10 +698,13 @@ pub mod Token {
         }
 
         fn _mint(ref self: ContractState, to: ContractAddress, amount: u256) {
-            assert(self.token_identity_registry.read().is_verified(to), 'Identity is not verified');
+            assert(
+                self.token_identity_registry.read().is_verified(to), Errors::IDENTITY_NOT_VERIFIED,
+            );
             let token_compliance = self.token_compliance.read();
             assert(
-                token_compliance.can_transfer(Zero::zero(), to, amount), 'Compliance not followed',
+                token_compliance.can_transfer(Zero::zero(), to, amount),
+                Errors::COMPLIANCE_CHECK_FAILED,
             );
             self.erc20.mint(to, amount);
             token_compliance.created(to, amount);
@@ -675,7 +712,7 @@ pub mod Token {
 
         fn _burn(ref self: ContractState, user_address: ContractAddress, amount: u256) {
             let user_balance = self.erc20.balance_of(user_address);
-            assert(user_balance >= amount, 'Cannot burn more than balance');
+            assert(user_balance >= amount, Errors::BURN_AMOUNT_EXCEEDS_BALANCE);
             let user_frozen_tokens_storage = self.frozen_tokens.entry(user_address);
             let user_frozen_tokens = user_frozen_tokens_storage.read();
             let free_balance = user_balance - user_frozen_tokens;
