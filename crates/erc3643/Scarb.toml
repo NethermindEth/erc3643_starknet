@@ -1,0 +1,32 @@
+[package]
+name = "erc3643"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+onchain_id_starknet.workspace = true
+openzeppelin_access.workspace = true
+openzeppelin_account.workspace = true
+openzeppelin_introspection.workspace = true
+openzeppelin_security.workspace = true
+openzeppelin_token.workspace = true
+openzeppelin_upgrades.workspace = true
+openzeppelin_utils.workspace = true
+starknet.workspace = true
+snforge_std.workspace = true
+storage = { path = "../storage" }
+
+[dev-dependencies]
+assert_macros.workspace = true
+test_commons = { path = "../test_commons" }
+
+[[target.starknet-contract]]
+sierra = true
+build-external-contracts = ["onchain_id_starknet::*", "test_commons::*"]
+allowed-libfuncs-list.name = "all"
+
+[tool]
+fmt.workspace = true
+
+[lib]
+name = "erc3643"

@@ -1,14 +1,15 @@
 [package]
-name = "storage"
+name = "test_commons"
 version = "0.1.0"
 edition = "2024_07"
 
 [dependencies]
 starknet.workspace = true
-erc3643 = { path = "../erc3643" }
-
-[dev-dependencies]
+onchain_id_starknet.workspace = true
+openzeppelin_token.workspace = true
+openzeppelin_access.workspace = true
 snforge_std.workspace = true
+erc3643 = { path = "../erc3643" }
 
 [[target.starknet-contract]]
 sierra = true
@@ -17,4 +18,4 @@ sierra = true
 fmt.workspace = true
 
 [lib]
-name = "storage"
+name = "test_commons"

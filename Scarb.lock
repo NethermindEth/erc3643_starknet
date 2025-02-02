@@ -2,73 +2,20 @@
 version = 1
 
 [[package]]
-name = "compliance"
+name = "erc3643"
 version = "0.1.0"
 dependencies = [
- "mocks",
- "openzeppelin_access",
- "openzeppelin_token",
- "openzeppelin_upgrades",
- "registry",
- "roles",
- "snforge_std",
- "storage",
- "token",
-]
-
-[[package]]
-name = "dva"
-version = "0.1.0"
-dependencies = [
- "factory",
- "openzeppelin_account",
- "openzeppelin_introspection",
- "openzeppelin_token",
- "openzeppelin_utils",
- "registry",
- "roles",
- "snforge_std",
- "storage",
- "token",
-]
-
-[[package]]
-name = "dvd"
-version = "0.1.0"
-dependencies = [
- "openzeppelin_access",
- "openzeppelin_token",
- "registry",
- "roles",
- "snforge_std",
- "token",
-]
-
-[[package]]
-name = "factory"
-version = "0.1.0"
-dependencies = [
- "compliance",
- "mocks",
  "onchain_id_starknet",
  "openzeppelin_access",
+ "openzeppelin_account",
+ "openzeppelin_introspection",
+ "openzeppelin_security",
  "openzeppelin_token",
  "openzeppelin_upgrades",
- "registry",
- "roles",
+ "openzeppelin_utils",
  "snforge_std",
- "token",
-]
-
-[[package]]
-name = "mocks"
-version = "0.1.0"
-dependencies = [
- "compliance",
- "openzeppelin_access",
- "openzeppelin_token",
- "roles",
- "snforge_std",
+ "storage",
+ "test_commons",
 ]
 
 [[package]]
@@ -138,36 +85,6 @@ source = "registry+https://scarbs.xyz/"
 checksum = "sha256:44f32d242af1e43982decc49c563e613a9b67ade552f5c3d5cde504e92f74607"
 
 [[package]]
-name = "registry"
-version = "0.1.0"
-dependencies = [
- "factory",
- "onchain_id_starknet",
- "openzeppelin_access",
- "openzeppelin_upgrades",
- "roles",
- "snforge_std",
- "storage",
-]
-
-[[package]]
-name = "roles"
-version = "0.1.0"
-dependencies = [
- "compliance",
- "factory",
- "mocks",
- "onchain_id_starknet",
- "openzeppelin_access",
- "openzeppelin_introspection",
- "openzeppelin_security",
- "openzeppelin_token",
- "registry",
- "snforge_std",
- "token",
-]
-
-[[package]]
 name = "snforge_scarb_plugin"
 version = "0.35.1"
 source = "registry+https://scarbs.xyz/"
@@ -186,25 +103,17 @@ dependencies = [
 name = "storage"
 version = "0.1.0"
 dependencies = [
- "compliance",
- "dva",
+ "erc3643",
  "snforge_std",
 ]
 
 [[package]]
-name = "token"
+name = "test_commons"
 version = "0.1.0"
 dependencies = [
- "compliance",
- "factory",
+ "erc3643",
  "onchain_id_starknet",
  "openzeppelin_access",
- "openzeppelin_introspection",
- "openzeppelin_security",
  "openzeppelin_token",
- "openzeppelin_upgrades",
- "openzeppelin_utils",
- "registry",
- "roles",
  "snforge_std",
 ]

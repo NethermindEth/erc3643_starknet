@@ -273,7 +273,7 @@ pub impl MutableContractAddressVecToContractAddressArray of Into<
 //********************************************************
 //             StorageArray for Limit
 //********************************************************
-use compliance::modules::time_transfer_limits_module::Limit;
+use erc3643::compliance::modules::time_transfer_limits_module::Limit;
 
 #[starknet::storage_node]
 pub struct StorageArrayLimit {
@@ -394,7 +394,7 @@ pub impl MutableLimitVecToLimitArray of Into<
 //********************************************************
 //             StorageArray for Approver
 //********************************************************
-use dva::idva_transfer_manager::Approver;
+use erc3643::dva::idva_transfer_manager::Approver;
 
 #[starknet::storage_node]
 pub struct StorageArrayApprover {
