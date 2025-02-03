@@ -783,3 +783,61 @@ pub mod batch_unfreeze_partial_tokens {
             );
     }
 }
+
+pub mod snip12_metadata {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_utils::cryptography::{
+        interface::{ISNIP12MetadataDispatcher, ISNIP12MetadataDispatcherTrait},
+    };
+    use token::{itoken::ITokenDispatcherTrait, token::Token::SNIP12MetadataImpl};
+
+    #[test]
+    fn test_should_get_snip12_metadata() {
+        let setup = setup_full_suite();
+
+        let snip12_metadata_dispatcher = ISNIP12MetadataDispatcher {
+            contract_address: setup.token.contract_address,
+        };
+        let (name, version) = snip12_metadata_dispatcher.snip12_metadata();
+        assert(name == SNIP12MetadataImpl::name(), 'Name does not match');
+        assert!(
+            version == SNIP12MetadataImpl::version(),
+            "Version does not match w (SNIP12MetadataImpl)",
+        );
+        assert!(version == setup.token.version(), "Version does not match w (IToken.version)");
+    }
+}
+
+
+pub mod src5 {
+    use factory::tests_common::setup_full_suite;
+    use openzeppelin_introspection::interface::{ISRC5Dispatcher, ISRC5DispatcherTrait, ISRC5_ID};
+    use token::itoken::ITOKEN_ID;
+
+    #[test]
+    fn test_should_return_true_for_itoken_interface() {
+        let setup = setup_full_suite();
+
+        let src5_dispatcher = ISRC5Dispatcher { contract_address: setup.token.contract_address };
+        assert(src5_dispatcher.supports_interface(ITOKEN_ID), 'Should return true');
+    }
+
+    #[test]
+    fn test_should_return_true_for_isrc5_interface() {
+        let setup = setup_full_suite();
+
+        let src5_dispatcher = ISRC5Dispatcher { contract_address: setup.token.contract_address };
+        assert(src5_dispatcher.supports_interface(ISRC5_ID), 'Should return true');
+    }
+
+    #[test]
+    fn test_should_return_false_for_unsupported_interface() {
+        let setup = setup_full_suite();
+        let unsupported_interface_id = 'UNSUPPORTED_INTERFACE_ID';
+
+        let src5_dispatcher = ISRC5Dispatcher { contract_address: setup.token.contract_address };
+        assert(
+            !src5_dispatcher.supports_interface(unsupported_interface_id), 'Should return false',
+        );
+    }
+}
