@@ -194,7 +194,7 @@ pub mod set_identity_registry {
     #[test]
     fn test_should_set_identity_registry() {
         let setup = setup_full_suite();
-        let new_identity_registry = Zero::zero();
+        let new_identity_registry = starknet::contract_address_const::<'NEW_IDENTITY_REGISTRY'>();
 
         let mut spy = spy_events();
         setup.token.set_identity_registry(new_identity_registry);
@@ -509,7 +509,7 @@ pub mod freeze_partial_tokens {
     }
 
     #[test]
-    #[should_panic(expected: "Amount exceeds available balance")]
+    #[should_panic(expected: 'Amount exceeds available funds')]
     fn test_should_revert_when_amount_exceeds_current_balance() {
         let setup = setup_full_suite();
         let user_address = starknet::contract_address_const::<'USER_ADDRESS'>();
@@ -565,7 +565,7 @@ pub mod batch_freeze_partial_tokens {
     }
 
     #[test]
-    #[should_panic(expected: "Amount exceeds available balance")]
+    #[should_panic(expected: 'Amount exceeds available funds')]
     fn test_should_revert_when_amount_exceeds_current_balance() {
         let setup = setup_full_suite();
         let user_address = starknet::contract_address_const::<'USER_ADDRESS'>();
@@ -577,7 +577,7 @@ pub mod batch_freeze_partial_tokens {
     }
 
     #[test]
-    #[should_panic(expected: 'Arrays length not parrallel')]
+    #[should_panic(expected: 'Array lengths not parallel')]
     fn test_should_revert_when_array_lengths_not_parallel() {
         let setup = setup_full_suite();
         let first_user_address = setup.accounts.alice.account.contract_address;
@@ -652,7 +652,7 @@ pub mod unfreeze_partial_tokens {
     }
 
     #[test]
-    #[should_panic(expected: "Amount should be lte to frozen tokens")]
+    #[should_panic(expected: 'Amount exceeds frozen tokens')]
     fn test_should_revert_when_amount_exceeds_current_frozen_balance() {
         let setup = setup_full_suite();
         let user_address = starknet::contract_address_const::<'USER_ADDRESS'>();
@@ -712,7 +712,7 @@ pub mod batch_unfreeze_partial_tokens {
     }
 
     #[test]
-    #[should_panic(expected: "Amount should be lte to frozen tokens")]
+    #[should_panic(expected: 'Amount exceeds frozen tokens')]
     fn test_should_revert_when_amount_exceeds_current_frozen_balance() {
         let setup = setup_full_suite();
         let user_address = starknet::contract_address_const::<'USER_ADDRESS'>();
@@ -724,7 +724,7 @@ pub mod batch_unfreeze_partial_tokens {
     }
 
     #[test]
-    #[should_panic(expected: 'Arrays length not parrallel')]
+    #[should_panic(expected: 'Array lengths not parallel')]
     fn test_should_revert_when_array_lengths_not_parallel() {
         let setup = setup_full_suite();
         let first_user_address = setup.accounts.alice.account.contract_address;
