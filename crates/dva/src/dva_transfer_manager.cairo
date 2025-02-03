@@ -1,39 +1,13 @@
-use core::hash::{HashStateExTrait, HashStateTrait};
-use core::poseidon::PoseidonTrait;
-use openzeppelin_utils::cryptography::snip12::StructHash;
-
-#[derive(Copy, Drop, Hash)]
-pub struct DelegatedApprovalMessage {
-    transfer_id: felt252,
-}
-
-// Todo: compute off chain and hardcode as constant
-// selector!(
-//   "\"DelegatedApprovalMessage\"(
-//     \"transfer_id\":\"felt"
-// );
-pub const DELEGATED_APPROVAL_MESSAGE_TYPE_HASH: felt252 = selector!(
-    "\"DelegatedApprovalMessage\"(\"transfer_id\":\"felt",
-);
-
-impl StructHashImpl of StructHash<DelegatedApprovalMessage> {
-    fn hash_struct(self: @DelegatedApprovalMessage) -> felt252 {
-        PoseidonTrait::new()
-            .update_with(DELEGATED_APPROVAL_MESSAGE_TYPE_HASH)
-            .update_with(*self)
-            .finalize()
-    }
-}
-
 #[starknet::contract]
 pub mod DVATransferManager {
     use core::num::traits::Zero;
     use core::poseidon::poseidon_hash_span;
+    use dva::idva_transfer_manager::IDVATransferManager;
     use dva::idva_transfer_manager::{
         ApprovalCriteria, ApprovalCriteriaStore, ApprovalCriteriaStoreStorageNode,
     };
-    use dva::idva_transfer_manager::{Approver, DelegatedApproval, TransferStatus};
-    use dva::idva_transfer_manager::{Errors, Events::*, IDVATransferManager};
+    use dva::idva_transfer_manager::{Approver, Errors, Events::*, TransferStatus};
+    use dva::idva_transfer_manager::{DelegatedApproval, DelegatedApprovalMessage};
     use dva::idva_transfer_manager::{
         Transfer, TransferStore, TransferStoreStorageNode, TransferStoreStorageNodeMut,
     };
@@ -45,13 +19,14 @@ pub mod DVATransferManager {
     use roles::agent_role::{IAgentRoleDispatcher, IAgentRoleDispatcherTrait};
     use starknet::ContractAddress;
     use starknet::storage::{
-        Map, MutableVecTrait, StorageNode, StorageNodeMut, StoragePathEntry,
-        StoragePointerReadAccess, StoragePointerWriteAccess, VecTrait,
+        Map, StorageAsPath, StorageNode, StorageNodeMut, StoragePathEntry, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
     };
     use storage::storage_array::{
+        MutableStorageArrayContractAddressImpl, MutableStorageArrayContractAddressIndexView,
         PathableMutableStorageArrayApproverImpl, PathableStorageArrayApproverImpl,
+        StorageArrayContractAddressImpl, StorageArrayContractAddressIndexView,
     };
-    use super::DelegatedApprovalMessage;
     use token::itoken::{ITokenDispatcher, ITokenDispatcherTrait};
 
     #[storage]
@@ -72,7 +47,7 @@ pub mod DVATransferManager {
         TransferRejected: TransferRejected,
         TransferCancelled: TransferCancelled,
         TransferCompleted: TransferCompleted,
-        TransferApprovalReset: TransferApprovalReset,
+        TransferApprovalStateReset: TransferApprovalStateReset,
     }
 
     #[abi(embed_v0)]
@@ -112,8 +87,9 @@ pub mod DVATransferManager {
             approval_criteria.include_recipient_approver.write(include_recipient_approver);
             approval_criteria.include_agent_approver.write(include_agent_approver);
             approval_criteria.sequential_approval.write(sequential_approval);
+            approval_criteria.additional_approvers.as_path().clear();
             for approver in additional_approvers {
-                approval_criteria.additional_approvers.append().write(*approver);
+                approval_criteria.additional_approvers.as_path().append().write(*approver);
             };
             approval_criteria.hash.write(hash);
 
@@ -150,8 +126,8 @@ pub mod DVATransferManager {
             let token = IERC20Dispatcher { contract_address: token_address };
             token.transfer_from(caller, starknet::get_contract_address(), amount);
 
-            let nonce = self.tx_nonce.read() + 1;
-            self.tx_nonce.write(nonce);
+            let nonce = self.tx_nonce.read();
+            self.tx_nonce.write(nonce + 1);
             let transfer_id = self.calculate_transfer_id(nonce, caller, recipient, amount);
 
             // Write transfer
@@ -217,6 +193,7 @@ pub mod DVATransferManager {
                     Errors::SIGNER_DOES_NOT_SUPPORT_SRC6,
                 );
 
+                // TODO: try catch the call and revert with 'APPROVER NOT FOUND' first
                 assert(
                     ISRC6Dispatcher { contract_address: delegated_approval.signer }
                         .is_valid_signature(
@@ -288,8 +265,9 @@ pub mod DVATransferManager {
             assert(hash.is_non_zero(), Errors::TOKEN_IS_NOT_REGISTERED);
 
             let mut additional_approvers = array![];
-            for i in 0..approval_criteria.additional_approvers.len() {
-                additional_approvers.append(approval_criteria.additional_approvers[i].read());
+            for i in 0..approval_criteria.additional_approvers.as_path().len() {
+                additional_approvers
+                    .append(approval_criteria.additional_approvers.as_path()[i].read());
             };
             ApprovalCriteria {
                 include_recipient_approver: approval_criteria.include_recipient_approver.read(),
@@ -438,7 +416,8 @@ pub mod DVATransferManager {
             // delete transfer.approvers;
             transfer.approvers.clear();
             self.add_approvers_to_transfer(transfer, approval_criteria.storage_node());
-            self.emit(TransferApprovalReset { transfer_id, approval_criteria_hash });
+            transfer.approval_criteria_hash.write(approval_criteria_hash);
+            self.emit(TransferApprovalStateReset { transfer_id, approval_criteria_hash });
 
             true
         }
@@ -470,13 +449,13 @@ pub mod DVATransferManager {
                     );
             };
 
-            for i in 0..approval_criteria.additional_approvers.len() {
+            for i in 0..approval_criteria.additional_approvers.as_path().len() {
                 transfer
                     .approvers
                     .append()
                     .write(
                         Approver {
-                            wallet: approval_criteria.additional_approvers[i].read(),
+                            wallet: approval_criteria.additional_approvers.as_path()[i].read(),
                             any_token_agent: false,
                             approved: false,
                         },
@@ -533,7 +512,7 @@ pub mod DVATransferManager {
         }
     }
 
-    impl SNIP12MetadataImpl of SNIP12Metadata {
+    pub impl SNIP12MetadataImpl of SNIP12Metadata {
         fn name() -> felt252 {
             unsafe_new_contract_state().name().at(0).unwrap().into()
         }

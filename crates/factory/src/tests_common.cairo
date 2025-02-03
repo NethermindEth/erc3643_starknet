@@ -487,7 +487,7 @@ fn setup_onchain_id(accounts: @TestAccounts) -> OnchainIdentitySetup {
     }
 }
 
-fn generate_account() -> Account {
+pub fn generate_account() -> Account {
     let mock_account_contract = declare("MockAccount").unwrap().contract_class();
     let key_pair = KeyPairTrait::<felt252, felt252>::generate();
     let (account_address, _) = mock_account_contract.deploy(@array![key_pair.public_key]).unwrap();
