@@ -450,7 +450,7 @@ pub mod set_address_frozen {
     }
 
     #[test]
-    fn test_should_set_address_frozen() {
+    fn test_should_set_address_frozen_to_true() {
         let setup = setup_full_suite();
         let user_address = starknet::contract_address_const::<'USER_ADDRESS'>();
         let token_agent = setup.accounts.token_agent.account.contract_address;
@@ -459,10 +459,6 @@ pub mod set_address_frozen {
         start_cheat_caller_address(setup.token.contract_address, token_agent);
         setup.token.set_address_frozen(user_address, true);
         assert(setup.token.is_frozen(user_address), 'Not frozen');
-
-        setup.token.set_address_frozen(user_address, false);
-        assert(!setup.token.is_frozen(user_address), 'Still frozen');
-        stop_cheat_caller_address(setup.token.contract_address);
 
         spy
             .assert_emitted(
@@ -475,6 +471,27 @@ pub mod set_address_frozen {
                             },
                         ),
                     ),
+                ],
+            );
+    }
+
+    #[test]
+    fn test_should_set_address_frozen_to_false() {
+        let setup = setup_full_suite();
+        let user_address = starknet::contract_address_const::<'USER_ADDRESS'>();
+        let token_agent = setup.accounts.token_agent.account.contract_address;
+
+        start_cheat_caller_address(setup.token.contract_address, token_agent);
+        setup.token.set_address_frozen(user_address, true);
+
+        let mut spy = spy_events();
+        setup.token.set_address_frozen(user_address, false);
+        stop_cheat_caller_address(setup.token.contract_address);
+
+        assert(!setup.token.is_frozen(user_address), 'Address not unfrozed');
+        spy
+            .assert_emitted(
+                @array![
                     (
                         setup.token.contract_address,
                         Token::Event::AddressFrozen(
